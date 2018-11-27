@@ -1,8 +1,10 @@
-import * as express from "express";
-import * as bodyParser from "body-parser";
-import { Routes } from "./routes/routes";
-import * as mongoose from "mongoose";
-import { Watcher } from "./services/watcher";
+import * as bodyParser from 'body-parser';
+import * as cors from 'cors';
+import * as express from 'express';
+import * as mongoose from 'mongoose';
+
+import { Routes } from './routes/routes';
+import { Watcher } from './services/watcher';
 
 class App {
 
@@ -24,6 +26,7 @@ class App {
         //this.app.use(bodyParser.urlencoded({ extended: true }));
         // serving static files 
         this.app.use(express.static('public'));
+        this.app.use(cors());
     }
 
     private mongoSetup(): void{

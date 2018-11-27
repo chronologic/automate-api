@@ -3,24 +3,20 @@ import * as mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
 export interface IScheduled extends mongoose.Document {
-  signedMessage: string,
-  amount: string,
-  asset: string,
-  tokenCondition: string,
+  signedTransaction: string,
+  conditionAsset: string,
+  conditionAmount: string,
   completed: boolean
 }
 
 export const ScheduledSchema = new Schema({
-  signedMessage: {
+  signedTransaction: {
     type: String
   },
-  amount: {
-    type: String
-  },
-  asset: {
+  conditionAsset: {
       type: String
   },
-  tokenCondition: {
+  conditionAmount: {
       type: String
   },
   completed: {

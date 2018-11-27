@@ -30,20 +30,18 @@ export class Watcher {
   }
 
   public static async watchBalance(scheduled: IScheduled) {
-    const transaction = ethers.utils.parseTransaction(scheduled.signedMessage);
+    const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
     console.log(
-      `Watching ${scheduled.asset} for balance ${scheduled.tokenCondition}`
+      `Watching ${scheduled.conditionAsset} for balance ${scheduled.conditionAmount}`
     );
-
-    ethers.utils.BigNumber;
 
     const network = ethers.utils.getNetwork(transaction.chainId);
     const provider = ethers.getDefaultProvider(network);
 
     const token = new ethers.Contract(transaction.to, abi, provider);
     const balance = (await token.balanceOf(transaction.from)) as BigNumber;
-    const condition = new BigNumber(scheduled.tokenCondition);
+    const condition = new BigNumber(scheduled.conditionAmount);
 
     const shouldExecute = balance.gte(condition);
 
