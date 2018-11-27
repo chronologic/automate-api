@@ -52,9 +52,21 @@ export class Watcher {
     if (!shouldExecute) return;
 
     console.log('Executing transaction...');
-    console.log(`Stopping watcher ${scheduled._id}`);
+    
+    let transactionHash = '';
+    
+    try {
+      const response = await provider.sendTransaction(scheduled.signedTransaction);
+      const receipt = await response.wait();
+      transactionHash = receipt.transactionHash;
+      console.log(`Transaction sent ${transactionHash}`)
+    } catch(e) {
+      console.log(`Transaction sent, but failed with ${e}`)
+      transactionHash = e.transactionHash;
+    }
 
-    scheduled.update({ completed: true }, (err, raw) => {
+    console.log(`Stopping watcher ${scheduled._id}`);
+    scheduled.update({ completed: true, transactionHash }, (err, raw) => {
       Watcher.jobs.get(scheduled._id).stop();
       Watcher.jobs.delete(scheduled._id);
     });

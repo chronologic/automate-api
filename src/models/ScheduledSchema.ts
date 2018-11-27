@@ -6,7 +6,8 @@ export interface IScheduled extends mongoose.Document {
   signedTransaction: string,
   conditionAsset: string,
   conditionAmount: string,
-  completed: boolean
+  completed: boolean,
+  transactionHash: string
 }
 
 export const ScheduledSchema = new Schema({
@@ -21,7 +22,10 @@ export const ScheduledSchema = new Schema({
   },
   completed: {
     type: Boolean
-}
+  },
+  transactionHash: {
+    type: String
+  }
 });
 
 const Scheduled = mongoose.model<IScheduled>('Scheduled', ScheduledSchema);
