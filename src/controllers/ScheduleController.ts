@@ -1,6 +1,7 @@
 import Scheduled, { IScheduled } from '../models/ScheduledSchema';
 import { Request, Response } from 'express';
 import { Watcher } from '../services/watcher';
+import { Key } from '../services/key';
 
 export class ScheduleController {
   public schedule(req: Request, res: Response) {
@@ -17,9 +18,13 @@ export class ScheduleController {
         res.json({ errors });
       } else {
         console.log(`Schedule:::save=${stored}`);
+        
         Watcher.watch(stored);
-  
-        res.json(stored);  
+                
+        res.json({
+          _id: stored._id,
+          key: Key.generate(stored._id)
+        });  
       }
     });
   }
