@@ -16,7 +16,7 @@ export class Watcher {
   }
 
   public static watch(scheduled: IScheduled) {
-    console.log(`Starting watcher ${scheduled._id}`);
+    console.log(`Watcher:::watch:::Starting watcher ${scheduled._id}`);
 
     Watcher.jobs.set(
       scheduled._id,
@@ -33,7 +33,7 @@ export class Watcher {
     const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
     console.log(
-      `Watching ${scheduled.conditionAsset} for balance ${scheduled.conditionAmount}`
+      `Watcher:::watchBalance:::Watching ${scheduled.conditionAsset} for balance ${scheduled.conditionAmount}`
     );
 
     const network = ethers.utils.getNetwork(transaction.chainId);
@@ -46,12 +46,12 @@ export class Watcher {
     const shouldExecute = balance.gte(condition);
 
     console.log(
-      `Current balance is ${balance.toString()} and condition is ${condition.toString()} res ${shouldExecute}`
+      `Watcher:::watchBalance:::Current balance is ${balance.toString()} and condition is ${condition.toString()} res ${shouldExecute}`
     );
 
     if (!shouldExecute) return;
 
-    console.log('Executing transaction...');
+    console.log('Watcher:::watchBalance:::Executing transaction...');
     
     let transactionHash = '';
     
@@ -59,13 +59,13 @@ export class Watcher {
       const response = await provider.sendTransaction(scheduled.signedTransaction);
       const receipt = await response.wait();
       transactionHash = receipt.transactionHash;
-      console.log(`Transaction sent ${transactionHash}`)
+      console.log(`Watcher:::watchBalance:::Transaction sent ${transactionHash}`)
     } catch(e) {
-      console.log(`Transaction sent, but failed with ${e}`)
+      console.log(`Watcher:::watchBalance:::Transaction sent, but failed with ${e}`)
       transactionHash = e.transactionHash;
     }
 
-    console.log(`Stopping watcher ${scheduled._id}`);
+    console.log(`Watcher:::watchBalance:::Stopping watcher ${scheduled._id}`);
     scheduled.update({ completed: true, transactionHash }, (err, raw) => {
       Watcher.jobs.get(scheduled._id).stop();
       Watcher.jobs.delete(scheduled._id);

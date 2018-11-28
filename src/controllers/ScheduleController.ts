@@ -1,23 +1,26 @@
-import * as mongoose from 'mongoose';
 import Scheduled, { IScheduled } from '../models/ScheduledSchema';
 import { Request, Response } from 'express';
 import { Watcher } from '../services/watcher';
 
 export class ScheduleController {
   public schedule(req: Request, res: Response) {
-    console.log(req.body)
-
     const scheduled = new Scheduled(req.body);
     scheduled.completed = false;
 
     scheduled.save((err, stored: IScheduled) => {
       if (err) {
-        res.send(err);
-      }
-      console.log('success. saved!');
-      Watcher.watch(stored);
+        const errors = Object.values(err.errors).map(
+          (e: any) => e.message
+        );
 
-      res.json(stored);
+        res.status(422);
+        res.json({ errors });
+      } else {
+        console.log(`Schedule:::save=${stored}`);
+        Watcher.watch(stored);
+  
+        res.json(stored);  
+      }
     });
   }
 
