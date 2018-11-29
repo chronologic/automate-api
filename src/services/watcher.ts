@@ -1,6 +1,6 @@
 import { CronJob } from 'cron';
 import { ethers } from 'ethers';
-import Scheduled, { IScheduled } from '../models/ScheduledSchema';
+import Scheduled, { IScheduled, Status } from '../models/ScheduledSchema';
 import { BigNumber } from 'ethers/utils';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -29,11 +29,31 @@ export class Watcher {
     );
   }
 
+  public static async cancel(id: string) {
+    console.log(`Watcher:::cancel:::Cancelling ${id}`);
+
+    return new Promise<Status>((resolve, reject) => {
+      this.stop(id);
+      Scheduled.updateOne(
+        { _id: id },
+        { status: Status.Cancelled },
+        (err, raw) => {
+          console.log(`Watcher:::cancel:::Cancelled ${id}`);
+          resolve(Status.Cancelled);
+        }
+      );
+    });
+  }
+
   public static async watchBalance(scheduled: IScheduled) {
-    const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
+    const transaction = ethers.utils.parseTransaction(
+      scheduled.signedTransaction
+    );
 
     console.log(
-      `Watcher:::watchBalance:::Watching ${scheduled.conditionAsset} for balance ${scheduled.conditionAmount}`
+      `Watcher:::watchBalance:::Watching ${
+        scheduled.conditionAsset
+      } for balance ${scheduled.conditionAmount}`
     );
 
     const network = ethers.utils.getNetwork(transaction.chainId);
@@ -52,23 +72,33 @@ export class Watcher {
     if (!shouldExecute) return;
 
     console.log('Watcher:::watchBalance:::Executing transaction...');
-    
+
     let transactionHash = '';
-    
+
     try {
-      const response = await provider.sendTransaction(scheduled.signedTransaction);
+      const response = await provider.sendTransaction(
+        scheduled.signedTransaction
+      );
       const receipt = await response.wait();
       transactionHash = receipt.transactionHash;
-      console.log(`Watcher:::watchBalance:::Transaction sent ${transactionHash}`)
-    } catch(e) {
-      console.log(`Watcher:::watchBalance:::Transaction sent, but failed with ${e}`)
+      console.log(
+        `Watcher:::watchBalance:::Transaction sent ${transactionHash}`
+      );
+    } catch (e) {
+      console.log(
+        `Watcher:::watchBalance:::Transaction sent, but failed with ${e}`
+      );
       transactionHash = e.transactionHash;
     }
 
     console.log(`Watcher:::watchBalance:::Stopping watcher ${scheduled._id}`);
     scheduled.update({ completed: true, transactionHash }, (err, raw) => {
-      Watcher.jobs.get(scheduled._id).stop();
-      Watcher.jobs.delete(scheduled._id);
+      this.stop(scheduled._id);
     });
+  }
+
+  private static stop(id: string) {
+    Watcher.jobs.get(id).stop();
+    Watcher.jobs.delete(id);
   }
 }

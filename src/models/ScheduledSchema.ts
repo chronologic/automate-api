@@ -3,11 +3,15 @@ import { ethers } from 'ethers';
 
 const Schema = mongoose.Schema;
 
+export enum Status {
+  Pending, Cancelled, Completed
+}
+
 export interface IScheduled extends mongoose.Document {
   signedTransaction: string;
   conditionAsset: string;
   conditionAmount: string;
-  completed: boolean;
+  status: Status;
   transactionHash: string;
 }
 

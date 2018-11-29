@@ -9,13 +9,13 @@ import { Watcher } from './services/watcher';
 class App {
 
     public app: express.Application;
-    public routePrv: Routes = new Routes();
+    public routes: Routes = new Routes();
     public mongoUrl: string = process.env.MONGODB_URI || 'mongodb://root:example@localhost:27017';
 
     constructor() {
         this.app = express();
         this.config();        
-        this.routePrv.routes(this.app);     
+        this.routes.init(this.app);     
         this.mongoSetup();
 
         Watcher.init();
