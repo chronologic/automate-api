@@ -31,7 +31,7 @@ export class ScheduleController {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
-    if (!this.auth(id, key, res)) {
+    if (!ScheduleController.auth(id, key, res)) {
       return;
     }
 
@@ -55,7 +55,7 @@ export class ScheduleController {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
-    if (!this.auth(id, key, res)) {
+    if (!ScheduleController.auth(id, key, res)) {
       return;
     }
 
@@ -63,7 +63,7 @@ export class ScheduleController {
     res.json({ status });
   }
 
-  private auth(id: string, key: string, res: Response) {
+  public static auth(id: string, key: string, res: Response) {
     if (!Key.test(id, key)) {
       res.status(401);
       res.json({ errors: ['Wrong _id and key'] });
