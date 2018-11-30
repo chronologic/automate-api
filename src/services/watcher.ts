@@ -10,30 +10,32 @@ export class Watcher {
 
   public static init() {
     console.log(`Loading and starting watchers...`);
-    Scheduled.where('completed', false).exec((err, scheduled: IScheduled[]) => {
-      scheduled.map(Watcher.watch);
-    });
+    Scheduled.where('status', Status.Pending).exec(
+      (err, scheduled: IScheduled[]) => {
+        scheduled.map(Watcher.watch);
+      }
+    );
   }
 
   public static watch(scheduled: IScheduled) {
     console.log(`Watcher:::watch:::Starting watcher ${scheduled._id}`);
 
-    Watcher.jobs.set(
-      scheduled._id,
-      new CronJob(
-        '* * * * *',
-        () => Watcher.watchBalance(scheduled),
-        null,
-        true
-      )
+    const job = new CronJob(
+      '* * * * *',
+      () => Watcher.watchBalance(scheduled),
+      null,
+      true
     );
+
+    Watcher.jobs.set(scheduled._id.toString(), job);
   }
 
   public static async cancel(id: string) {
     console.log(`Watcher:::cancel:::Cancelling ${id}`);
 
     return new Promise<Status>((resolve, reject) => {
-      this.stop(id);
+      Watcher.stop(id);
+
       Scheduled.updateOne(
         { _id: id },
         { status: Status.Cancelled },
@@ -46,6 +48,8 @@ export class Watcher {
   }
 
   public static async watchBalance(scheduled: IScheduled) {
+    console.log(`Watcher:::watchBalance:::id ${scheduled._id}`);
+
     const transaction = ethers.utils.parseTransaction(
       scheduled.signedTransaction
     );
@@ -98,7 +102,12 @@ export class Watcher {
   }
 
   private static stop(id: string) {
-    Watcher.jobs.get(id).stop();
-    Watcher.jobs.delete(id);
+    const job = Watcher.jobs.get(id);
+    if (job) {
+      job.stop();
+      Watcher.jobs.delete(id);
+    } else {
+      throw new Error('Missing watcher?');
+    }
   }
 }

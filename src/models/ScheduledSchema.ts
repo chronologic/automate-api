@@ -80,6 +80,9 @@ export const ScheduledSchema = new Schema({
   },
   transactionHash: {
     type: String
+  },
+  status: {
+    type: Status
   }
 });
 
