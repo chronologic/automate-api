@@ -62,11 +62,16 @@ export class Watcher {
 
     const network = ethers.utils.getNetwork(transaction.chainId);
     const provider = ethers.getDefaultProvider(network);
+    let balance;
 
-    const token = new ethers.Contract(transaction.to, abi, provider);
-    const balance = (await token.balanceOf(transaction.from)) as BigNumber;
+    try {
+      const token = new ethers.Contract(transaction.to, abi, provider);
+      balance = (await token.balanceOf(transaction.from)) as BigNumber;
+    } catch (e) {
+      balance = await provider.getBalance(transaction.from!);
+    }
+
     const condition = new BigNumber(scheduled.conditionAmount);
-
     const shouldExecute = balance.gte(condition);
 
     console.log(
@@ -97,7 +102,7 @@ export class Watcher {
 
     console.log(`Watcher:::watchBalance:::Stopping watcher ${scheduled._id}`);
     scheduled.update({ completed: true, transactionHash }, (err, raw) => {
-      this.stop(scheduled._id);
+      this.stop(scheduled._id.toString());
     });
   }
 

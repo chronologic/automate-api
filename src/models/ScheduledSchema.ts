@@ -45,9 +45,11 @@ export const ScheduledSchema = new Schema({
   },
   conditionAsset: {
     type: String,
-    required: [true, 'Condition asset is required'],
     validate: {
       validator: (conditionAsset: string) => {
+        if (!conditionAsset) { //ETH
+          return true;
+        }
         try {
           ethers.utils.getAddress(conditionAsset);
         } catch (e) {
