@@ -41,7 +41,8 @@ export class ScheduleController {
       }
 
       res.json({
-        id: scheduled._id,
+        id: scheduled._id.toString(),
+        error: scheduled.error,
         signedTransaction: scheduled.signedTransaction,
         conditionAsset: scheduled.conditionAsset,
         conditionAmount: scheduled.conditionAmount,

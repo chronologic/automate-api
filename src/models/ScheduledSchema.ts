@@ -4,7 +4,10 @@ import { ethers } from 'ethers';
 const Schema = mongoose.Schema;
 
 export enum Status {
-  Pending, Cancelled, Completed
+  Pending,
+  Cancelled,
+  Completed,
+  Error
 }
 
 export interface IScheduled extends mongoose.Document {
@@ -13,41 +16,53 @@ export interface IScheduled extends mongoose.Document {
   conditionAmount: string;
   status: Status;
   transactionHash: string;
+  error: string;
 }
 
 export const ScheduledSchema = new Schema({
   signedTransaction: {
     type: String,
-    validate: {
-      validator: async (tx: string) => {
-        try {
-          const parsed = ethers.utils.parseTransaction(tx);
+    validate: [
+      {
+        validator: async (tx: string) => {
+          try {
+            const parsed = ethers.utils.parseTransaction(tx);
 
-          if (!!parsed.from && !!parsed.r) {
+            return !!parsed.from && !!parsed.r;
+          } catch (e) {
+            console.error(e);
+            return false;
+          }
+        },
+        msg: 'Invalid signed transaction: Signature is missing'
+      },
+      {
+        validator: async (tx: string) => {
+          try {
+            const parsed = ethers.utils.parseTransaction(tx);
             const network = ethers.utils.getNetwork(parsed.chainId);
+            
             const nonce = await ethers
               .getDefaultProvider(network)
               .getTransactionCount(parsed.from);
-            
-            console.log(`ScheduledSchema:::signedTransaction:::validate:::Parsed nonce ${parsed.nonce} account nonce ${nonce}`)
-            return nonce === parsed.nonce;
-          }
-        } catch (e) {
-          console.error(e);
-          return false;
-        }
 
-        return false;
+            return parsed.nonce >= nonce;
+          } catch (e) {
+            console.error(e);
+            return false;
+          }
+        },
+        msg: 'Invalid signed transaction: Signed nonce is lower than account nonce'
       },
-      message: (props: any) => 'Invalid signed transaction'
-    },
+    ],
     required: [true, 'Signed Transaction is required']
   },
   conditionAsset: {
     type: String,
     validate: {
       validator: (conditionAsset: string) => {
-        if (!conditionAsset) { //ETH
+        if (!conditionAsset) {
+          //ETH
           return true;
         }
         try {
@@ -58,7 +73,7 @@ export const ScheduledSchema = new Schema({
 
         return true;
       },
-      message: () => 'Invalid address'
+      message: 'Invalid address'
     }
   },
   conditionAmount: {
@@ -74,7 +89,7 @@ export const ScheduledSchema = new Schema({
 
         return true;
       },
-      message: () => 'Invalid amount'
+      message: 'Invalid amount'
     }
   },
   completed: {
@@ -85,6 +100,9 @@ export const ScheduledSchema = new Schema({
   },
   status: {
     type: Status
+  },
+  error: {
+    type: String
   }
 });
 

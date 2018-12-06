@@ -83,6 +83,8 @@ export class Watcher {
     console.log('Watcher:::watchBalance:::Executing transaction...');
 
     let transactionHash = '';
+    let status = Status.Completed;
+    let error = '';
 
     try {
       const response = await provider.sendTransaction(
@@ -98,10 +100,12 @@ export class Watcher {
         `Watcher:::watchBalance:::Transaction sent, but failed with ${e}`
       );
       transactionHash = e.transactionHash;
+      status = Status.Error;
+      error = e.toString();
     }
 
     console.log(`Watcher:::watchBalance:::Stopping watcher ${scheduled._id}`);
-    scheduled.update({ completed: true, transactionHash }, (err, raw) => {
+    scheduled.update({ completed: true, transactionHash, status, error }, (err, raw) => {
       this.stop(scheduled._id.toString());
     });
   }
