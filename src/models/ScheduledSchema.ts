@@ -92,9 +92,6 @@ export const ScheduledSchema = new Schema({
       message: 'Invalid amount'
     }
   },
-  completed: {
-    type: Boolean
-  },
   transactionHash: {
     type: String
   },
