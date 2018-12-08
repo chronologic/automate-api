@@ -36,14 +36,17 @@ export class Watcher {
   }
 
   private static groupBySender(scheduled: IScheduled[]) {
+    const mkKey = (sender: string,chainId: number) => sender+chainId.toString();
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach(s => {
-      if (!groups.has(s.sender)) {
-        groups.set(s.sender, []);
+      const key = mkKey(s.sender, s.chainId);
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
       }
 
-      groups.get(s.sender).push(s);
+      groups.get(key).push(s);
     });
 
     return groups;

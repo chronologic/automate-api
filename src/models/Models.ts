@@ -16,4 +16,5 @@ export interface IScheduled extends Document {
   error: string;
   sender: string;
   nonce: number;
+  chainId: number;
 }

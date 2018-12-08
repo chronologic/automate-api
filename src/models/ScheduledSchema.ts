@@ -85,6 +85,9 @@ const ScheduledSchema = new Schema({
   transactionHash: {
     type: String
   },
+  chainId: {
+    type: Number
+  },
   status: {
     type: Status
   },
@@ -99,6 +102,7 @@ function preSave(next: any) {
 
   this.sender = parsed.from!;
   this.nonce = parsed.nonce;
+  this.chainId = parsed.chainId;
 
   next();
 }
