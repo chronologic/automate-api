@@ -1,7 +1,8 @@
-import Scheduled, { IScheduled, Status } from '../models/ScheduledSchema';
+import Scheduled from '../models/ScheduledSchema';
 import { Request, Response } from 'express';
 import { Watcher } from '../services/watcher';
 import { Key } from '../services/key';
+import { Status, IScheduled } from '../models/Models';
 
 export class ScheduleController {
   public schedule(req: Request, res: Response) {
@@ -10,6 +11,7 @@ export class ScheduleController {
 
     scheduled.save((err, stored: IScheduled) => {
       if (err) {
+        console.log(err);
         const errors = Object.values(err.errors).map((e: any) => e.message);
 
         res.status(422);

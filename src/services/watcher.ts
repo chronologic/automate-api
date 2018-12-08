@@ -1,7 +1,8 @@
 import { CronJob } from 'cron';
 import { ethers } from 'ethers';
-import Scheduled, { IScheduled, Status } from '../models/ScheduledSchema';
+import Scheduled from '../models/ScheduledSchema';
 import { BigNumber } from 'ethers/utils';
+import { IScheduled, Status } from '../models/Models';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 

@@ -1,25 +1,8 @@
-import * as mongoose from 'mongoose';
 import { ethers } from 'ethers';
+import { model, Schema } from 'mongoose';
+import { IScheduled, Status } from './Models';
 
-const Schema = mongoose.Schema;
-
-export enum Status {
-  Pending,
-  Cancelled,
-  Completed,
-  Error
-}
-
-export interface IScheduled extends mongoose.Document {
-  signedTransaction: string;
-  conditionAsset: string;
-  conditionAmount: string;
-  status: Status;
-  transactionHash: string;
-  error: string;
-}
-
-export const ScheduledSchema = new Schema({
+const ScheduledSchema = new Schema({
   signedTransaction: {
     type: String,
     validate: [
@@ -92,6 +75,12 @@ export const ScheduledSchema = new Schema({
       message: 'Invalid amount'
     }
   },
+  sender: {
+    type: String
+  },
+  nonce: {
+    type: Number
+  },
   transactionHash: {
     type: String
   },
@@ -103,5 +92,18 @@ export const ScheduledSchema = new Schema({
   }
 });
 
-const Scheduled = mongoose.model<IScheduled>('Scheduled', ScheduledSchema);
+// do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!
+function preSave(next: any) {
+  const parsed = ethers.utils.parseTransaction(this.signedTransaction);
+  
+  this.sender = parsed.from!;
+  this.nonce = parsed.nonce;
+
+  next();
+}
+
+ScheduledSchema.pre('save', preSave);
+
+const Scheduled = model<IScheduled>('Scheduled', ScheduledSchema);
+
 export default Scheduled;
