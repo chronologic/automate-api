@@ -4,6 +4,7 @@ import Scheduled from '../models/ScheduledSchema';
 import { BigNumber } from 'ethers/utils';
 import { IScheduled, Status } from '../models/Models';
 import { stringify } from 'querystring';
+import { Transaction } from './transaction';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 
@@ -40,7 +41,7 @@ export class Watcher {
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach(s => {
-      const key = mkKey(s.sender, s.chainId);
+      const key = mkKey(s.from, s.chainId);
 
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -54,7 +55,7 @@ export class Watcher {
 
   private static async processTransactions(scheduled: IScheduled[]) {
     const sorted = scheduled.sort((a,b) => a.nonce - b.nonce);
-    
+
     for(const transaction of sorted) {
       let res = false;
       try {
@@ -66,8 +67,17 @@ export class Watcher {
     }
   }
 
+  private static async hasCorrectNonce(transaction: IScheduled) : Promise<boolean> {
+    return (await Transaction.getSenderNextNonce(transaction)) === transaction.nonce;
+  }
+
   private static async processTransaction(scheduled: IScheduled): Promise<boolean> {
     console.log(`Watcher:::watchBalance:::id ${scheduled._id}`);
+
+    const hasCorrectNonce = this.hasCorrectNonce(scheduled);
+    if (!hasCorrectNonce) {
+      return false;
+    }
 
     const transaction = ethers.utils.parseTransaction(
       scheduled.signedTransaction

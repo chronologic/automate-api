@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 import { IScheduled, Status } from './Models';
+import { Transaction } from '../services/transaction';
 
 const ScheduledSchema = new Schema({
   signedTransaction: {
@@ -23,13 +24,9 @@ const ScheduledSchema = new Schema({
         validator: async (tx: string) => {
           try {
             const parsed = ethers.utils.parseTransaction(tx);
-            const network = ethers.utils.getNetwork(parsed.chainId);
+            const senderNonce = await Transaction.getSenderNonce(tx);
 
-            const nonce = await ethers
-              .getDefaultProvider(network)
-              .getTransactionCount(parsed.from);
-
-            return parsed.nonce >= nonce;
+            return parsed.nonce >= senderNonce;
           } catch (e) {
             console.error(e);
             return false;
@@ -76,7 +73,7 @@ const ScheduledSchema = new Schema({
       message: 'Invalid amount'
     }
   },
-  sender: {
+  from: {
     type: String
   },
   nonce: {
@@ -100,7 +97,7 @@ const ScheduledSchema = new Schema({
 function preSave(next: any) {
   const parsed = ethers.utils.parseTransaction(this.signedTransaction);
 
-  this.sender = parsed.from!;
+  this.from = parsed.from!;
   this.nonce = parsed.nonce;
   this.chainId = parsed.chainId;
 

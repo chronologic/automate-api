@@ -14,7 +14,7 @@ export interface IScheduled extends Document {
   status: Status;
   transactionHash: string;
   error: string;
-  sender: string;
+  from: string;
   nonce: number;
   chainId: number;
 }
