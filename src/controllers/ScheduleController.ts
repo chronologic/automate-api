@@ -19,8 +19,6 @@ export class ScheduleController {
       } else {
         console.log(`Schedule:::save=${stored}`);
 
-        Watcher.watch(stored);
-
         res.json({
           id: stored._id,
           key: Key.generate(stored._id)

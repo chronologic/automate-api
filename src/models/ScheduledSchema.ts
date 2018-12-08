@@ -24,7 +24,7 @@ const ScheduledSchema = new Schema({
           try {
             const parsed = ethers.utils.parseTransaction(tx);
             const network = ethers.utils.getNetwork(parsed.chainId);
-            
+
             const nonce = await ethers
               .getDefaultProvider(network)
               .getTransactionCount(parsed.from);
@@ -35,8 +35,9 @@ const ScheduledSchema = new Schema({
             return false;
           }
         },
-        msg: 'Invalid signed transaction: Signed nonce is lower than account nonce'
-      },
+        msg:
+          'Invalid signed transaction: Signed nonce is lower than account nonce'
+      }
     ],
     required: [true, 'Signed Transaction is required']
   },
@@ -95,7 +96,7 @@ const ScheduledSchema = new Schema({
 // do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!
 function preSave(next: any) {
   const parsed = ethers.utils.parseTransaction(this.signedTransaction);
-  
+
   this.sender = parsed.from!;
   this.nonce = parsed.nonce;
 

@@ -3,52 +3,67 @@ import { ethers } from 'ethers';
 import Scheduled from '../models/ScheduledSchema';
 import { BigNumber } from 'ethers/utils';
 import { IScheduled, Status } from '../models/Models';
+import { stringify } from 'querystring';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 
 export class Watcher {
-  public static jobs: Map<string, CronJob> = new Map<string, CronJob>();
-
-  public static init() {
+  public static async process() {
     console.log(`Loading and starting watchers...`);
-    Scheduled.where('status', Status.Pending).exec(
-      (err, scheduled: IScheduled[]) => {
-        scheduled.map(Watcher.watch);
-      }
-    );
+
+    const scheduled: IScheduled[] = await Scheduled.where(
+      'status',
+      Status.Pending
+    ).exec();
+
+    const groups = this.groupBySender(scheduled);
+    groups.forEach((transactions) => this.processTransactions(transactions));
   }
 
-  public static watch(scheduled: IScheduled) {
-    console.log(`Watcher:::watch:::Starting watcher ${scheduled._id}`);
-
-    const job = new CronJob(
-      '* * * * *',
-      () => Watcher.watchBalance(scheduled),
-      null,
-      true
-    );
-
-    Watcher.jobs.set(scheduled._id.toString(), job);
+  public static init() {
+    this.process();
+    new CronJob('* * * * *', () => Watcher.process(), null, true);
   }
 
   public static async cancel(id: string) {
     console.log(`Watcher:::cancel:::Cancelling ${id}`);
 
-    return new Promise<Status>((resolve, reject) => {
-      Watcher.stop(id);
+    await Scheduled.updateOne({ _id: id }, { status: Status.Cancelled }).exec();
 
-      Scheduled.updateOne(
-        { _id: id },
-        { status: Status.Cancelled },
-        (err, raw) => {
-          console.log(`Watcher:::cancel:::Cancelled ${id}`);
-          resolve(Status.Cancelled);
-        }
-      );
-    });
+    console.log(`Watcher:::cancel:::Cancelled ${id}`);
+
+    return Status.Cancelled;
   }
 
-  public static async watchBalance(scheduled: IScheduled) {
+  private static groupBySender(scheduled: IScheduled[]) {
+    const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
+
+    scheduled.forEach(s => {
+      if (!groups.has(s.sender)) {
+        groups.set(s.sender, []);
+      }
+
+      groups.get(s.sender).push(s);
+    });
+
+    return groups;
+  }
+
+  private static async processTransactions(scheduled: IScheduled[]) {
+    const sorted = scheduled.sort((a,b) => a.nonce - b.nonce);
+    
+    for(const transaction of sorted) {
+      let res = false;
+      try {
+        res = await this.processTransaction(transaction);
+      } catch(e) {
+        console.log(`Processing ${transaction._id} failed with ${e}`);
+      }
+      if (!res) break;
+    }
+  }
+
+  private static async processTransaction(scheduled: IScheduled): Promise<boolean> {
     console.log(`Watcher:::watchBalance:::id ${scheduled._id}`);
 
     const transaction = ethers.utils.parseTransaction(
@@ -79,7 +94,9 @@ export class Watcher {
       `Watcher:::watchBalance:::Current balance is ${balance.toString()} and condition is ${condition.toString()} res ${shouldExecute}`
     );
 
-    if (!shouldExecute) return;
+    if (!shouldExecute) {
+      return false;
+    }
 
     console.log('Watcher:::watchBalance:::Executing transaction...');
 
@@ -105,19 +122,11 @@ export class Watcher {
       error = e.toString();
     }
 
-    console.log(`Watcher:::watchBalance:::Stopping watcher ${scheduled._id}`);
-    scheduled.update({ completed: true, transactionHash, status, error }, (err, raw) => {
-      this.stop(scheduled._id.toString());
-    });
-  }
+    console.log(`Watcher:::watchBalance:::Completed ${scheduled._id}`);
+    scheduled
+      .update({ transactionHash, status, error })
+      .exec();
 
-  private static stop(id: string) {
-    const job = Watcher.jobs.get(id);
-    if (job) {
-      job.stop();
-      Watcher.jobs.delete(id);
-    } else {
-      throw new Error('Missing watcher?');
-    }
+    return true;
   }
 }
