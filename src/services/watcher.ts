@@ -3,7 +3,6 @@ import { ethers } from 'ethers';
 import Scheduled from '../models/ScheduledSchema';
 import { BigNumber } from 'ethers/utils';
 import { IScheduled, Status } from '../models/Models';
-import { stringify } from 'querystring';
 import { Transaction } from './transaction';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -17,7 +16,7 @@ export class Watcher {
       Status.Pending
     ).exec();
 
-    const groups = this.groupBySender(scheduled);
+    const groups = this.groupBySenderAndChain(scheduled);
     groups.forEach((transactions) => this.processTransactions(transactions));
   }
 
@@ -36,7 +35,7 @@ export class Watcher {
     return Status.Cancelled;
   }
 
-  private static groupBySender(scheduled: IScheduled[]) {
+  private static groupBySenderAndChain(scheduled: IScheduled[]) {
     const mkKey = (sender: string,chainId: number) => sender+chainId.toString();
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 

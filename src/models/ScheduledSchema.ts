@@ -24,7 +24,11 @@ const ScheduledSchema = new Schema({
         validator: async (tx: string) => {
           try {
             const parsed = ethers.utils.parseTransaction(tx);
-            const senderNonce = await Transaction.getSenderNonce(tx);
+            const sender = {
+              chainId: parsed.chainId,
+              from: parsed.from!
+            }
+            const senderNonce = await Transaction.getSenderNextNonce(sender);
 
             return parsed.nonce >= senderNonce;
           } catch (e) {
