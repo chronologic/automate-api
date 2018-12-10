@@ -5,29 +5,25 @@ import { Key } from '../services/key';
 import { Status, IScheduled } from '../models/Models';
 
 export class ScheduleController {
-  public schedule(req: Request, res: Response) {
+  public async schedule(req: Request, res: Response) {
     const scheduled = new Scheduled(req.body);
     scheduled.status = Status.Pending;
 
-    scheduled.save((err, stored: IScheduled) => {
-      if (err) {
-        console.log(err);
-        const errors = Object.values(err.errors).map((e: any) => e.message);
+    try {
+      const stored = await scheduled.save();
+      res.json({
+        id: stored._id,
+        key: Key.generate(stored._id)
+      });
+    } catch (e) {
+      const errors = Object.values(e.errors).map((e: any) => e.message);
 
-        res.status(422);
-        res.json({ errors });
-      } else {
-        console.log(`Schedule:::save=${stored}`);
-
-        res.json({
-          id: stored._id,
-          key: Key.generate(stored._id)
-        });
-      }
-    });
+      res.status(422);
+      res.json({ errors });
+    }
   }
 
-  public getScheduled(req: Request, res: Response) {
+  public async getScheduled(req: Request, res: Response) {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
@@ -35,20 +31,15 @@ export class ScheduleController {
       return;
     }
 
-    Scheduled.findById(id, (err, scheduled) => {
-      if (err) {
-        res.send(err);
-      }
-
-      res.json({
-        id: scheduled._id.toString(),
-        error: scheduled.error,
-        signedTransaction: scheduled.signedTransaction,
-        conditionAsset: scheduled.conditionAsset,
-        conditionAmount: scheduled.conditionAmount,
-        status: scheduled.status,
-        transactionHash: scheduled.transactionHash
-      });
+    const scheduled = await Scheduled.findById(id).exec();
+    res.json({
+      id: scheduled._id.toString(),
+      error: scheduled.error,
+      signedTransaction: scheduled.signedTransaction,
+      conditionAsset: scheduled.conditionAsset,
+      conditionAmount: scheduled.conditionAmount,
+      status: scheduled.status,
+      transactionHash: scheduled.transactionHash
     });
   }
 

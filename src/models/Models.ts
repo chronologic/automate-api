@@ -18,3 +18,9 @@ export interface IScheduled extends Document {
   nonce: number;
   chainId: number;
 }
+
+export interface IExecuteStatus {
+  status: Status;
+  transactionHash?: string;
+  error?: string;
+}
