@@ -19,14 +19,14 @@ export class Transaction {
       scheduled.signedTransaction
     );
 
-    logger.info(
-      `${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${
-        scheduled.conditionAmount
-      }`
-    );
-
     const network = ethers.utils.getNetwork(transaction.chainId);
     const provider = ethers.getDefaultProvider(network);
+
+    const networkTransaction = await provider.getTransaction(transaction.hash!);
+    if (networkTransaction && networkTransaction.hash) {
+      logger.info(`${scheduled._id} Already posted ${networkTransaction.hash}`);
+      return { status: Status.Pending };
+    }
 
     if (!this.isConditionMet(scheduled, transaction, provider)) {
       logger.info(`${scheduled._id} Condition not met`);
@@ -38,6 +38,7 @@ export class Transaction {
         scheduled.signedTransaction
       );
       logger.info(`${scheduled._id} Sent ${response.hash}`);
+
       const receipt = await response.wait();
       logger.info(`${scheduled._id} Confirmed ${receipt.transactionHash}`);
 
@@ -66,6 +67,12 @@ export class Transaction {
     transaction: ethers.utils.Transaction,
     provider: ethers.providers.BaseProvider
   ) {
+    logger.info(
+      `${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${
+        scheduled.conditionAmount
+      }`
+    );
+
     let currentConditionAmount;
 
     try {

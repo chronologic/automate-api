@@ -16,21 +16,13 @@ export class Processor {
     groups.forEach((transactions, key) => this.dispatch(transactions, key));
   }
 
-  private static inProgress: Set<string> = new Set<string>();
-
   private static async loadTransaction(): Promise<IScheduled[]> {
     return Scheduled.where('status', Status.Pending).exec();
   }
 
   private static async dispatch(transactions: IScheduled[], key: string) {
-    if (!this.inProgress.has(key)) {
-      this.inProgress.add(key);
-      logger.info(`Starting with group ${key}`);
-      await this.processTransactions(transactions);
-      this.inProgress.delete(key);
-    } else {
-      logger.info(`Group ${key} still in progress`);
-    }
+    logger.info(`Starting with group ${key}`);
+    await this.processTransactions(transactions);
   }
 
   private static groupBySenderAndChain(scheduled: IScheduled[]) {
