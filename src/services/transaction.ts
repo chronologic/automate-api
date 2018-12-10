@@ -9,9 +9,9 @@ export class Transaction {
   public static async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
     logger.info(`${scheduled._id} Executing...`);
 
-    const hasCorrectNonce = this.hasCorrectNonce(scheduled);
+    const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
     if (!hasCorrectNonce) {
-      logger.info(`${scheduled._id} Incorrect nonce`);
+      logger.info(`${scheduled._id} Nonce does not match`);
       return { status: Status.Pending };
     }
 
@@ -28,7 +28,7 @@ export class Transaction {
       return { status: Status.Pending };
     }
 
-    if (!this.isConditionMet(scheduled, transaction, provider)) {
+    if (!(await this.isConditionMet(scheduled, transaction, provider))) {
       logger.info(`${scheduled._id} Condition not met`);
       return { status: Status.Pending };
     }
@@ -47,7 +47,7 @@ export class Transaction {
         transactionHash: receipt.transactionHash
       };
     } catch (e) {
-      logger.error(`${scheduled._id} Error ${e}`);
+      logger.error(`${scheduled._id} ${e}`);
       return {
         status: Status.Error,
         transactionHash: e.transactionHash,
@@ -99,8 +99,14 @@ export class Transaction {
   private static async hasCorrectNonce(
     transaction: IScheduled
   ): Promise<boolean> {
-    return (
-      (await Transaction.getSenderNextNonce(transaction)) === transaction.nonce
+    const senderNonce = await Transaction.getSenderNextNonce(transaction);
+
+    logger.info(
+      `${transaction._id} Sender nonce ${senderNonce} transaction nonce ${
+        transaction.nonce
+      }`
     );
+
+    return senderNonce === transaction.nonce;
   }
 }
