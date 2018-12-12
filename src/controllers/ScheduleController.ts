@@ -1,16 +1,18 @@
-import Scheduled from '../models/ScheduledSchema';
 import { Request, Response } from 'express';
-import { Watcher } from '../services/watcher';
+import { IScheduleService } from 'services/schedule';
+
 import { Key } from '../services/key';
-import { Status, IScheduled } from '../models/Models';
 
 export class ScheduleController {
-  public async schedule(req: Request, res: Response) {
-    const scheduled = new Scheduled(req.body);
-    scheduled.status = Status.Pending;
+  private _scheduleService: IScheduleService;
 
+  constructor(scheduleService: IScheduleService) {
+    this._scheduleService = scheduleService;
+  }
+
+  public async schedule(req: Request, res: Response) {
     try {
-      const stored = await scheduled.save();
+      const stored = await this._scheduleService.schedule(req.body);
       res.json({
         id: stored._id,
         key: Key.generate(stored._id)
@@ -31,7 +33,8 @@ export class ScheduleController {
       return;
     }
 
-    const scheduled = await Scheduled.findById(id).exec();
+    const scheduled = await this._scheduleService.find(id);
+
     res.json({
       id: scheduled._id.toString(),
       error: scheduled.error,
@@ -51,11 +54,11 @@ export class ScheduleController {
       return;
     }
 
-    const status = await Watcher.cancel(id);
+    const status = await this._scheduleService.cancel(id);
     res.json({ status });
   }
 
-  public static auth(id: string, key: string, res: Response) {
+  private static auth(id: string, key: string, res: Response) {
     if (!Key.test(id, key)) {
       res.status(401);
       res.json({ errors: ['Wrong _id and key'] });

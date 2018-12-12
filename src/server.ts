@@ -2,7 +2,7 @@ import app from './app';
 import * as http from 'http';
 import logger from './services/logger';
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 http.createServer(app).listen(PORT, () => {
   logger.info('Express server listening on port ' + PORT);

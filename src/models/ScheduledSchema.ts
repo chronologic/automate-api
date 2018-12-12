@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 import { IScheduled, Status } from './Models';
-import { Transaction } from '../services/transaction';
+import { TransactionExecutor } from '../services/transaction';
 
 const ScheduledSchema = new Schema({
   signedTransaction: {
@@ -27,8 +27,10 @@ const ScheduledSchema = new Schema({
             const sender = {
               chainId: parsed.chainId,
               from: parsed.from!
-            }
-            const senderNonce = await Transaction.getSenderNextNonce(sender);
+            };
+            const senderNonce = await TransactionExecutor.getSenderNextNonce(
+              sender
+            );
 
             return parsed.nonce >= senderNonce;
           } catch (e) {

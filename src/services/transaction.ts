@@ -5,8 +5,11 @@ import logger from './logger';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 
-export class Transaction {
-  public static async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
+export interface ITransactionExecutor {
+  execute(scheduled: IScheduled): Promise<IExecuteStatus>;
+}
+export class TransactionExecutor implements ITransactionExecutor {
+  public async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
     logger.info(`${scheduled._id} Executing...`);
 
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
@@ -62,7 +65,7 @@ export class Transaction {
     return ethers.getDefaultProvider(network).getTransactionCount(from);
   }
 
-  private static async isConditionMet(
+  private async isConditionMet(
     scheduled: IScheduled,
     transaction: ethers.utils.Transaction,
     provider: ethers.providers.BaseProvider
@@ -96,10 +99,10 @@ export class Transaction {
     return shouldExecute;
   }
 
-  private static async hasCorrectNonce(
-    transaction: IScheduled
-  ): Promise<boolean> {
-    const senderNonce = await Transaction.getSenderNextNonce(transaction);
+  private async hasCorrectNonce(transaction: IScheduled): Promise<boolean> {
+    const senderNonce = await TransactionExecutor.getSenderNextNonce(
+      transaction
+    );
 
     logger.info(
       `${transaction._id} Sender nonce ${senderNonce} transaction nonce ${

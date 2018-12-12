@@ -24,3 +24,9 @@ export interface IExecuteStatus {
   transactionHash?: string;
   error?: string;
 }
+
+export interface IScheduleRequest {
+  conditionAmount: string;
+  conditionAsset: string;
+  signedTransaction: string;
+}
