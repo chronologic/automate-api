@@ -1,18 +1,18 @@
 import { Request, Response } from 'express';
-import { IScheduleService } from 'services/schedule';
+import { IScheduleService } from '../services/schedule';
 
 import { Key } from '../services/key';
 
 export class ScheduleController {
-  private _scheduleService: IScheduleService;
+  private scheduleService: IScheduleService;
 
   constructor(scheduleService: IScheduleService) {
-    this._scheduleService = scheduleService;
+    this.scheduleService = scheduleService;
   }
 
   public async schedule(req: Request, res: Response) {
     try {
-      const stored = await this._scheduleService.schedule(req.body);
+      const stored = await this.scheduleService.schedule(req.body);
       res.json({
         id: stored._id,
         key: Key.generate(stored._id)
@@ -29,18 +29,18 @@ export class ScheduleController {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
-    if (!ScheduleController.auth(id, key, res)) {
+    if (!this.auth(id, key, res)) {
       return;
     }
 
-    const scheduled = await this._scheduleService.find(id);
+    const scheduled = await this.scheduleService.find(id);
 
     res.json({
-      id: scheduled._id.toString(),
-      error: scheduled.error,
-      signedTransaction: scheduled.signedTransaction,
-      conditionAsset: scheduled.conditionAsset,
       conditionAmount: scheduled.conditionAmount,
+      conditionAsset: scheduled.conditionAsset,
+      error: scheduled.error,
+      id: scheduled._id.toString(),
+      signedTransaction: scheduled.signedTransaction,
       status: scheduled.status,
       transactionHash: scheduled.transactionHash
     });
@@ -50,15 +50,15 @@ export class ScheduleController {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
-    if (!ScheduleController.auth(id, key, res)) {
+    if (!this.auth(id, key, res)) {
       return;
     }
 
-    const status = await this._scheduleService.cancel(id);
+    const status = await this.scheduleService.cancel(id);
     res.json({ status });
   }
 
-  private static auth(id: string, key: string, res: Response) {
+  private auth(id: string, key: string, res: Response) {
     if (!Key.test(id, key)) {
       res.status(401);
       res.json({ errors: ['Wrong _id and key'] });

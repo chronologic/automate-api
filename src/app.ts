@@ -1,9 +1,9 @@
 import * as bodyParser from 'body-parser';
 import * as cors from 'cors';
 import * as express from 'express';
+import * as expressWinston from 'express-winston';
 import * as mongoose from 'mongoose';
 import * as winston from 'winston';
-import * as expressWinston from 'express-winston';
 
 import { Routes } from './routes/routes';
 import { Watcher } from './services/watcher';
@@ -25,17 +25,16 @@ class App {
 
   private config(): void {
     this.app.use(bodyParser.json());
-    //this.app.use(bodyParser.urlencoded({ extended: true }));
     // serving static files
     this.app.use(express.static('public'));
     this.app.use(cors());
     this.app.use(
       expressWinston.logger({
-        transports: [new winston.transports.Console()],
         format: winston.format.combine(
           winston.format.colorize(),
           winston.format.json()
-        )
+        ),
+        transports: [new winston.transports.Console()]
       })
     );
   }

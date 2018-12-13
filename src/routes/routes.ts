@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { ScheduleController } from '../controllers/ScheduleController';
+// tslint:disable-next-line:no-implicit-dependencies
 import { IRouter } from 'express-serve-static-core';
+
+import { ScheduleController } from '../controllers/ScheduleController';
 import { ScheduleService } from '../services/schedule';
 
 export class Routes {

@@ -1,8 +1,6 @@
 import { CronJob } from 'cron';
-import Scheduled from '../models/ScheduledSchema';
-import { Status } from '../models/Models';
+
 import { Processor } from './processor';
-import logger from './logger';
 import { ScheduleService } from './schedule';
 import { TransactionExecutor } from './transaction';
 
@@ -12,6 +10,7 @@ export class Watcher {
       new ScheduleService(),
       new TransactionExecutor()
     );
+    // tslint:disable-next-line:no-unused-expression
     new CronJob('* * * * *', () => processor.process(), null, true);
   }
 }

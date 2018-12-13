@@ -1,24 +1,24 @@
 import { IScheduled, Status } from '../models/Models';
-import { ITransactionExecutor } from './transaction';
 import logger from './logger';
 import { IScheduleService } from './schedule';
+import { ITransactionExecutor } from './transaction';
 
 export class Processor {
-  private _scheduleService: IScheduleService;
-  private _transactionExecutor: ITransactionExecutor;
+  private scheduleService: IScheduleService;
+  private transactionExecutor: ITransactionExecutor;
 
   constructor(
     scheduleService: IScheduleService,
     transactionExecutor: ITransactionExecutor
   ) {
-    this._scheduleService = scheduleService;
-    this._transactionExecutor = transactionExecutor;
+    this.scheduleService = scheduleService;
+    this.transactionExecutor = transactionExecutor;
   }
 
   public async process() {
     logger.info('Starting');
 
-    const scheduled = await this._scheduleService.getPending();
+    const scheduled = await this.scheduleService.getPending();
     const groups = this.groupBySenderAndChain(scheduled);
 
     logger.info(
@@ -60,7 +60,9 @@ export class Processor {
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
       }
-      if (!res) break;
+      if (!res) {
+        break;
+      }
     }
   }
 
@@ -69,8 +71,8 @@ export class Processor {
       transactionHash,
       status,
       error
-    } = await this._transactionExecutor.execute(scheduled);
-    if (status != Status.Pending) {
+    } = await this.transactionExecutor.execute(scheduled);
+    if (status !== Status.Pending) {
       logger.info(
         `Transaction ${scheduled._id} completed with status ${Status[status]}`
       );

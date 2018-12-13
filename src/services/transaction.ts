@@ -1,6 +1,8 @@
 import { ethers } from 'ethers';
-import { IScheduled, Status, IExecuteStatus } from '../models/Models';
+// tslint:disable-next-line:no-submodule-imports
 import { BigNumber } from 'ethers/utils';
+
+import { IExecuteStatus, IScheduled, Status } from '../models/Models';
 import logger from './logger';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -9,6 +11,12 @@ export interface ITransactionExecutor {
   execute(scheduled: IScheduled): Promise<IExecuteStatus>;
 }
 export class TransactionExecutor implements ITransactionExecutor {
+  public static async getSenderNextNonce({ chainId, from }): Promise<number> {
+    const network = ethers.utils.getNetwork(chainId);
+
+    return ethers.getDefaultProvider(network).getTransactionCount(from);
+  }
+
   public async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
     logger.info(`${scheduled._id} Executing...`);
 
@@ -57,12 +65,6 @@ export class TransactionExecutor implements ITransactionExecutor {
         error: e.toString()
       };
     }
-  }
-
-  public static async getSenderNextNonce({ chainId, from }): Promise<number> {
-    const network = ethers.utils.getNetwork(chainId);
-
-    return ethers.getDefaultProvider(network).getTransactionCount(from);
   }
 
   private async isConditionMet(
