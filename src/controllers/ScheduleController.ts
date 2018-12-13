@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { IScheduleService } from '../services/schedule';
 
+import { Status } from '../models/Models';
 import { Key } from '../services/key';
+import { IScheduleService } from '../services/schedule';
 
 export class ScheduleController {
   private scheduleService: IScheduleService;
@@ -54,8 +55,8 @@ export class ScheduleController {
       return;
     }
 
-    const status = await this.scheduleService.cancel(id);
-    res.json({ status });
+    await this.scheduleService.cancel(id);
+    res.json({ status: Status.Cancelled });
   }
 
   private auth(id: string, key: string, res: Response) {

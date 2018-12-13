@@ -2,8 +2,8 @@ import Scheduled from '../models/ScheduledSchema';
 import { Status, IScheduleRequest, IScheduled } from '../models/Models';
 
 export interface IScheduleService {
-  schedule(request: IScheduleRequest);
-  find(id: string);
+  schedule(request: IScheduleRequest): Promise<IScheduled>;
+  find(id: string): Promise<IScheduled>;
   cancel(id: string);
   getPending(): Promise<IScheduled[]>;
 }
