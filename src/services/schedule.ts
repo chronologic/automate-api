@@ -9,11 +9,20 @@ export interface IScheduleService {
 }
 
 export class ScheduleService implements IScheduleService {
-  public schedule(request: IScheduleRequest) {
-    const scheduled = new Scheduled(request);
-    scheduled.status = Status.Pending;
+  public async schedule(request: IScheduleRequest) {
+    let transaction = await this.findBySignedTransaction(
+      request.signedTransaction
+    );
+    if (transaction) {
+      transaction.conditionAmount = request.conditionAmount;
+      transaction.conditionAsset = request.conditionAsset;
+      transaction.signedTransaction = request.signedTransaction;
+    } else {
+      transaction = new Scheduled(request);
+    }
+    transaction.status = Status.Pending;
 
-    return scheduled.save();
+    return transaction.save();
   }
 
   public find(id: string) {
@@ -29,5 +38,9 @@ export class ScheduleService implements IScheduleService {
 
   public getPending(): Promise<IScheduled[]> {
     return Scheduled.where('status', Status.Pending).exec();
+  }
+
+  private findBySignedTransaction(signedTransaction: string) {
+    return Scheduled.findOne({ signedTransaction }).exec();
   }
 }
