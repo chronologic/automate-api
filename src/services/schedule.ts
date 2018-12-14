@@ -1,5 +1,5 @@
+import { IScheduled, IScheduleRequest, Status } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
-import { Status, IScheduleRequest, IScheduled } from '../models/Models';
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
