@@ -4,7 +4,8 @@ export enum Status {
   Pending,
   Cancelled,
   Completed,
-  Error
+  Error,
+  StaleNonce
 }
 
 export interface IScheduled extends Document {

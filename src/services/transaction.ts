@@ -20,8 +20,20 @@ export class TransactionExecutor implements ITransactionExecutor {
   public async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
     logger.info(`${scheduled._id} Executing...`);
 
-    const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
-    if (!hasCorrectNonce) {
+    const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
+
+    logger.info(
+      `${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${
+        scheduled.nonce
+      }`
+    );
+
+    if (senderNonce > scheduled.nonce) {
+      logger.info(`${scheduled._id} Transaction nonce already spent`);
+      return { status: Status.StaleNonce };
+    }
+
+    if (senderNonce !== scheduled.nonce) {
       logger.info(`${scheduled._id} Nonce does not match`);
       return { status: Status.Pending };
     }
@@ -99,19 +111,5 @@ export class TransactionExecutor implements ITransactionExecutor {
     );
 
     return shouldExecute;
-  }
-
-  private async hasCorrectNonce(transaction: IScheduled): Promise<boolean> {
-    const senderNonce = await TransactionExecutor.getSenderNextNonce(
-      transaction
-    );
-
-    logger.info(
-      `${transaction._id} Sender nonce ${senderNonce} transaction nonce ${
-        transaction.nonce
-      }`
-    );
-
-    return senderNonce === transaction.nonce;
   }
 }
