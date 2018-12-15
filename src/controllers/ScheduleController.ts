@@ -1,16 +1,19 @@
-import Scheduled from '../models/ScheduledSchema';
 import { Request, Response } from 'express';
-import { Watcher } from '../services/watcher';
+
+import { Status } from '../models/Models';
 import { Key } from '../services/key';
-import { Status, IScheduled } from '../models/Models';
+import { IScheduleService } from '../services/schedule';
 
 export class ScheduleController {
-  public async schedule(req: Request, res: Response) {
-    const scheduled = new Scheduled(req.body);
-    scheduled.status = Status.Pending;
+  private scheduleService: IScheduleService;
 
+  constructor(scheduleService: IScheduleService) {
+    this.scheduleService = scheduleService;
+  }
+
+  public async schedule(req: Request, res: Response) {
     try {
-      const stored = await scheduled.save();
+      const stored = await this.scheduleService.schedule(req.body);
       res.json({
         id: stored._id,
         key: Key.generate(stored._id)
@@ -27,17 +30,18 @@ export class ScheduleController {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
-    if (!ScheduleController.auth(id, key, res)) {
+    if (!this.auth(id, key, res)) {
       return;
     }
 
-    const scheduled = await Scheduled.findById(id).exec();
+    const scheduled = await this.scheduleService.find(id);
+
     res.json({
-      id: scheduled._id.toString(),
-      error: scheduled.error,
-      signedTransaction: scheduled.signedTransaction,
-      conditionAsset: scheduled.conditionAsset,
       conditionAmount: scheduled.conditionAmount,
+      conditionAsset: scheduled.conditionAsset,
+      error: scheduled.error,
+      id: scheduled._id.toString(),
+      signedTransaction: scheduled.signedTransaction,
       status: scheduled.status,
       transactionHash: scheduled.transactionHash
     });
@@ -47,15 +51,15 @@ export class ScheduleController {
     const id: string = req.query.id;
     const key: string = req.query.key;
 
-    if (!ScheduleController.auth(id, key, res)) {
+    if (!this.auth(id, key, res)) {
       return;
     }
 
-    const status = await Watcher.cancel(id);
-    res.json({ status });
+    await this.scheduleService.cancel(id);
+    res.json({ status: Status.Cancelled });
   }
 
-  public static auth(id: string, key: string, res: Response) {
+  private auth(id: string, key: string, res: Response) {
     if (!Key.test(id, key)) {
       res.status(401);
       res.json({ errors: ['Wrong _id and key'] });

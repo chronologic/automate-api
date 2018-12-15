@@ -4,7 +4,8 @@ export enum Status {
   Pending,
   Cancelled,
   Completed,
-  Error
+  Error,
+  StaleNonce
 }
 
 export interface IScheduled extends Document {
@@ -23,4 +24,10 @@ export interface IExecuteStatus {
   status: Status;
   transactionHash?: string;
   error?: string;
+}
+
+export interface IScheduleRequest {
+  conditionAmount: string;
+  conditionAsset: string;
+  signedTransaction: string;
 }

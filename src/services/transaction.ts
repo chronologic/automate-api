@@ -1,16 +1,39 @@
 import { ethers } from 'ethers';
-import { IScheduled, Status, IExecuteStatus } from '../models/Models';
+// tslint:disable-next-line:no-submodule-imports
 import { BigNumber } from 'ethers/utils';
+
+import { IExecuteStatus, IScheduled, Status } from '../models/Models';
 import logger from './logger';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 
-export class Transaction {
-  public static async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
+export interface ITransactionExecutor {
+  execute(scheduled: IScheduled): Promise<IExecuteStatus>;
+}
+export class TransactionExecutor implements ITransactionExecutor {
+  public static async getSenderNextNonce({ chainId, from }): Promise<number> {
+    const network = ethers.utils.getNetwork(chainId);
+
+    return ethers.getDefaultProvider(network).getTransactionCount(from);
+  }
+
+  public async execute(scheduled: IScheduled): Promise<IExecuteStatus> {
     logger.info(`${scheduled._id} Executing...`);
 
-    const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
-    if (!hasCorrectNonce) {
+    const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
+
+    logger.info(
+      `${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${
+        scheduled.nonce
+      }`
+    );
+
+    if (senderNonce > scheduled.nonce) {
+      logger.info(`${scheduled._id} Transaction nonce already spent`);
+      return { status: Status.StaleNonce };
+    }
+
+    if (senderNonce !== scheduled.nonce) {
       logger.info(`${scheduled._id} Nonce does not match`);
       return { status: Status.Pending };
     }
@@ -56,13 +79,7 @@ export class Transaction {
     }
   }
 
-  public static async getSenderNextNonce({ chainId, from }): Promise<number> {
-    const network = ethers.utils.getNetwork(chainId);
-
-    return ethers.getDefaultProvider(network).getTransactionCount(from);
-  }
-
-  private static async isConditionMet(
+  private async isConditionMet(
     scheduled: IScheduled,
     transaction: ethers.utils.Transaction,
     provider: ethers.providers.BaseProvider
@@ -94,19 +111,5 @@ export class Transaction {
     );
 
     return shouldExecute;
-  }
-
-  private static async hasCorrectNonce(
-    transaction: IScheduled
-  ): Promise<boolean> {
-    const senderNonce = await Transaction.getSenderNextNonce(transaction);
-
-    logger.info(
-      `${transaction._id} Sender nonce ${senderNonce} transaction nonce ${
-        transaction.nonce
-      }`
-    );
-
-    return senderNonce === transaction.nonce;
   }
 }

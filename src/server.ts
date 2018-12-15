@@ -1,5 +1,6 @@
-import app from './app';
 import * as http from 'http';
+
+import app from './app';
 import logger from './services/logger';
 
 const PORT = process.env.PORT || 3001;

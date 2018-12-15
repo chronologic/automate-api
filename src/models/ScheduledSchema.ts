@@ -1,53 +1,57 @@
 import { ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
+
+import logger from '../services/logger';
+import { TransactionExecutor } from '../services/transaction';
 import { IScheduled, Status } from './Models';
-import { Transaction } from '../services/transaction';
 
 const ScheduledSchema = new Schema({
   signedTransaction: {
+    required: [true, 'Signed Transaction is required'],
     type: String,
     validate: [
       {
+        msg: 'Invalid signed transaction: Signature is missing',
         validator: async (tx: string) => {
           try {
             const parsed = ethers.utils.parseTransaction(tx);
 
             return !!parsed.from && !!parsed.r;
           } catch (e) {
-            console.error(e);
+            logger.error(e);
             return false;
           }
-        },
-        msg: 'Invalid signed transaction: Signature is missing'
+        }
       },
       {
+        msg:
+          'Invalid signed transaction: Signed nonce is lower than account nonce',
         validator: async (tx: string) => {
           try {
             const parsed = ethers.utils.parseTransaction(tx);
             const sender = {
               chainId: parsed.chainId,
               from: parsed.from!
-            }
-            const senderNonce = await Transaction.getSenderNextNonce(sender);
+            };
+            const senderNonce = await TransactionExecutor.getSenderNextNonce(
+              sender
+            );
 
             return parsed.nonce >= senderNonce;
           } catch (e) {
-            console.error(e);
+            logger.error(e);
             return false;
           }
-        },
-        msg:
-          'Invalid signed transaction: Signed nonce is lower than account nonce'
+        }
       }
-    ],
-    required: [true, 'Signed Transaction is required']
+    ]
   },
   conditionAsset: {
     type: String,
     validate: {
+      msg: 'Invalid address',
       validator: (conditionAsset: string) => {
         if (!conditionAsset) {
-          //ETH
           return true;
         }
         try {
@@ -57,24 +61,24 @@ const ScheduledSchema = new Schema({
         }
 
         return true;
-      },
-      message: 'Invalid address'
+      }
     }
   },
   conditionAmount: {
-    type: String,
     required: [true, 'Condition amount is required'],
+    type: String,
     validate: {
+      msg: 'Invalid amount',
       validator: (conditionAmount: string) => {
         try {
+          // tslint:disable-next-line:no-unused-expression
           new ethers.utils.BigNumber(conditionAmount);
         } catch (e) {
           return false;
         }
 
         return true;
-      },
-      message: 'Invalid amount'
+      }
     }
   },
   from: {
