@@ -1,3 +1,5 @@
+import { ethers } from 'ethers';
+
 import { IScheduled, IScheduleRequest, Status } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
 
@@ -10,6 +12,8 @@ export interface IScheduleService {
 
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest) {
+    await new Scheduled(request).validate();
+
     let transaction = await this.findBySignedTransaction(
       request.signedTransaction
     );
@@ -41,6 +45,9 @@ export class ScheduleService implements IScheduleService {
   }
 
   private findBySignedTransaction(signedTransaction: string) {
-    return Scheduled.findOne({ signedTransaction }).exec();
+    const { from, nonce, chainId } = ethers.utils.parseTransaction(
+      signedTransaction
+    );
+    return Scheduled.findOne({ from, nonce, chainId }).exec();
   }
 }
