@@ -15,8 +15,9 @@ export class Processor {
     this.transactionExecutor = transactionExecutor;
   }
 
-  public async process() {
+  public async process(blockNum: number) {
     logger.info('Starting');
+    logger.info(`Triggered by ${blockNum}`);
 
     const scheduled = await this.scheduleService.getPending();
     const groups = this.groupBySenderAndChain(scheduled);
