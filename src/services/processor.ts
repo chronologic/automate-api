@@ -16,7 +16,6 @@ export class Processor {
   }
 
   public async process(blockNum: number) {
-    logger.info('Starting');
     logger.info(`Triggered by ${blockNum}`);
 
     const scheduled = await this.scheduleService.getPending();
@@ -25,17 +24,23 @@ export class Processor {
     logger.info(
       `Found ${scheduled.length} pending transactions in ${groups.size} groups`
     );
-    groups.forEach((transactions, key) => this.dispatch(transactions, key));
+    groups.forEach((transactions, key) =>
+      this.dispatch(transactions, key, blockNum)
+    );
   }
 
-  private async dispatch(transactions: IScheduled[], key: string) {
-    logger.info(`Starting with group ${key}`);
-    await this.processTransactions(transactions);
+  private async dispatch(
+    transactions: IScheduled[],
+    key: string,
+    blockNum: number
+  ) {
+    logger.info(`Group ${key}`);
+    await this.processTransactions(transactions, blockNum);
   }
 
   private groupBySenderAndChain(scheduled: IScheduled[]) {
     const mkKey = (sender: string, chainId: number) =>
-      sender + chainId.toString();
+      `${sender}-${chainId.toString()}`;
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach(s => {
@@ -51,13 +56,13 @@ export class Processor {
     return groups;
   }
 
-  private async processTransactions(scheduled: IScheduled[]) {
+  private async processTransactions(scheduled: IScheduled[], blockNum: number) {
     const sorted = scheduled.sort((a, b) => a.nonce - b.nonce);
 
     for (const transaction of sorted) {
       let res = false;
       try {
-        res = await this.processTransaction(transaction);
+        res = await this.processTransaction(transaction, blockNum);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
       }
@@ -67,19 +72,23 @@ export class Processor {
     }
   }
 
-  private async processTransaction(scheduled: IScheduled): Promise<boolean> {
+  private async processTransaction(
+    scheduled: IScheduled,
+    blockNum: number
+  ): Promise<boolean> {
     const {
       transactionHash,
       status,
       error
-    } = await this.transactionExecutor.execute(scheduled);
+    } = await this.transactionExecutor.execute(scheduled, blockNum);
     if (status !== Status.Pending) {
-      logger.info(
-        `Transaction ${scheduled._id} completed with status ${Status[status]}`
-      );
+      logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
       scheduled.update({ transactionHash, status, error }).exec();
 
       return true;
+    } else if (!scheduled.conditionBlock) {
+      logger.info(`${scheduled._id} Starting confirmation tracker`);
+      scheduled.update({ conditionBlock: blockNum }).exec();
     }
 
     return false;

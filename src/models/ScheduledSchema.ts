@@ -98,6 +98,10 @@ const ScheduledSchema = new Schema({
   },
   error: {
     type: String
+  },
+  conditionBlock: {
+    type: Number,
+    default: 0
   }
 });
 
