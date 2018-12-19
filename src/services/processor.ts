@@ -24,27 +24,21 @@ export class Processor {
     logger.info(
       `Found ${scheduled.length} pending transactions in ${groups.size} groups`
     );
-    groups.forEach((transactions, key) =>
-      this.dispatch(transactions, key, blockNum)
+    const inProgress = [];
+    groups.forEach(transactions =>
+      inProgress.push(this.processTransactions(transactions, blockNum))
     );
-  }
 
-  private async dispatch(
-    transactions: IScheduled[],
-    key: string,
-    blockNum: number
-  ) {
-    logger.info(`Group ${key}`);
-    await this.processTransactions(transactions, blockNum);
+    return Promise.all(inProgress);
   }
 
   private groupBySenderAndChain(scheduled: IScheduled[]) {
-    const mkKey = (sender: string, chainId: number) =>
+    const makeKey = (sender: string, chainId: number) =>
       `${sender}-${chainId.toString()}`;
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach(s => {
-      const key = mkKey(s.from, s.chainId);
+      const key = makeKey(s.from, s.chainId);
 
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -81,12 +75,13 @@ export class Processor {
       status,
       error
     } = await this.transactionExecutor.execute(scheduled, blockNum);
+
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
       scheduled.update({ transactionHash, status, error }).exec();
 
       return true;
-    } else if (!scheduled.conditionBlock) {
+    } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
     }
