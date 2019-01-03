@@ -15,8 +15,8 @@ export class Processor {
     this.transactionExecutor = transactionExecutor;
   }
 
-  public async process() {
-    logger.info('Starting');
+  public async process(blockNum: number) {
+    logger.info(`Triggered by ${blockNum}`);
 
     const scheduled = await this.scheduleService.getPending();
     const groups = this.groupBySenderAndChain(scheduled);
@@ -24,21 +24,21 @@ export class Processor {
     logger.info(
       `Found ${scheduled.length} pending transactions in ${groups.size} groups`
     );
-    groups.forEach((transactions, key) => this.dispatch(transactions, key));
-  }
+    const inProgress = [];
+    groups.forEach(transactions =>
+      inProgress.push(this.processTransactions(transactions, blockNum))
+    );
 
-  private async dispatch(transactions: IScheduled[], key: string) {
-    logger.info(`Starting with group ${key}`);
-    await this.processTransactions(transactions);
+    return Promise.all(inProgress);
   }
 
   private groupBySenderAndChain(scheduled: IScheduled[]) {
-    const mkKey = (sender: string, chainId: number) =>
-      sender + chainId.toString();
+    const makeKey = (sender: string, chainId: number) =>
+      `${sender}-${chainId.toString()}`;
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach(s => {
-      const key = mkKey(s.from, s.chainId);
+      const key = makeKey(s.from, s.chainId);
 
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -50,13 +50,13 @@ export class Processor {
     return groups;
   }
 
-  private async processTransactions(scheduled: IScheduled[]) {
+  private async processTransactions(scheduled: IScheduled[], blockNum: number) {
     const sorted = scheduled.sort((a, b) => a.nonce - b.nonce);
 
     for (const transaction of sorted) {
       let res = false;
       try {
-        res = await this.processTransaction(transaction);
+        res = await this.processTransaction(transaction, blockNum);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
       }
@@ -66,19 +66,24 @@ export class Processor {
     }
   }
 
-  private async processTransaction(scheduled: IScheduled): Promise<boolean> {
+  private async processTransaction(
+    scheduled: IScheduled,
+    blockNum: number
+  ): Promise<boolean> {
     const {
       transactionHash,
       status,
       error
-    } = await this.transactionExecutor.execute(scheduled);
+    } = await this.transactionExecutor.execute(scheduled, blockNum);
+
     if (status !== Status.Pending) {
-      logger.info(
-        `Transaction ${scheduled._id} completed with status ${Status[status]}`
-      );
+      logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
       scheduled.update({ transactionHash, status, error }).exec();
 
       return true;
+    } else if (scheduled.conditionBlock === 0) {
+      logger.info(`${scheduled._id} Starting confirmation tracker`);
+      scheduled.update({ conditionBlock: blockNum }).exec();
     }
 
     return false;

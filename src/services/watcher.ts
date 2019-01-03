@@ -1,4 +1,4 @@
-import { CronJob } from 'cron';
+import { ethers } from 'ethers';
 
 import { Processor } from './processor';
 import { ScheduleService } from './schedule';
@@ -10,7 +10,9 @@ export class Watcher {
       new ScheduleService(),
       new TransactionExecutor()
     );
-    // tslint:disable-next-line:no-unused-expression
-    new CronJob('* * * * *', () => processor.process(), null, true);
+
+    ethers
+      .getDefaultProvider()
+      .on('block', (blockNum: number) => processor.process(blockNum));
   }
 }

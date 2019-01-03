@@ -5,7 +5,8 @@ export enum Status {
   Cancelled,
   Completed,
   Error,
-  StaleNonce
+  StaleNonce,
+  PendingConfirmations
 }
 
 export interface IScheduled extends Document {
@@ -18,6 +19,7 @@ export interface IScheduled extends Document {
   from: string;
   nonce: number;
   chainId: number;
+  conditionBlock: number;
 }
 
 export interface IExecuteStatus {
