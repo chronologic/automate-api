@@ -43,6 +43,8 @@ export class ScheduleController {
       id: scheduled._id.toString(),
       signedTransaction: scheduled.signedTransaction,
       status: scheduled.status,
+      timeCondition: scheduled.timeCondition || 0,
+      timeConditionTZ: scheduled.timeConditionTZ || '',
       transactionHash: scheduled.transactionHash
     });
   }

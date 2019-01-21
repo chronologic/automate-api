@@ -20,6 +20,8 @@ export interface IScheduled extends Document {
   nonce: number;
   chainId: number;
   conditionBlock: number;
+  timeCondition: number;
+  timeConditionTZ: string;
 }
 
 export interface IExecuteStatus {
@@ -32,4 +34,5 @@ export interface IScheduleRequest {
   conditionAmount: string;
   conditionAsset: string;
   signedTransaction: string;
+  timeCondition: number;
 }
