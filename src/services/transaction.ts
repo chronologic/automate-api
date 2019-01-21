@@ -191,7 +191,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     const condition = new BigNumber(scheduled.conditionAmount);
-    const shouldExecute = currentConditionAmount.gte(condition);
+    const isStateConditionMet = currentConditionAmount.gte(condition);
 
     logger.info(
       `${
@@ -199,6 +199,16 @@ export class TransactionExecutor implements ITransactionExecutor {
       } Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`
     );
 
-    return shouldExecute;
+    const currentTime = new Date().getTime();
+    const timeCondition = scheduled.timeCondition || 0;
+    const isTimeConditionMet = currentTime > scheduled.timeCondition;
+
+    logger.info(
+      `${scheduled._id} Time condition=${new Date(
+        timeCondition
+      ).toISOString()} Current=${new Date(currentTime).toISOString()}`
+    );
+
+    return isStateConditionMet && isTimeConditionMet;
   }
 }

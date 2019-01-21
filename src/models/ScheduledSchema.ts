@@ -81,6 +81,13 @@ const ScheduledSchema = new Schema({
       }
     }
   },
+  timeCondition: {
+    required: [true, 'Time condition is required'],
+    type: Number
+  },
+  timeConditionTZ: {
+    type: String
+  },
   from: {
     type: String
   },
