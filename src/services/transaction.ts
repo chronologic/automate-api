@@ -201,7 +201,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const currentTime = new Date().getTime();
     const timeCondition = scheduled.timeCondition || 0;
-    const isTimeConditionMet = currentTime > scheduled.timeCondition;
+    const isTimeConditionMet = currentTime > timeCondition;
 
     logger.info(
       `${scheduled._id} Time condition=${new Date(
