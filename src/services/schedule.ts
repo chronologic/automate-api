@@ -21,6 +21,8 @@ export class ScheduleService implements IScheduleService {
       transaction.conditionAmount = request.conditionAmount;
       transaction.conditionAsset = request.conditionAsset;
       transaction.signedTransaction = request.signedTransaction;
+      transaction.timeCondition = request.timeCondition;
+      transaction.timeConditionTZ = request.timeConditionTZ;
     } else {
       transaction = new Scheduled(request);
     }

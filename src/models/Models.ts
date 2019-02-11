@@ -35,4 +35,5 @@ export interface IScheduleRequest {
   conditionAsset: string;
   signedTransaction: string;
   timeCondition: number;
+  timeConditionTZ: string;
 }
