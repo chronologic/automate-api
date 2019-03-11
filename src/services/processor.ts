@@ -1,18 +1,22 @@
 import { IScheduled, Status } from '../models/Models';
 import logger from './logger';
 import { IScheduleService } from './schedule';
+import { ITracker } from './tracker';
 import { ITransactionExecutor } from './transaction';
 
 export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
+  private tracker: ITracker;
 
   constructor(
     scheduleService: IScheduleService,
-    transactionExecutor: ITransactionExecutor
+    transactionExecutor: ITransactionExecutor,
+    tracker: ITracker
   ) {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
+    this.tracker = tracker;
   }
 
   public async process(blockNum: number) {
@@ -21,9 +25,12 @@ export class Processor {
     const scheduled = await this.scheduleService.getPending();
     const groups = this.groupBySenderAndChain(scheduled);
 
+    this.tracker.trackQueue(scheduled.length);
+
     logger.info(
       `Found ${scheduled.length} pending transactions in ${groups.size} groups`
     );
+
     const inProgress = [];
     groups.forEach(transactions =>
       inProgress.push(this.processTransactions(transactions, blockNum))
@@ -79,6 +86,8 @@ export class Processor {
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
       scheduled.update({ transactionHash, status, error }).exec();
+
+      this.tracker.trackTransaction(scheduled);
 
       return true;
     } else if (scheduled.conditionBlock === 0) {

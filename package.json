@@ -27,6 +27,7 @@
     "ethers": "^4.0.13",
     "express": "^4.16.4",
     "express-winston": "^3.0.1",
+    "keen-tracking": "^4.2.4",
     "mongoose": "^5.3.13",
     "winston": "^3.1.0"
   },

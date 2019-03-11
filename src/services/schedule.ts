@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 
 import { IScheduled, IScheduleRequest, Status } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
+import { ITracker } from './tracker';
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
@@ -11,6 +12,12 @@ export interface IScheduleService {
 }
 
 export class ScheduleService implements IScheduleService {
+  private tracker: ITracker;
+
+  constructor(tracker: ITracker) {
+    this.tracker = tracker;
+  }
+
   public async schedule(request: IScheduleRequest) {
     await new Scheduled(request).validate();
 
@@ -27,6 +34,8 @@ export class ScheduleService implements IScheduleService {
       transaction = new Scheduled(request);
     }
     transaction.status = Status.Pending;
+
+    this.tracker.trackTransaction(transaction);
 
     return transaction.save();
   }
