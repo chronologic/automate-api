@@ -1,13 +1,16 @@
 import { Query } from 'mongoose';
-// tslint:disable-next-line:no-implicit-dependencies
 import { It, Mock, Times } from 'typemoq';
 
 import { IScheduled, Status } from '../models/Models';
 import { Processor } from './processor';
 import { IScheduleService } from './schedule';
+import { ITracker } from './tracker';
 import { ITransactionExecutor } from './transaction';
 
+// tslint:disable-next-line:no-implicit-dependencies
 describe('Processor', () => {
+  const tracker = Mock.ofType<ITracker>();
+
   const createScheduled = (conditionBlock: number = 0) => {
     const scheduled = Mock.ofType<IScheduled>();
 
@@ -61,7 +64,8 @@ describe('Processor', () => {
 
     const processor = new Processor(
       scheduleService.object,
-      transactionExecutor.object
+      transactionExecutor.object,
+      tracker.object
     );
 
     await processor.process(block);
@@ -87,7 +91,8 @@ describe('Processor', () => {
 
     const processor = new Processor(
       scheduleService.object,
-      transactionExecutor.object
+      transactionExecutor.object,
+      tracker.object
     );
 
     await processor.process(block);
@@ -122,7 +127,8 @@ describe('Processor', () => {
 
     const processor = new Processor(
       scheduleService.object,
-      transactionExecutor.object
+      transactionExecutor.object,
+      tracker.object
     );
 
     await processor.process(block);
@@ -150,7 +156,8 @@ describe('Processor', () => {
 
     const processor = new Processor(
       scheduleService.object,
-      transactionExecutor.object
+      transactionExecutor.object,
+      tracker.object
     );
 
     await processor.process(block);
@@ -190,7 +197,8 @@ describe('Processor', () => {
 
     const processor = new Processor(
       scheduleService.object,
-      transactionExecutor.object
+      transactionExecutor.object,
+      tracker.object
     );
 
     await processor.process(block);

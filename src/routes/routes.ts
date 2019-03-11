@@ -3,10 +3,11 @@ import { IRouter } from 'express-serve-static-core';
 
 import { ScheduleController } from '../controllers/ScheduleController';
 import { ScheduleService } from '../services/schedule';
+import { Tracker } from '../services/tracker';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(
-    new ScheduleService()
+    new ScheduleService(new Tracker())
   );
 
   public init(app: IRouter): void {
