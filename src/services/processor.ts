@@ -85,9 +85,10 @@ export class Processor {
 
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
+
       scheduled.update({ transactionHash, status, error }).exec();
 
-      this.tracker.trackTransaction(scheduled);
+      this.tracker.trackTransaction(scheduled, status);
 
       return true;
     } else if (scheduled.conditionBlock === 0) {

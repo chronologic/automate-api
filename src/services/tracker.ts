@@ -1,11 +1,11 @@
 import { ethers } from 'ethers';
 import * as KeenTracking from 'keen-tracking';
 
-import { IScheduled } from '../models/Models';
+import { IScheduled, Status } from '../models/Models';
 
 export interface ITracker {
   trackQueue(pending: number);
-  trackTransaction(scheduled: IScheduled);
+  trackTransaction(scheduled: IScheduled, status?: Status);
 }
 
 export class Tracker implements ITracker {
@@ -24,7 +24,7 @@ export class Tracker implements ITracker {
     });
   }
 
-  public trackTransaction(scheduled: IScheduled) {
+  public trackTransaction(scheduled: IScheduled, status?: Status) {
     const decodedTransaction = ethers.utils.parseTransaction(
       scheduled.signedTransaction
     );
@@ -32,9 +32,9 @@ export class Tracker implements ITracker {
     this.client.recordEvent('transaction', {
       conditionAsset: scheduled.conditionAsset,
       conditionAmount: scheduled.conditionAmount,
-      status: scheduled.status,
+      status: status || scheduled.status,
       from: scheduled.from,
-      chainId: scheduled.chainId,
+      chainId: scheduled.chainId || decodedTransaction.chainId,
       timeCondition: scheduled.timeCondition,
       tokenTransfer:
         decodedTransaction.data !== '' &&
