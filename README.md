@@ -6,7 +6,15 @@ This contains API project for Automate project.
 
 UI project here https://github.com/chronologic/automate-ui
 
-## How to start
+__LIVE version available here__ [https://automate.chronologic.network/](https://automate.chronologic.network/)
+
+__ProductHunt:__[here](https://www.producthunt.com/posts/automate-1)
+
+__Tutorials and help:__ [here](https://blog.chronologic.network/automate/home)
+
+
+## Development
+### How to start
 
 `yarn install`
 
@@ -18,7 +26,7 @@ To create a production build
 
 `yarn build`
 
-## MongoDB
+### MongoDB
 
 Start MongoDB instance using 
 
@@ -26,7 +34,7 @@ Start MongoDB instance using
 
 or any other instance compatible with `mongodb://root:example@localhost:27017` connection string.
 
-## Stack
+### Stack
 
 Typescript
 Ethers
