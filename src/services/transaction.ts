@@ -1,4 +1,5 @@
 import BigNumber from 'bignumber.js';
+import * as cheerio from 'cheerio';
 import * as InputDataDecoder from 'ethereum-input-data-decoder';
 import { ethers } from 'ethers';
 import * as moment from 'moment';
@@ -14,6 +15,7 @@ import logger from './logger';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 const CONFIRMATIONS = 3;
+const fallbackAssetName = '_';
 
 let coinGeckoCoins: ICoinGeckoCoin[] = [];
 
@@ -82,15 +84,6 @@ export class TransactionExecutor implements ITransactionExecutor {
       assetValue,
       executedAt
     } = await method.call(this, transaction, parsedTx, provider);
-
-    console.log({
-      transactionId: transaction.id,
-      hash: transaction.transactionHash,
-      assetName,
-      assetAmount,
-      assetValue,
-      executedAt
-    });
 
     return {
       assetName,
@@ -316,7 +309,65 @@ export class TransactionExecutor implements ITransactionExecutor {
       );
     }
 
+    if (
+      (transaction.assetName === fallbackAssetName ||
+        transaction.assetValue === 0) &&
+      transaction.transactionHash
+    ) {
+      logger.debug('fetchTokenMetadata scraping data as fallback...');
+      const {
+        assetName,
+        assetAmount,
+        assetValue
+      } = await this.scrapeTokenMetadata(transaction.transactionHash);
+
+      transaction.assetName = assetName || transaction.assetName;
+      transaction.assetAmount = assetAmount || transaction.assetAmount;
+      transaction.assetValue = assetValue || transaction.assetValue;
+    }
+
     return transaction;
+  }
+
+  private async scrapeTokenMetadata(txHash) {
+    try {
+      const res = await fetch(
+        `https://etherscan.io/tx/${txHash}`
+      ).then(response => response.text());
+      const $ = cheerio.load(res);
+      const tokenDetails = $('.row .list-unstyled');
+      const values = [0, 0];
+      tokenDetails.find('.media-body').each((_, mb) => {
+        const rowValues = $(mb)
+          .find('> span.mr-1')
+          .last()
+          .text()
+          .trim()
+          .split(' ')
+          .map(val => Number(val.trim().replace(/[\(\)\$,]/g, '')));
+        values[0] = values[0] + rowValues[0];
+        values[1] = values[1] + rowValues[1];
+      });
+      const [assetAmount, assetValue] = values;
+      const assetName = tokenDetails
+        .find('.media-body > a')
+        .first()
+        .text()
+        .trim()
+        .split(' ')
+        .reverse()[0]
+        .replace(/[\(\)]/g, '')
+        .toLowerCase();
+
+      return {
+        assetAmount,
+        assetValue,
+        assetName
+      };
+    } catch (e) {
+      logger.error(e);
+      return {};
+    }
   }
 
   private async fetchEthMetadata(
