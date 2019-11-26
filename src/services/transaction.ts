@@ -411,6 +411,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   }
 
   private async fetchCoinGeckoAssetId(symbol): Promise<string> {
+    const fallbackAssetId = '_';
     let asset = coinGeckoCoins.find(coin => coin.symbol === symbol);
 
     if (asset) {
@@ -423,10 +424,10 @@ export class TransactionExecutor implements ITransactionExecutor {
       ).then(response => response.json());
       asset = coinGeckoCoins.find(coin => coin.symbol === symbol);
 
-      return asset.id;
+      return asset.id || fallbackAssetId;
     } catch (e) {
       logger.error(e);
-      return '_';
+      return fallbackAssetId;
     }
   }
 
@@ -439,10 +440,14 @@ export class TransactionExecutor implements ITransactionExecutor {
       const tokenAbi = await this.fetchABI(contractAddress);
       const decoder = new InputDataDecoder(tokenAbi);
       const decoded = decoder.decodeData(txData);
+      const token = new ethers.Contract(contractAddress, tokenAbi, provider);
+      const decimals = await token.functions.decimals();
       if (decoded.method === 'transfer') {
         const amount = new BigNumber(decoded.inputs[1].toString(10));
-        const token = new ethers.Contract(contractAddress, tokenAbi, provider);
-        const decimals = await token.functions.decimals();
+
+        return amount.div(new BigNumber(10).pow(decimals)).toNumber();
+      } else if (decoded.method === 'transferFrom') {
+        const amount = new BigNumber(decoded.inputs[2].toString(10));
 
         return amount.div(new BigNumber(10).pow(decimals)).toNumber();
       } else {
@@ -471,15 +476,16 @@ export class TransactionExecutor implements ITransactionExecutor {
   }
 
   private async fetchTokenName(contractAddress: string): Promise<string> {
+    const fallbackName = '_';
     try {
       const res = await fetch(
         `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`
       ).then(response => response.json());
 
-      return res.symbol;
+      return res.symbol || fallbackName;
     } catch (e) {
       logger.error(e);
-      return '_';
+      return fallbackName;
     }
   }
 }

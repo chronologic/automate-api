@@ -39,11 +39,9 @@ export class Watcher {
     });
 
     for (const row of res) {
-      console.log(row._id);
       const metadata = await transactionExecutor.fetchTransactionMetadata(row);
-      console.log(metadata);
 
-      // await row.update(metadata).exec();
+      await row.update(metadata).exec();
     }
   }
 }
