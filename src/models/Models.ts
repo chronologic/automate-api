@@ -33,6 +33,10 @@ export interface IExecuteStatus {
   status: Status;
   transactionHash?: string;
   error?: string;
+  executedAt?: string;
+  assetName?: string;
+  assetAmount?: number;
+  assetValue?: number;
 }
 
 export interface IScheduleRequest {

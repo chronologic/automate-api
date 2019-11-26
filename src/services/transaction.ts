@@ -147,9 +147,23 @@ export class TransactionExecutor implements ITransactionExecutor {
       const receipt = await response.wait(CONFIRMATIONS);
       logger.info(`${id} Confirmed ${receipt.transactionHash}`);
 
+      scheduled.status = Status.Completed;
+      scheduled.transactionHash = receipt.transactionHash;
+      scheduled.executedAt = new Date().toISOString();
+
+      const {
+        assetName,
+        assetAmount,
+        assetValue
+      } = await this.fetchTransactionMetadata(scheduled);
+
       return {
-        status: Status.Completed,
-        transactionHash: receipt.transactionHash
+        status: scheduled.status,
+        transactionHash: scheduled.transactionHash,
+        executedAt: scheduled.executedAt,
+        assetName,
+        assetAmount,
+        assetValue
       };
     } catch (e) {
       logger.error(`${id} ${e}`);

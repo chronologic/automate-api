@@ -10,7 +10,7 @@ import { TransactionExecutor } from './transaction';
 export class Watcher {
   public static async init() {
     const transactionExecutor = new TransactionExecutor();
-    await Watcher.catchUpMetadata(transactionExecutor);
+    await Watcher.fillMissingMetadata(transactionExecutor);
     const tracker = new Tracker();
 
     const processor = new Processor(
@@ -24,7 +24,7 @@ export class Watcher {
       .on('block', (blockNum: number) => processor.process(blockNum));
   }
 
-  private static async catchUpMetadata(
+  private static async fillMissingMetadata(
     transactionExecutor: TransactionExecutor
   ): Promise<void> {
     const res = await Scheduled.find({
