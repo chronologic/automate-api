@@ -109,6 +109,21 @@ const ScheduledSchema = new Schema({
   conditionBlock: {
     type: Number,
     default: 0
+  },
+  assetName: {
+    type: String
+  },
+  assetAmount: {
+    type: Number
+  },
+  assetValue: {
+    type: Number
+  },
+  createdAt: {
+    type: String
+  },
+  executedAt: {
+    type: String
   }
 });
 

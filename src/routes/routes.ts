@@ -4,10 +4,11 @@ import { IRouter } from 'express-serve-static-core';
 import { ScheduleController } from '../controllers/ScheduleController';
 import { ScheduleService } from '../services/schedule';
 import { Tracker } from '../services/tracker';
+import { TransactionExecutor } from '../services/transaction';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(
-    new ScheduleService(new Tracker())
+    new ScheduleService(new Tracker(), new TransactionExecutor())
   );
 
   public init(app: IRouter): void {

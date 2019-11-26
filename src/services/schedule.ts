@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { IScheduled, IScheduleRequest, Status } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
 import { ITracker } from './tracker';
+import { ITransactionExecutor } from './transaction';
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
@@ -13,9 +14,11 @@ export interface IScheduleService {
 
 export class ScheduleService implements IScheduleService {
   private tracker: ITracker;
+  private transactionExecutor: ITransactionExecutor;
 
-  constructor(tracker: ITracker) {
+  constructor(tracker: ITracker, transactionExecutor: ITransactionExecutor) {
     this.tracker = tracker;
+    this.transactionExecutor = transactionExecutor;
   }
 
   public async schedule(request: IScheduleRequest) {
@@ -33,7 +36,14 @@ export class ScheduleService implements IScheduleService {
     } else {
       transaction = new Scheduled(request);
     }
+    const metadata = await this.transactionExecutor.fetchTransactionMetadata(
+      transaction
+    );
+    transaction.assetName = metadata.assetName;
+    transaction.assetAmount = metadata.assetAmount;
+    transaction.assetValue = metadata.assetValue;
     transaction.status = Status.Pending;
+    transaction.createdAt = new Date().toISOString();
 
     this.tracker.trackTransaction(transaction);
 
