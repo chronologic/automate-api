@@ -19,9 +19,9 @@ export class Watcher {
       tracker
     );
 
-    // ethers
-    //   .getDefaultProvider()
-    //   .on('block', (blockNum: number) => processor.process(blockNum));
+    ethers
+      .getDefaultProvider()
+      .on('block', (blockNum: number) => processor.process(blockNum));
   }
 
   private static async catchUpMetadata(
