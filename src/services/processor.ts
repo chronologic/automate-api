@@ -80,13 +80,27 @@ export class Processor {
     const {
       transactionHash,
       status,
-      error
+      error,
+      executedAt,
+      assetName,
+      assetAmount,
+      assetValue
     } = await this.transactionExecutor.execute(scheduled, blockNum);
 
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
 
-      scheduled.update({ transactionHash, status, error }).exec();
+      scheduled
+        .update({
+          transactionHash,
+          status,
+          error,
+          executedAt,
+          assetName,
+          assetAmount,
+          assetValue
+        })
+        .exec();
 
       this.tracker.trackTransaction(scheduled, status);
 

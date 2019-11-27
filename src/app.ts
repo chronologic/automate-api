@@ -8,6 +8,8 @@ import * as winston from 'winston';
 import { Routes } from './routes/routes';
 import { Watcher } from './services/watcher';
 
+import { ethers } from 'ethers';
+
 class App {
   public app: express.Application;
   public routes: Routes = new Routes();

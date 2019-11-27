@@ -1,4 +1,7 @@
+import { config } from 'dotenv';
 import * as http from 'http';
+
+config();
 
 import app from './app';
 import logger from './services/logger';

@@ -22,12 +22,21 @@ export interface IScheduled extends Document {
   conditionBlock: number;
   timeCondition: number;
   timeConditionTZ: string;
+  assetName: string;
+  assetAmount: number;
+  assetValue: number;
+  createdAt: string;
+  executedAt: string;
 }
 
 export interface IExecuteStatus {
   status: Status;
   transactionHash?: string;
   error?: string;
+  executedAt?: string;
+  assetName?: string;
+  assetAmount?: number;
+  assetValue?: number;
 }
 
 export interface IScheduleRequest {
@@ -36,4 +45,11 @@ export interface IScheduleRequest {
   signedTransaction: string;
   timeCondition: number;
   timeConditionTZ: string;
+}
+
+export interface ITransactionMetadata {
+  assetName: string;
+  assetAmount: number;
+  assetValue: number;
+  executedAt: string;
 }
