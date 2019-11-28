@@ -23,33 +23,47 @@ export interface IStatsService {
 export class StatsService implements IStatsService {
   public async getStats(): Promise<IStats> {
     const rawStats = await Scheduled.aggregate([
-      { $match: { status: { $in: [Status.Pending, Status.Completed] } } },
+      {
+        $match: {
+          status: { $in: [Status.Pending, Status.Completed] },
+          assetName: { $exists: true }
+        }
+      },
       {
         $group: {
           _id: {
             status: '$status',
             assetName: '$assetName'
           },
-          count: { $sum: 1 },
-          value: { $sum: '$assetValue' },
-          amount: { $sum: '$assetAmount' }
+          status: { $first: '$status' },
+          txCount: { $sum: 1 },
+          value: { $sum: '$assetValue' }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            status: '$status'
+          },
+          status: { $first: '$status' },
+          txCount: { $sum: '$txCount' },
+          assetCount: { $sum: 1 },
+          value: { $sum: '$value' }
         }
       }
     ]);
 
     const stats = { pending: {}, completed: {} };
     rawStats
-      .filter(item => item._id.assetName)
       .map(item => {
-        item._id.status =
-          item._id.status === Status.Pending ? 'pending' : 'completed';
+        item.status = item.status === Status.Pending ? 'pending' : 'completed';
         return item;
       })
       .forEach(item => {
-        const { status, assetName } = item._id;
-        stats[status][assetName] = {
-          count: item.count,
-          amount: item.amount,
+        const { status } = item;
+        stats[status] = {
+          txCount: item.txCount,
+          assetCount: item.assetCount,
           value: item.value
         };
       });
