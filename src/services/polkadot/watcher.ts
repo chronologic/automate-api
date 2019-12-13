@@ -1,22 +1,17 @@
-import { ethers } from 'ethers';
-
-import { Status } from '../models/Models';
-import Scheduled from '../models/ScheduledSchema';
+import { AssetType, Status } from '../../models/Models';
+import Scheduled from '../../models/ScheduledSchema';
 import { Processor } from './processor';
 import { ScheduleService } from './schedule';
-import { Tracker } from './tracker';
 import { TransactionExecutor } from './transaction';
 
 export class Watcher {
   public static async init() {
     const transactionExecutor = new TransactionExecutor();
     await Watcher.fillMissingMetadata(transactionExecutor);
-    const tracker = new Tracker();
 
     const processor = new Processor(
-      new ScheduleService(tracker, transactionExecutor),
+      new ScheduleService(transactionExecutor),
       transactionExecutor,
-      tracker
     );
 
     // ethers
@@ -25,17 +20,18 @@ export class Watcher {
   }
 
   private static async fillMissingMetadata(
-    transactionExecutor: TransactionExecutor
+    transactionExecutor: TransactionExecutor,
   ): Promise<void> {
     const res = await Scheduled.find({
+      assetType: { $in: [AssetType.Polkadot] },
       status: { $in: [Status.Completed, Status.Pending] },
-      chainId: 1,
+      // chainId: 1,
       $or: [
         { assetName: { $exists: false } },
         { assetAmount: { $exists: false } },
         { assetValue: { $exists: false } },
-        { executedAt: { $exists: false } }
-      ]
+        { executedAt: { $exists: false } },
+      ],
     });
 
     for (const row of res) {

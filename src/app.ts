@@ -6,9 +6,7 @@ import * as mongoose from 'mongoose';
 import * as winston from 'winston';
 
 import { Routes } from './routes/routes';
-import { Watcher } from './services/watcher';
-
-import { ethers } from 'ethers';
+import { Manager } from './services/manager';
 
 class App {
   public app: express.Application;
@@ -22,7 +20,7 @@ class App {
     this.routes.init(this.app);
     this.mongoSetup();
 
-    Watcher.init();
+    Manager.init();
   }
 
   private config(): void {

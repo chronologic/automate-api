@@ -10,10 +10,10 @@ import { TransactionExecutor } from '../services/transaction';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(
-    new ScheduleService(new Tracker(), new TransactionExecutor())
+    new ScheduleService(new Tracker(), new TransactionExecutor()),
   );
   private statsController: StatsController = new StatsController(
-    new StatsService()
+    new StatsService(),
   );
 
   public init(app: IRouter): void {

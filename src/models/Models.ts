@@ -6,10 +6,16 @@ export enum Status {
   Completed,
   Error,
   StaleNonce,
-  PendingConfirmations
+  PendingConfirmations,
+}
+
+export enum AssetType {
+  Ethereum,
+  Polkadot,
 }
 
 export interface IScheduled extends Document {
+  assetType: AssetType;
   signedTransaction: string;
   conditionAsset: string;
   conditionAmount: string;
