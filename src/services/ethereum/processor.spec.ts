@@ -1,7 +1,7 @@
 import { Query } from 'mongoose';
 import { It, Mock, Times } from 'typemoq';
 
-import { IScheduled, Status } from '../models/Models';
+import { IScheduled, Status } from '../../models/Models';
 import { Processor } from './processor';
 import { IScheduleService } from './schedule';
 import { ITracker } from './tracker';
