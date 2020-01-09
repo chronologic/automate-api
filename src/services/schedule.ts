@@ -1,31 +1,27 @@
-import { ethers } from 'ethers';
-
-import { IScheduled, IScheduleRequest, Status } from '../models/Models';
+import {
+  AssetType,
+  IScheduled,
+  IScheduleRequest,
+  ITransactionMetadata,
+  Status,
+} from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
-import { ITracker } from './tracker';
-import { ITransactionExecutor } from './transaction';
+import * as ethUtils from './ethereum/utils';
+import * as polkadotUtils from './polkadot/utils';
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
   find(id: string): Promise<IScheduled>;
   cancel(id: string);
-  getPending(): Promise<IScheduled[]>;
+  getPending(assetType: AssetType): Promise<IScheduled[]>;
 }
 
 export class ScheduleService implements IScheduleService {
-  private tracker: ITracker;
-  private transactionExecutor: ITransactionExecutor;
-
-  constructor(tracker: ITracker, transactionExecutor: ITransactionExecutor) {
-    this.tracker = tracker;
-    this.transactionExecutor = transactionExecutor;
-  }
-
   public async schedule(request: IScheduleRequest) {
     await new Scheduled(request).validate();
 
     let transaction = await this.findBySignedTransaction(
-      request.signedTransaction
+      request.signedTransaction,
     );
     if (transaction) {
       transaction.conditionAmount = request.conditionAmount;
@@ -36,16 +32,12 @@ export class ScheduleService implements IScheduleService {
     } else {
       transaction = new Scheduled(request);
     }
-    const metadata = await this.transactionExecutor.fetchTransactionMetadata(
-      transaction
-    );
+    const metadata = await this.getTransactionMetadata(transaction);
     transaction.assetName = metadata.assetName;
     transaction.assetAmount = metadata.assetAmount;
     transaction.assetValue = metadata.assetValue;
     transaction.status = Status.Pending;
     transaction.createdAt = new Date().toISOString();
-
-    this.tracker.trackTransaction(transaction);
 
     return transaction.save();
   }
@@ -57,18 +49,36 @@ export class ScheduleService implements IScheduleService {
   public cancel(id: string) {
     return Scheduled.updateOne(
       { _id: id },
-      { status: Status.Cancelled }
+      { status: Status.Cancelled },
     ).exec();
   }
 
-  public getPending(): Promise<IScheduled[]> {
-    return Scheduled.where('status', Status.Pending).exec();
+  public getPending(assetType: AssetType): Promise<IScheduled[]> {
+    let assetTypeCondition: AssetType | AssetType[] = assetType;
+
+    if ([undefined, AssetType.Ethereum].includes(assetType)) {
+      assetTypeCondition = [undefined, assetType];
+    }
+    return Scheduled.where('status', Status.Pending)
+      .where('assetType', assetTypeCondition)
+      .exec();
+  }
+
+  private getTransactionMetadata(
+    transaction: IScheduled,
+  ): Promise<ITransactionMetadata> {
+    switch (transaction.assetType) {
+      case AssetType.Ethereum:
+      case undefined: {
+        return ethUtils.fetchTransactionMetadata(transaction);
+      }
+      case AssetType.Polkadot: {
+        return polkadotUtils.fetchTransactionMetadata(transaction);
+      }
+    }
   }
 
   private findBySignedTransaction(signedTransaction: string) {
-    const { from, nonce, chainId } = ethers.utils.parseTransaction(
-      signedTransaction
-    );
-    return Scheduled.findOne({ from, nonce, chainId }).exec();
+    return Scheduled.findOne({ signedTransaction }).exec();
   }
 }

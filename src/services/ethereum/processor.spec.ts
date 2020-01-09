@@ -1,16 +1,13 @@
 import { Query } from 'mongoose';
 import { It, Mock, Times } from 'typemoq';
 
-import { IScheduled, Status } from '../../models/Models';
+import { AssetType, IScheduled, Status } from '../../models/Models';
+import { IScheduleService } from '../schedule';
 import { Processor } from './processor';
-import { IScheduleService } from './schedule';
-import { ITracker } from './tracker';
 import { ITransactionExecutor } from './transaction';
 
 // tslint:disable-next-line:no-implicit-dependencies
 describe('Processor', () => {
-  const tracker = Mock.ofType<ITracker>();
-
   const createScheduled = (conditionBlock: number = 0) => {
     const scheduled = Mock.ofType<IScheduled>();
 
@@ -25,7 +22,7 @@ describe('Processor', () => {
   const createScheduledWithNonce = (nonce: number) => {
     const tx = createScheduled();
     tx.setup(s => s.update(It.isAny())).returns(
-      () => Mock.ofType<Query<any>>().object
+      () => Mock.ofType<Query<any>>().object,
     );
 
     tx.setup(s => s.nonce).returns(() => nonce);
@@ -36,7 +33,9 @@ describe('Processor', () => {
   const createScheduleService = (scheduled: IScheduled[]) => {
     const scheduleService = Mock.ofType<IScheduleService>();
 
-    scheduleService.setup(s => s.getPending()).returns(async () => scheduled);
+    scheduleService
+      .setup(s => s.getPending(AssetType.Ethereum))
+      .returns(async () => scheduled);
 
     return scheduleService;
   };
@@ -59,13 +58,12 @@ describe('Processor', () => {
     transactionExecutor
       .setup(s => s.execute(It.isAny(), It.isAnyNumber()))
       .returns(async () => ({
-        status: Status.Pending
+        status: Status.Pending,
       }));
 
     const processor = new Processor(
       scheduleService.object,
       transactionExecutor.object,
-      tracker.object
     );
 
     await processor.process(block);
@@ -86,13 +84,12 @@ describe('Processor', () => {
     transactionExecutor
       .setup(s => s.execute(It.isAny(), It.isAnyNumber()))
       .returns(async () => ({
-        status: Status.Pending
+        status: Status.Pending,
       }));
 
     const processor = new Processor(
       scheduleService.object,
       transactionExecutor.object,
-      tracker.object
     );
 
     await processor.process(block);
@@ -122,13 +119,12 @@ describe('Processor', () => {
       .setup(s => s.execute(It.isAny(), It.isAnyNumber()))
       .returns(async () => ({
         status: Status.Completed,
-        transactionHash
+        transactionHash,
       }));
 
     const processor = new Processor(
       scheduleService.object,
       transactionExecutor.object,
-      tracker.object
     );
 
     await processor.process(block);
@@ -151,13 +147,12 @@ describe('Processor', () => {
       .callback((tx: IScheduled) => executionQueue.push(tx.nonce))
       .returns(async () => ({
         status: Status.Completed,
-        transactionHash
+        transactionHash,
       }));
 
     const processor = new Processor(
       scheduleService.object,
       transactionExecutor.object,
-      tracker.object
     );
 
     await processor.process(block);
@@ -184,7 +179,7 @@ describe('Processor', () => {
       .callback((tx: IScheduled) => executionQueue.push(tx.nonce))
       .returns(async () => ({
         status: Status.Completed,
-        transactionHash
+        transactionHash,
       }));
 
     transactionExecutor
@@ -192,13 +187,12 @@ describe('Processor', () => {
       .callback((tx: IScheduled) => executionQueue.push(tx.nonce))
       .returns(async () => ({
         status: Status.Pending,
-        transactionHash
+        transactionHash,
       }));
 
     const processor = new Processor(
       scheduleService.object,
       transactionExecutor.object,
-      tracker.object
     );
 
     await processor.process(block);

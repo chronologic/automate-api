@@ -1,31 +1,25 @@
-import { IScheduled, Status } from '../../models/Models';
+import { AssetType, IScheduled, Status } from '../../models/Models';
+import { IScheduleService } from '../schedule';
 import logger from './logger';
-import { IScheduleService } from './schedule';
-import { ITracker } from './tracker';
 import { ITransactionExecutor } from './transaction';
 
 export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
-  private tracker: ITracker;
 
   constructor(
     scheduleService: IScheduleService,
     transactionExecutor: ITransactionExecutor,
-    tracker: ITracker,
   ) {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
-    this.tracker = tracker;
   }
 
   public async process(blockNum: number) {
     logger.info(`Triggered by ${blockNum}`);
 
-    const scheduled = await this.scheduleService.getPending();
+    const scheduled = await this.scheduleService.getPending(AssetType.Ethereum);
     const groups = this.groupBySenderAndChain(scheduled);
-
-    this.tracker.trackQueue(scheduled.length);
 
     logger.info(
       `Found ${scheduled.length} pending transactions in ${groups.size} groups`,
@@ -101,8 +95,6 @@ export class Processor {
           assetValue,
         })
         .exec();
-
-      this.tracker.trackTransaction(scheduled, status);
 
       return true;
     } else if (scheduled.conditionBlock === 0) {

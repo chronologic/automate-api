@@ -5,12 +5,10 @@ import { ScheduleController } from '../controllers/ScheduleController';
 import { StatsController } from '../controllers/StatsController';
 import { ScheduleService } from '../services/schedule';
 import { StatsService } from '../services/stats';
-import { Tracker } from '../services/tracker';
-import { TransactionExecutor } from '../services/transaction';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(
-    new ScheduleService(new Tracker(), new TransactionExecutor()),
+    new ScheduleService(),
   );
   private statsController: StatsController = new StatsController(
     new StatsService(),

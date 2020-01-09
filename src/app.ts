@@ -32,16 +32,19 @@ class App {
       expressWinston.logger({
         format: winston.format.combine(
           winston.format.colorize(),
-          winston.format.json()
+          winston.format.json(),
         ),
-        transports: [new winston.transports.Console()]
-      })
+        transports: [new winston.transports.Console()],
+      }),
     );
   }
 
   private mongoSetup(): void {
     // mongoose.Promise = global.Promise;
-    mongoose.connect(this.mongoUrl);
+    mongoose.connect(this.mongoUrl, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
   }
 }
 

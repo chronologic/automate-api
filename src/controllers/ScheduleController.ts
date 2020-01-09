@@ -16,7 +16,7 @@ export class ScheduleController {
       const stored = await this.scheduleService.schedule(req.body);
       res.json({
         id: stored._id,
-        key: Key.generate(stored._id)
+        key: Key.generate(stored._id),
       });
     } catch (e) {
       const errors = Object.values(e.errors).map((e: any) => e.message);
@@ -45,7 +45,7 @@ export class ScheduleController {
       status: scheduled.status,
       timeCondition: scheduled.timeCondition || 0,
       timeConditionTZ: scheduled.timeConditionTZ || '',
-      transactionHash: scheduled.transactionHash
+      transactionHash: scheduled.transactionHash,
     });
   }
 

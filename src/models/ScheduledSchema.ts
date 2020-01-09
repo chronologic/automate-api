@@ -1,9 +1,11 @@
 import { ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 
-import logger from '../services/logger';
-import { TransactionExecutor } from '../services/transaction';
-import { AssetType, IScheduled, Status } from './Models';
+import * as ethUtils from '../services/ethereum/utils';
+import makeLogger from '../services/logger';
+import * as polkadotUtils from '../services/polkadot/utils';
+import { AssetType, IScheduled, PolkadotChainId, Status } from './Models';
+const logger = makeLogger('ScheduledSchema');
 
 const ScheduledSchema = new Schema({
   assetType: {
@@ -48,11 +50,17 @@ const ScheduledSchema = new Schema({
                   chainId: parsed.chainId,
                   from: parsed.from!,
                 };
-                const senderNonce = await TransactionExecutor.getSenderNextNonce(
-                  sender,
-                );
+                const senderNonce = await ethUtils.getSenderNextNonce(sender);
 
                 return parsed.nonce >= senderNonce;
+              }
+              case AssetType.Polkadot: {
+                const { signer, nonce } = await polkadotUtils.parseTx(tx);
+                const senderNonce = await polkadotUtils.getSenderNextNonce(
+                  signer,
+                );
+
+                return nonce >= senderNonce;
               }
               default: {
                 return true;
@@ -78,7 +86,7 @@ const ScheduledSchema = new Schema({
           switch (this.assetType) {
             case AssetType.Ethereum:
             case undefined: {
-              ethers.utils.getAddress(conditionAsset);
+              return !!ethers.utils.getAddress(conditionAsset);
             }
             default: {
               return true;
@@ -154,12 +162,28 @@ const ScheduledSchema = new Schema({
 });
 
 // do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!
-function preSave(next: any) {
-  const parsed = ethers.utils.parseTransaction(this.signedTransaction);
+async function preSave(next: () => {}) {
+  switch (this.assetType) {
+    case AssetType.Ethereum:
+    case undefined: {
+      const parsed = ethers.utils.parseTransaction(this.signedTransaction);
+      this.from = parsed.from!;
+      this.nonce = parsed.nonce;
+      this.chainId = parsed.chainId;
 
-  this.from = parsed.from!;
-  this.nonce = parsed.nonce;
-  this.chainId = parsed.chainId;
+      break;
+    }
+    case AssetType.Polkadot: {
+      const { signer, nonce, chainId } = await polkadotUtils.parseTx(
+        this.signedTransaction,
+      );
+      this.from = signer;
+      this.nonce = nonce;
+      this.chainId = chainId;
+
+      break;
+    }
+  }
 
   next();
 }

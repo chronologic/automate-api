@@ -1,43 +1,28 @@
-import { AssetType, Status } from '../../models/Models';
-import Scheduled from '../../models/ScheduledSchema';
+import { ScheduleService } from '../schedule';
+import getApi from './api';
 import { Processor } from './processor';
-import { ScheduleService } from './schedule';
 import { TransactionExecutor } from './transaction';
 
 export class Watcher {
   public static async init() {
     const transactionExecutor = new TransactionExecutor();
-    await Watcher.fillMissingMetadata(transactionExecutor);
 
-    const processor = new Processor(
-      new ScheduleService(transactionExecutor),
-      transactionExecutor,
-    );
+    const processor = new Processor(new ScheduleService(), transactionExecutor);
 
-    // ethers
-    //   .getDefaultProvider()
-    //   .on('block', (blockNum: number) => processor.process(blockNum));
-  }
+    setInterval(process, 60 * 1000);
+    process();
 
-  private static async fillMissingMetadata(
-    transactionExecutor: TransactionExecutor,
-  ): Promise<void> {
-    const res = await Scheduled.find({
-      assetType: { $in: [AssetType.Polkadot] },
-      status: { $in: [Status.Completed, Status.Pending] },
-      // chainId: 1,
-      $or: [
-        { assetName: { $exists: false } },
-        { assetAmount: { $exists: false } },
-        { assetValue: { $exists: false } },
-        { executedAt: { $exists: false } },
-      ],
-    });
+    async function process() {
+      const blockNumber = await getBlockNumber();
 
-    for (const row of res) {
-      const metadata = await transactionExecutor.fetchTransactionMetadata(row);
+      processor.process(blockNumber);
+    }
 
-      await row.update(metadata).exec();
+    async function getBlockNumber(): Promise<number> {
+      const api = await getApi();
+      const block: any = await api.rpc.chain.getHeader();
+
+      return block.number.toNumber();
     }
   }
 }
