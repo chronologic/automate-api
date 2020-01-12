@@ -4,11 +4,7 @@ import BigNumber from 'bignumber.js';
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import getApi from './api';
 import logger from './logger';
-import {
-  fetchTransactionMetadata,
-  getSenderNextNonce,
-  txToExtrinsic,
-} from './utils';
+import { fetchTransactionMetadata, getNextNonce, txToExtrinsic } from './utils';
 
 interface IValidationResult {
   res: boolean;
@@ -20,7 +16,7 @@ export interface ITransactionExecutor {
 }
 export class TransactionExecutor implements ITransactionExecutor {
   public static async getSenderNextNonce(from: string): Promise<number> {
-    return getSenderNextNonce(from);
+    return getNextNonce(from);
   }
 
   private static queue: Set<string> = new Set<string>();

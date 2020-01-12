@@ -7,7 +7,7 @@ import {
 import getApi from './api';
 import logger from './logger';
 
-async function getSenderNextNonce(address: string): Promise<number> {
+async function getNextNonce(address: string): Promise<number> {
   const api = await getApi();
   const nonce = await api.query.system.accountNonce(address);
 
@@ -41,6 +41,7 @@ async function parseTx(tx: string): Promise<IPolkadotTx> {
   return parsed;
 }
 
+// TODO: finish implementing this
 async function fetchTransactionMetadata(
   transaction: IScheduled,
 ): Promise<ITransactionMetadata> {
@@ -61,4 +62,4 @@ async function fetchTransactionMetadata(
   };
 }
 
-export { getSenderNextNonce, parseTx, txToExtrinsic, fetchTransactionMetadata };
+export { getNextNonce, parseTx, txToExtrinsic, fetchTransactionMetadata };
