@@ -8,6 +8,10 @@ import * as winston from 'winston';
 import { Routes } from './routes/routes';
 import { Manager } from './services/manager';
 
+const corsOptions = {
+  origin: process.env.UI_URL,
+};
+
 class App {
   public app: express.Application;
   public routes: Routes = new Routes();
@@ -27,7 +31,7 @@ class App {
     this.app.use(bodyParser.json());
     // serving static files
     this.app.use(express.static('public'));
-    this.app.use(cors());
+    this.app.use(cors(corsOptions));
     this.app.use(
       expressWinston.logger({
         format: winston.format.combine(
