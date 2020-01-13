@@ -56,7 +56,7 @@ const ScheduledSchema = new Schema({
               }
               case AssetType.Polkadot: {
                 const { signer, nonce } = await polkadotUtils.parseTx(tx);
-                const senderNonce = await polkadotUtils.getSenderNextNonce(
+                const senderNonce = await polkadotUtils.getNextNonce(
                   signer,
                 );
 
