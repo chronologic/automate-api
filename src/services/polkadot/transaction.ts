@@ -114,15 +114,19 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private async sendTx(api: ApiPromise, tx: string): Promise<string> {
     const extrinsic: any = await txToExtrinsic(tx);
-    return new Promise((resolve, reject) => {
-      api.rpc.author.submitAndWatchExtrinsic(extrinsic, (result: any) => {
-        if (result.isFinalized) {
-          return resolve(extrinsic.hash.toString());
-        } else if (result.isDropped || result.isInvalid) {
-          return reject(result.type);
-        }
-      });
-    });
+
+    return Promise.race([
+      new Promise((resolve, reject) => {
+        api.rpc.author.submitAndWatchExtrinsic(extrinsic, (result: any) => {
+          if (result.isFinalized) {
+            return resolve(extrinsic.hash.toString());
+          } else if (result.isDropped || result.isInvalid) {
+            return reject(result.type);
+          }
+        });
+      }),
+      new Promise((resolve, reject) => setTimeout(reject, 30000)),
+    ]) as Promise<string>;
   }
 
   // private isWaitingForConfirmations(

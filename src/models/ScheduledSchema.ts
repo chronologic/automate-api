@@ -2,9 +2,10 @@ import { ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 
 import * as ethUtils from '../services/ethereum/utils';
-import makeLogger from '../services/logger';
+import { makeLogger } from '../services/logger';
 import * as polkadotUtils from '../services/polkadot/utils';
 import { AssetType, IScheduled, PolkadotChainId, Status } from './Models';
+
 const logger = makeLogger('ScheduledSchema');
 
 const ScheduledSchema = new Schema({

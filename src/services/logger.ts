@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { createLogger, format, transports } from 'winston';
 
-const makeLogger = source =>
+export const makeLogger = source =>
   createLogger({
     level: 'debug',
     format: format.combine(
@@ -18,4 +18,4 @@ const makeLogger = source =>
     transports: [new transports.Console()],
   });
 
-export default makeLogger;
+export default makeLogger('server');

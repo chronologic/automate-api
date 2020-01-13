@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 
-import { getNextNonce, parseTx } from '../services/polkadot/utils';
 import getApi from '../services/polkadot/api';
+import { getNextNonce, parseTx } from '../services/polkadot/utils';
 
 export class PolkadotController {
   public async getBalance(req: Request, res: Response) {
