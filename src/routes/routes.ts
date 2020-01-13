@@ -1,9 +1,9 @@
 // tslint:disable-next-line:no-implicit-dependencies
 import { IRouter } from 'express-serve-static-core';
 
+import { PolkadotController } from '../controllers/PolkadotController';
 import { ScheduleController } from '../controllers/ScheduleController';
 import { StatsController } from '../controllers/StatsController';
-import { PolkadotController } from '../controllers/PolkadotController';
 import { ScheduleService } from '../services/schedule';
 import { StatsService } from '../services/stats';
 
