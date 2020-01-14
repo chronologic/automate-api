@@ -200,7 +200,9 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     const condition = new BigNumber(scheduled.conditionAmount);
-    const isStateConditionMet = currentConditionAmount.gte(condition);
+    const isStateConditionMet = new BigNumber(currentConditionAmount).gte(
+      condition,
+    );
 
     logger.info(
       `${

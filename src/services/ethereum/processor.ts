@@ -60,6 +60,8 @@ export class Processor {
         res = await this.processTransaction(transaction, blockNum);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
+        // tslint:disable-next-line: no-console
+        // console.log(e);
       }
       if (!res) {
         break;
