@@ -26,31 +26,31 @@ export class StatsService implements IStatsService {
       {
         $match: {
           status: { $in: [Status.Pending, Status.Completed] },
-          assetName: { $exists: true }
-        }
+          assetName: { $exists: true },
+        },
       },
       {
         $group: {
           _id: {
             status: '$status',
-            assetName: '$assetName'
+            assetName: '$assetName',
           },
           status: { $first: '$status' },
           txCount: { $sum: 1 },
-          value: { $sum: '$assetValue' }
-        }
+          value: { $sum: '$assetValue' },
+        },
       },
       {
         $group: {
           _id: {
-            status: '$status'
+            status: '$status',
           },
           status: { $first: '$status' },
           txCount: { $sum: '$txCount' },
           assetCount: { $sum: 1 },
-          value: { $sum: '$value' }
-        }
-      }
+          value: { $sum: '$value' },
+        },
+      },
     ]);
 
     const stats = { pending: {}, completed: {} };
@@ -64,7 +64,7 @@ export class StatsService implements IStatsService {
         stats[status] = {
           txCount: item.txCount,
           assetCount: item.assetCount,
-          value: item.value
+          value: item.value,
         };
       });
 

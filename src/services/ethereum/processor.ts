@@ -1,39 +1,33 @@
-import { IScheduled, Status } from '../models/Models';
+import { AssetType, IScheduled, Status } from '../../models/Models';
+import { IScheduleService } from '../schedule';
 import logger from './logger';
-import { IScheduleService } from './schedule';
-import { ITracker } from './tracker';
 import { ITransactionExecutor } from './transaction';
 
 export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
-  private tracker: ITracker;
 
   constructor(
     scheduleService: IScheduleService,
     transactionExecutor: ITransactionExecutor,
-    tracker: ITracker
   ) {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
-    this.tracker = tracker;
   }
 
   public async process(blockNum: number) {
     logger.info(`Triggered by ${blockNum}`);
 
-    const scheduled = await this.scheduleService.getPending();
+    const scheduled = await this.scheduleService.getPending(AssetType.Ethereum);
     const groups = this.groupBySenderAndChain(scheduled);
 
-    this.tracker.trackQueue(scheduled.length);
-
     logger.info(
-      `Found ${scheduled.length} pending transactions in ${groups.size} groups`
+      `Found ${scheduled.length} pending transactions in ${groups.size} groups`,
     );
 
     const inProgress = [];
     groups.forEach(transactions =>
-      inProgress.push(this.processTransactions(transactions, blockNum))
+      inProgress.push(this.processTransactions(transactions, blockNum)),
     );
 
     return Promise.all(inProgress);
@@ -66,6 +60,8 @@ export class Processor {
         res = await this.processTransaction(transaction, blockNum);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
+        // tslint:disable-next-line: no-console
+        // console.log(e);
       }
       if (!res) {
         break;
@@ -75,7 +71,7 @@ export class Processor {
 
   private async processTransaction(
     scheduled: IScheduled,
-    blockNum: number
+    blockNum: number,
   ): Promise<boolean> {
     const {
       transactionHash,
@@ -84,7 +80,7 @@ export class Processor {
       executedAt,
       assetName,
       assetAmount,
-      assetValue
+      assetValue,
     } = await this.transactionExecutor.execute(scheduled, blockNum);
 
     if (status !== Status.Pending) {
@@ -98,11 +94,9 @@ export class Processor {
           executedAt,
           assetName,
           assetAmount,
-          assetValue
+          assetValue,
         })
         .exec();
-
-      this.tracker.trackTransaction(scheduled, status);
 
       return true;
     } else if (scheduled.conditionBlock === 0) {

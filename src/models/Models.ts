@@ -6,10 +6,20 @@ export enum Status {
   Completed,
   Error,
   StaleNonce,
-  PendingConfirmations
+  PendingConfirmations,
+}
+
+export enum AssetType {
+  Ethereum = 'ethereum',
+  Polkadot = 'polkadot',
+}
+
+export enum PolkadotChainId {
+  Kusama = 1,
 }
 
 export interface IScheduled extends Document {
+  assetType: AssetType;
   signedTransaction: string;
   conditionAsset: string;
   conditionAmount: string;
@@ -52,4 +62,17 @@ export interface ITransactionMetadata {
   assetAmount: number;
   assetValue: number;
   executedAt: string;
+}
+
+export interface IPolkadotTx {
+  signer: string;
+  nonce: number;
+  accountNonce: number;
+  chainId: number;
+  chainName: string;
+  assetName: string;
+  hash: string;
+  dest?: string;
+  value?: string;
+  decimals?: number;
 }

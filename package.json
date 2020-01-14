@@ -1,6 +1,6 @@
 {
   "name": "sentinel-api",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "main": "dist/server.js",
   "scripts": {
@@ -22,6 +22,7 @@
   },
   "homepage": "https://github.com/chronologic/sentinel-api#readme",
   "dependencies": {
+    "@polkadot/api": "^0.100.1",
     "bignumber.js": "^9.0.0",
     "body-parser": "^1.18.3",
     "cheerio": "^1.0.0-rc.3",

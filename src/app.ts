@@ -6,9 +6,11 @@ import * as mongoose from 'mongoose';
 import * as winston from 'winston';
 
 import { Routes } from './routes/routes';
-import { Watcher } from './services/watcher';
+import { Manager } from './services/manager';
 
-import { ethers } from 'ethers';
+const corsOptions = {
+  origin: process.env.UI_URL,
+};
 
 class App {
   public app: express.Application;
@@ -22,28 +24,31 @@ class App {
     this.routes.init(this.app);
     this.mongoSetup();
 
-    Watcher.init();
+    Manager.init();
   }
 
   private config(): void {
     this.app.use(bodyParser.json());
     // serving static files
     this.app.use(express.static('public'));
-    this.app.use(cors());
+    this.app.use(cors(corsOptions));
     this.app.use(
       expressWinston.logger({
         format: winston.format.combine(
           winston.format.colorize(),
-          winston.format.json()
+          winston.format.json(),
         ),
-        transports: [new winston.transports.Console()]
-      })
+        transports: [new winston.transports.Console()],
+      }),
     );
   }
 
   private mongoSetup(): void {
     // mongoose.Promise = global.Promise;
-    mongoose.connect(this.mongoUrl);
+    mongoose.connect(this.mongoUrl, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
   }
 }
 
