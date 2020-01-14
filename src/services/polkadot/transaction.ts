@@ -46,7 +46,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   ): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const api = await getApi();
-    logger.info(`${id} Executing...`);
+    logger.info(`${id} Checking execute conditions...`);
 
     // const isWaitingForConfirmations = this.isWaitingForConfirmations(
     //   scheduled,
@@ -78,6 +78,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     try {
+      logger.info(`${id} Executing...`);
       const hash = await this.sendTx(api, scheduled.signedTransaction);
       // logger.info(`${id} Sent ${hash.toString()}`);
 

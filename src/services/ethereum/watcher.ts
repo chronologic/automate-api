@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { AssetType, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
 import { ScheduleService } from '../schedule';
+import logger from './logger';
 import { Processor } from './processor';
 import { TransactionExecutor } from './transaction';
 import { fetchTransactionMetadata } from './utils';
@@ -11,6 +12,7 @@ export class Watcher {
   public static async init() {
     const transactionExecutor = new TransactionExecutor();
     await Watcher.fillMissingMetadata();
+    await Watcher.fillMissingAssetType();
 
     const processor = new Processor(new ScheduleService(), transactionExecutor);
 
@@ -37,5 +39,18 @@ export class Watcher {
 
       await row.update(metadata).exec();
     }
+  }
+
+  private static async fillMissingAssetType(): Promise<void> {
+    const { n } = await Scheduled.updateMany(
+      {
+        assetType: { $in: [null, undefined] },
+      },
+      {
+        assetType: AssetType.Ethereum,
+      },
+    );
+
+    logger.info(`Filled missing asset type in ${n} rows`);
   }
 }

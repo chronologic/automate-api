@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { Status } from '../models/Models';
+import { AssetType, Status } from '../models/Models';
 import { Key } from '../services/key';
 import { IScheduleService } from '../services/schedule';
 
@@ -37,6 +37,7 @@ export class ScheduleController {
     const scheduled = await this.scheduleService.find(id);
 
     res.json({
+      assetType: scheduled.assetType || AssetType.Ethereum,
       conditionAmount: scheduled.conditionAmount,
       conditionAsset: scheduled.conditionAsset,
       error: scheduled.error,

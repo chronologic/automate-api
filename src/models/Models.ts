@@ -15,7 +15,7 @@ export enum AssetType {
 }
 
 export enum PolkadotChainId {
-  Kusama = 0,
+  Kusama = 1,
 }
 
 export interface IScheduled extends Document {
@@ -67,8 +67,12 @@ export interface ITransactionMetadata {
 export interface IPolkadotTx {
   signer: string;
   nonce: number;
+  accountNonce: number;
   chainId: number;
+  chainName: string;
+  assetName: string;
   hash: string;
   dest?: string;
-  value?: number;
+  value?: string;
+  decimals?: number;
 }

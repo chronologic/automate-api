@@ -4,7 +4,7 @@ import { model, Schema } from 'mongoose';
 import * as ethUtils from '../services/ethereum/utils';
 import { makeLogger } from '../services/logger';
 import * as polkadotUtils from '../services/polkadot/utils';
-import { AssetType, IScheduled, PolkadotChainId, Status } from './Models';
+import { AssetType, IScheduled, Status } from './Models';
 
 const logger = makeLogger('ScheduledSchema');
 
@@ -57,9 +57,7 @@ const ScheduledSchema = new Schema({
               }
               case AssetType.Polkadot: {
                 const { signer, nonce } = await polkadotUtils.parseTx(tx);
-                const senderNonce = await polkadotUtils.getNextNonce(
-                  signer,
-                );
+                const senderNonce = await polkadotUtils.getNextNonce(signer);
 
                 return nonce >= senderNonce;
               }

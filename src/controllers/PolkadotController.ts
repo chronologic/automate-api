@@ -13,8 +13,14 @@ export class PolkadotController {
   }
 
   public async parseTx(req: Request, res: Response) {
-    const parsed = await parseTx(req.query.tx);
-    return res.json(parsed);
+    try {
+      const parsed = await parseTx(req.query.tx);
+      return res.json(parsed);
+    } catch (e) {
+      return res.status(400).json({
+        errors: [e.message],
+      });
+    }
   }
 
   public async getNextNonce(req: Request, res: Response) {

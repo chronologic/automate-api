@@ -49,7 +49,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const id = scheduled._id.toString();
     const provider = this.getProvider(scheduled.chainId);
 
-    logger.info(`${id} Executing...`);
+    logger.info(`${id} Checking execute conditions...`);
 
     const isWaitingForConfirmations = this.isWaitingForConfirmations(
       scheduled,
@@ -88,6 +88,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     try {
+      logger.info(`${id} Executing...`);
       const response = await provider.sendTransaction(
         scheduled.signedTransaction,
       );
