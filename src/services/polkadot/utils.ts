@@ -9,6 +9,9 @@ import {
 import getApi from './api';
 import logger from './logger';
 
+const tokenSymbol = 'KSM';
+const tokenDecimals = 12;
+
 async function getNextNonce(address: string): Promise<number> {
   const api = await getApi();
   const nonce = await api.query.system.accountNonce(address);
@@ -35,18 +38,17 @@ async function parseTx(tx: string): Promise<IPolkadotTx> {
     accountNonce,
     chainId: PolkadotChainId.Kusama,
     chainName: PolkadotChainId[PolkadotChainId.Kusama],
-    assetName: 'DOT',
+    assetName: tokenSymbol,
+    decimals: tokenDecimals,
     hash: extrinsic.hash.toString(),
   };
 
   if (methodName === 'transfer') {
-    const decimals = 12;
     const method = JSON.parse(extrinsic.method.toString());
     parsed.dest = method.args.dest;
     parsed.value = new BigNumber(method.args.value)
-      .div(new BigNumber(10).pow(decimals))
-      .toFormat(decimals);
-    parsed.decimals = decimals;
+      .div(new BigNumber(10).pow(tokenDecimals))
+      .toFormat(tokenDecimals);
   }
 
   return parsed;
@@ -66,7 +68,7 @@ async function fetchTransactionMetadata(
   }
 
   return {
-    assetName: 'DOT',
+    assetName: tokenSymbol,
     assetAmount: +assetAmount,
     assetValue,
     executedAt: null,
