@@ -122,6 +122,8 @@ export class TransactionExecutor implements ITransactionExecutor {
           await api.rpc.author.submitAndWatchExtrinsic(
             extrinsic,
             (result: any) => {
+              // tslint:disable-next-line: no-console
+              console.log(result);
               if (result.isFinalized) {
                 return resolve(extrinsic.hash.toString());
               } else if (result.isDropped || result.isInvalid) {
