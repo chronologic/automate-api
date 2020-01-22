@@ -9,6 +9,7 @@ export enum Status {
   PendingConfirmations,
   PendingPayment,
   PendingPaymentConfirmations,
+  PaymentExpired,
 }
 
 export enum AssetType {
