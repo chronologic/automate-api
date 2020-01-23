@@ -11,7 +11,10 @@ const PAYMENT_ADDRESSES = (process.env.PAYMENT_ADDRESSES || '').split(',');
 const DAY_ADDRESS = '0xe814aee960a85208c3db542c53e7d4a6c8d5f60f';
 const MINUTE_MILLIS = 60 * 1000;
 const MAX_PAYMENT_LIFETIME = 60 * MINUTE_MILLIS;
-const CONFIRMATIONS = 30;
+const CONFIRMATIONS = 3;
+const SCHEDULE_PRICE = new ethers.utils.BigNumber(
+  '10 000 000 000 000 000 000'.replace(/ /g, ''),
+);
 
 const logger = makeLogger('payment');
 const tokenInterface = new ethers.utils.Interface(ERC20);
@@ -30,6 +33,7 @@ export class PaymentService {
   }
 
   public static init(): void {
+    logger.info('Initializing payment processor');
     const filter = {
       address: DAY_ADDRESS,
       topics: [transferTopic],
@@ -54,28 +58,28 @@ export class PaymentService {
       PAYMENT_ADDRESSES.find(addr => addr.toLowerCase() === to.toLowerCase())
     ) {
       logger.info(
-        'Payment from %s to %s for %s detected. Tx %s',
-        from,
-        to,
-        amount,
-        event.transactionHash,
+        `Payment from ${from} to ${to} for ${amount} detected. Tx ${event.transactionHash}`,
       );
 
       const pending = await this.getPendingPayments();
       const tx = pending.find(
-        item =>
-          item.paymentAddress.toLowerCase() ===
-          to.toLowerwithdrawal.transactionHashCase(),
+        item => item.paymentAddress.toLowerCase() === to.toLowerCase(),
       );
 
       if (tx) {
-        logger.info('[%s] Payment matched. Waiting for confirmations.', tx._id);
-        tx.status = Status.PendingPaymentConfirmations;
-        await tx.save();
-        await PaymentService.waitForConfirmation(event.transactionHash);
-        logger.info('[%s] Payment confirmed', tx._id);
-        tx.status = Status.Pending;
-        await tx.save();
+        logger.info(`[${tx._id}] Payment matched`);
+        if (SCHEDULE_PRICE.lte(amount)) {
+          logger.info(`[${tx._id}] Awaiting confirmations`);
+          tx.status = Status.PendingPaymentConfirmations;
+          tx.paymentTx = event.transactionHash;
+          await tx.save();
+          await PaymentService.waitForConfirmation(event.transactionHash);
+          logger.info(`[${tx._id}] Payment confirmed`);
+          tx.status = Status.Pending;
+          await tx.save();
+        } else {
+          logger.info(`[${tx._id}] Payment amount insufficient: ${amount}`);
+        }
       } else {
         logger.info('Payment not matched. Thank you for your donation!');
       }
