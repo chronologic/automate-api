@@ -1,4 +1,5 @@
 import { Watcher as EthereumWatcher } from './ethereum/watcher';
+import { PaymentService } from './payment';
 import { Watcher as PolkadotWatcher } from './polkadot/watcher';
 
 import logger from './logger';
@@ -16,6 +17,12 @@ export class Manager {
       PolkadotWatcher.init();
     } else {
       logger.info('Polkadot support is disabled');
+    }
+    const paymentsEnabled = process.env.PAYMENT === 'true';
+    if (paymentsEnabled) {
+      PaymentService.init();
+    } else {
+      logger.info('Payments are disabled');
     }
   }
 }

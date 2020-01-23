@@ -17,6 +17,8 @@ export class ScheduleController {
       res.json({
         id: stored._id,
         key: Key.generate(stored._id),
+        createdAt: stored.createdAt,
+        paymentAddress: stored.paymentAddress,
       });
     } catch (e) {
       const errors = Object.values(e.errors).map((e: any) => e.message);
@@ -47,6 +49,10 @@ export class ScheduleController {
       timeCondition: scheduled.timeCondition || 0,
       timeConditionTZ: scheduled.timeConditionTZ || '',
       transactionHash: scheduled.transactionHash,
+      paymentAddress: scheduled.paymentAddress,
+      paymentEmail: scheduled.paymentEmail,
+      paymentRefundAddress: scheduled.paymentRefundAddress,
+      paymentTx: scheduled.paymentTx,
     });
   }
 

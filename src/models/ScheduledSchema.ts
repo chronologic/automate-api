@@ -158,6 +158,18 @@ const ScheduledSchema = new Schema({
   executedAt: {
     type: String,
   },
+  paymentEmail: {
+    type: String,
+  },
+  paymentRefundAddress: {
+    type: String,
+  },
+  paymentAddress: {
+    type: String,
+  },
+  paymentTx: {
+    type: String,
+  },
 });
 
 // do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!

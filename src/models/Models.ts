@@ -7,6 +7,9 @@ export enum Status {
   Error,
   StaleNonce,
   PendingConfirmations,
+  PendingPayment,
+  PendingPaymentConfirmations,
+  PaymentExpired,
 }
 
 export enum AssetType {
@@ -37,6 +40,10 @@ export interface IScheduled extends Document {
   assetValue: number;
   createdAt: string;
   executedAt: string;
+  paymentEmail: string;
+  paymentRefundAddress: string;
+  paymentAddress: string;
+  paymentTx: string;
 }
 
 export interface IExecuteStatus {
@@ -55,6 +62,8 @@ export interface IScheduleRequest {
   signedTransaction: string;
   timeCondition: number;
   timeConditionTZ: string;
+  paymentEmail: string;
+  paymentRefundAddress: string;
 }
 
 export interface ITransactionMetadata {

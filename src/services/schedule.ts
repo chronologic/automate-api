@@ -7,6 +7,7 @@ import {
 } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
 import * as ethUtils from './ethereum/utils';
+import { PaymentService } from './payment';
 import * as polkadotUtils from './polkadot/utils';
 
 export interface IScheduleService {
@@ -29,6 +30,8 @@ export class ScheduleService implements IScheduleService {
       transaction.signedTransaction = request.signedTransaction;
       transaction.timeCondition = request.timeCondition;
       transaction.timeConditionTZ = request.timeConditionTZ;
+      transaction.paymentEmail = request.paymentEmail;
+      transaction.paymentRefundAddress = request.paymentRefundAddress;
     } else {
       transaction = new Scheduled(request);
     }
@@ -36,8 +39,18 @@ export class ScheduleService implements IScheduleService {
     transaction.assetName = metadata.assetName;
     transaction.assetAmount = metadata.assetAmount;
     transaction.assetValue = metadata.assetValue;
-    transaction.status = Status.Pending;
     transaction.createdAt = new Date().toISOString();
+
+    const paymentsEnabled = process.env.PAYMENT === 'true';
+    const isDevTx =
+      request.paymentEmail === process.env.DEV_PAYMENT_EMAIL &&
+      request.paymentRefundAddress === process.env.DEV_PAYMENT_REFUND_ADDRESS;
+    const freeTx = isDevTx || !paymentsEnabled;
+
+    transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
+    transaction.paymentAddress = freeTx
+      ? ''
+      : PaymentService.getNextPaymentAddress();
 
     return transaction.save();
   }
