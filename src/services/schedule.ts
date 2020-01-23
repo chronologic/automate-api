@@ -30,6 +30,8 @@ export class ScheduleService implements IScheduleService {
       transaction.signedTransaction = request.signedTransaction;
       transaction.timeCondition = request.timeCondition;
       transaction.timeConditionTZ = request.timeConditionTZ;
+      transaction.paymentEmail = request.paymentEmail;
+      transaction.paymentRefundAddress = request.paymentRefundAddress;
     } else {
       transaction = new Scheduled(request);
     }
@@ -41,9 +43,8 @@ export class ScheduleService implements IScheduleService {
 
     const paymentsEnabled = process.env.PAYMENT === 'true';
     const isDevTx =
-      transaction.paymentEmail === process.env.DEV_PAYMENT_EMAIL &&
-      transaction.paymentRefundAddress ===
-        process.env.DEV_PAYMENT_REFUND_ADDRESS;
+      request.paymentEmail === process.env.DEV_PAYMENT_EMAIL &&
+      request.paymentRefundAddress === process.env.DEV_PAYMENT_REFUND_ADDRESS;
     const freeTx = isDevTx || !paymentsEnabled;
 
     transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
