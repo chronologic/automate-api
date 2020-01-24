@@ -40,6 +40,7 @@ export class ScheduleController {
 
     res.json({
       assetType: scheduled.assetType || AssetType.Ethereum,
+      chainId: scheduled.chainId,
       conditionAmount: scheduled.conditionAmount,
       conditionAsset: scheduled.conditionAsset,
       error: scheduled.error,

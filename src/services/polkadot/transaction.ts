@@ -1,10 +1,14 @@
-import { ApiPromise } from '@polkadot/api';
 import BigNumber from 'bignumber.js';
 
-import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
+import {
+  IExecuteStatus,
+  IExtendedPolkadotAPI,
+  IScheduled,
+  PolkadotChainId,
+  Status,
+} from '../../models/Models';
 import getApi from './api';
 import logger from './logger';
-import { fetchTransactionMetadata, getNextNonce, txToExtrinsic } from './utils';
 
 interface IValidationResult {
   res: boolean;
@@ -15,8 +19,12 @@ export interface ITransactionExecutor {
   execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus>;
 }
 export class TransactionExecutor implements ITransactionExecutor {
-  public static async getSenderNextNonce(from: string): Promise<number> {
-    return getNextNonce(from);
+  public static async getSenderNextNonce(
+    from: string,
+    chainId: PolkadotChainId,
+  ): Promise<number> {
+    const api = await getApi(chainId);
+    return api.getNextNonce(from);
   }
 
   private static queue: Set<string> = new Set<string>();
@@ -45,8 +53,8 @@ export class TransactionExecutor implements ITransactionExecutor {
     blockNum: number,
   ): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
-    const api = await getApi();
-    logger.info(`${id} Checking execute conditions...`);
+    const api = await getApi(scheduled.chainId);
+    logger.info(`${id} ${api.chainName} Checking execute conditions...`);
 
     // const isWaitingForConfirmations = this.isWaitingForConfirmations(
     //   scheduled,
@@ -70,15 +78,17 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const isConditionMet = await this.isConditionMet(scheduled, api);
     if (!isConditionMet) {
-      logger.info(`${id} Condition not met`);
+      logger.info(`${id} ${api.chainName} Condition not met`);
       return this.pending;
     } else if (!scheduled.conditionBlock) {
-      logger.info(`${id} Condition met. Waiting for confirmations.`);
+      logger.info(
+        `${id} ${api.chainName} Condition met. Waiting for confirmations.`,
+      );
       return this.pending;
     }
 
     try {
-      logger.info(`${id} Executing...`);
+      logger.info(`${id} ${api.chainName} Executing...`);
       const hash = await this.sendTx(api, scheduled.signedTransaction);
       // logger.info(`${id} Sent ${hash.toString()}`);
 
@@ -93,7 +103,7 @@ export class TransactionExecutor implements ITransactionExecutor {
         assetName,
         assetAmount,
         assetValue,
-      } = await fetchTransactionMetadata(scheduled);
+      } = await api.fetchTransactionMetadata(scheduled);
 
       return {
         status: scheduled.status,
@@ -113,8 +123,8 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
   }
 
-  private async sendTx(api: ApiPromise, tx: string): Promise<string> {
-    const extrinsic: any = await txToExtrinsic(tx);
+  private async sendTx(api: IExtendedPolkadotAPI, tx: string): Promise<string> {
+    const extrinsic: any = await api.txToExtrinsic(tx);
 
     return Promise.race([
       new Promise(async (resolve, reject) => {
@@ -122,8 +132,8 @@ export class TransactionExecutor implements ITransactionExecutor {
           await api.rpc.author.submitAndWatchExtrinsic(
             extrinsic,
             (result: any) => {
-              // tslint:disable-next-line: no-console
-              console.log(result);
+              // // tslint:disable-next-line: no-console
+              // console.log(result);
               if (result.isFinalized) {
                 return resolve(extrinsic.hash.toString());
               } else if (result.isDropped || result.isInvalid) {
@@ -167,19 +177,23 @@ export class TransactionExecutor implements ITransactionExecutor {
   ): Promise<IValidationResult> {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(
       scheduled.from,
+      scheduled.chainId,
     );
+    const api = await getApi(scheduled.chainId);
 
     logger.info(
-      `${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`,
+      `${scheduled._id} ${api.chainName} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`,
     );
 
     if (senderNonce > scheduled.nonce) {
-      logger.info(`${scheduled._id} Transaction nonce already spent`);
+      logger.info(
+        `${scheduled._id} ${api.chainName} Transaction nonce already spent`,
+      );
       return { res: false, status: { status: Status.StaleNonce } };
     }
 
     if (senderNonce !== scheduled.nonce) {
-      logger.info(`${scheduled._id} Nonce does not match`);
+      logger.info(`${scheduled._id} ${api.chainName} Nonce does not match`);
       return { res: false, status: this.pending };
     }
 
@@ -190,9 +204,12 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { status: Status.Pending };
   }
 
-  private async isConditionMet(scheduled: IScheduled, api: ApiPromise) {
+  private async isConditionMet(
+    scheduled: IScheduled,
+    api: IExtendedPolkadotAPI,
+  ) {
     logger.info(
-      `${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`,
+      `${scheduled._id} ${api.chainName} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`,
     );
 
     const currentConditionAmount = new BigNumber(
@@ -202,8 +219,8 @@ export class TransactionExecutor implements ITransactionExecutor {
     const isStateConditionMet = currentConditionAmount.gte(condition);
 
     logger.info(
-      `${
-        scheduled._id
+      `${scheduled._id} ${
+        api.chainName
       } Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`,
     );
 
@@ -212,7 +229,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const isTimeConditionMet = currentTime > timeCondition;
 
     logger.info(
-      `${scheduled._id} Time condition=${new Date(
+      `${scheduled._id} ${api.chainName} Time condition=${new Date(
         timeCondition,
       ).toISOString()} Current=${new Date(currentTime).toISOString()}`,
     );

@@ -8,7 +8,7 @@ import {
 import Scheduled from '../models/ScheduledSchema';
 import * as ethUtils from './ethereum/utils';
 import { PaymentService } from './payment';
-import * as polkadotUtils from './polkadot/utils';
+import getApi from './polkadot/api';
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
@@ -77,7 +77,7 @@ export class ScheduleService implements IScheduleService {
       .exec();
   }
 
-  private getTransactionMetadata(
+  private async getTransactionMetadata(
     transaction: IScheduled,
   ): Promise<ITransactionMetadata> {
     switch (transaction.assetType) {
@@ -86,7 +86,8 @@ export class ScheduleService implements IScheduleService {
         return ethUtils.fetchTransactionMetadata(transaction);
       }
       case AssetType.Polkadot: {
-        return polkadotUtils.fetchTransactionMetadata(transaction);
+        const api = await getApi(transaction.chainId);
+        return api.fetchTransactionMetadata(transaction);
       }
     }
   }

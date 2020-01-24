@@ -1,3 +1,4 @@
+import { ApiPromise } from '@polkadot/api';
 import { Document } from 'mongoose';
 
 export enum Status {
@@ -19,6 +20,17 @@ export enum AssetType {
 
 export enum PolkadotChainId {
   Kusama = 1,
+  EdgewareTestnet4 = 2,
+}
+
+export interface IExtendedPolkadotAPI extends ApiPromise {
+  chainName: string;
+  getNextNonce(address: string): Promise<number>;
+  txToExtrinsic(tx: string): Promise<any>;
+  parseTx(tx: string): Promise<IPolkadotTx>;
+  fetchTransactionMetadata(
+    transaction: IScheduled,
+  ): Promise<ITransactionMetadata>;
 }
 
 export interface IScheduled extends Document {

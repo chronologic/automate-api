@@ -1,3 +1,4 @@
+import { PolkadotChainId } from '../../models/Models';
 import { ScheduleService } from '../schedule';
 import getApi from './api';
 import { Processor } from './processor';
@@ -19,7 +20,7 @@ export class Watcher {
     }
 
     async function getBlockNumber(): Promise<number> {
-      const api = await getApi();
+      const api = await getApi(PolkadotChainId.Kusama);
       const block: any = await api.rpc.chain.getHeader();
 
       return block.number.toNumber();

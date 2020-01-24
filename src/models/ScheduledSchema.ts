@@ -3,7 +3,7 @@ import { model, Schema } from 'mongoose';
 
 import * as ethUtils from '../services/ethereum/utils';
 import { makeLogger } from '../services/logger';
-import * as polkadotUtils from '../services/polkadot/utils';
+import getApi from '../services/polkadot/api';
 import { AssetType, IScheduled, Status } from './Models';
 
 const logger = makeLogger('ScheduledSchema');
@@ -56,8 +56,9 @@ const ScheduledSchema = new Schema({
                 return parsed.nonce >= senderNonce;
               }
               case AssetType.Polkadot: {
-                const { signer, nonce } = await polkadotUtils.parseTx(tx);
-                const senderNonce = await polkadotUtils.getNextNonce(signer);
+                const api = await getApi(this.chainId);
+                const { signer, nonce } = await api.parseTx(tx);
+                const senderNonce = await api.getNextNonce(signer);
 
                 return nonce >= senderNonce;
               }
@@ -185,7 +186,8 @@ async function preSave(next: () => {}) {
       break;
     }
     case AssetType.Polkadot: {
-      const { signer, nonce, chainId } = await polkadotUtils.parseTx(
+      const api = await getApi(this.chainId);
+      const { signer, nonce, chainId } = await api.parseTx(
         this.signedTransaction,
       );
       this.from = signer;
