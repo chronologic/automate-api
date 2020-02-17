@@ -29,11 +29,11 @@ chains[PolkadotChainId.Kusama] = {
   },
 };
 
-chains[PolkadotChainId.EdgewareTestnet4] = {
+chains[PolkadotChainId.EdgewareMainnet] = {
   uri: process.env.EDGEWARE_URI,
   decimals: 18,
   tokenSymbol: 'EDG',
-  name: PolkadotChainId[PolkadotChainId.EdgewareTestnet4],
+  name: PolkadotChainId[PolkadotChainId.EdgewareMainnet],
   types: {
     Keys: 'SessionKeys3',
     ValidatorPrefs: 'ValidatorPrefsTo196',
