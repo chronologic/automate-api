@@ -1,4 +1,5 @@
 import { Query } from 'mongoose';
+// tslint:disable-next-line: no-implicit-dependencies
 import { It, Mock, Times } from 'typemoq';
 
 import { AssetType, IScheduled, Status } from '../../models/Models';
