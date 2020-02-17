@@ -1,4 +1,5 @@
 import { ApiPromise } from '@polkadot/api';
+import BigNumber from 'bignumber.js';
 import { Document } from 'mongoose';
 
 export enum Status {
@@ -26,6 +27,7 @@ export enum PolkadotChainId {
 export interface IExtendedPolkadotAPI extends ApiPromise {
   chainName: string;
   getNextNonce(address: string): Promise<number>;
+  getBalance(address: string): Promise<BigNumber>;
   txToExtrinsic(tx: string): Promise<any>;
   parseTx(tx: string): Promise<IPolkadotTx>;
   fetchTransactionMetadata(

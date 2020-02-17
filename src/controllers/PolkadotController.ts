@@ -5,9 +5,9 @@ import getApi from '../services/polkadot/api';
 export class PolkadotController {
   public async getBalance(req: Request, res: Response) {
     const api = await getApi(+req.query.chainId);
-    const balance = await api.query.balances.freeBalance(req.query.address);
+    const balance = await api.getBalance(req.query.address);
     return res.json({
-      balance,
+      balance: balance.toFixed(0),
     });
   }
 

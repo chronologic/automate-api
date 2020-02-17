@@ -212,9 +212,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       `${scheduled._id} ${api.chainName} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`,
     );
 
-    const currentConditionAmount = new BigNumber(
-      (await api.query.balances.freeBalance(scheduled.from!)).toString(),
-    );
+    const currentConditionAmount = await api.getBalance(scheduled.from!);
     const condition = new BigNumber(scheduled.conditionAmount);
     const isStateConditionMet = currentConditionAmount.gte(condition);
 

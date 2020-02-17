@@ -52,10 +52,17 @@ function extendApi(
 ): IExtendedPolkadotAPI {
   const chain = chains[chainId];
 
+  // https://polkadot.js.org/api/start/FAQ.html#my-chain-does-not-support-system-account-queries
   async function getNextNonce(address: string): Promise<number> {
-    const nonce = await api.query.system.accountNonce(address);
+    const { accountNonce } = await api.derive.balances.account(address);
 
-    return nonce.toNumber();
+    return accountNonce.toBn().toNumber();
+  }
+
+  async function getBalance(address: string): Promise<BigNumber> {
+    const { freeBalance } = await api.derive.balances.account(address);
+
+    return new BigNumber(freeBalance.toBn().toString());
   }
 
   // TODO: IExtrinsic
@@ -113,6 +120,7 @@ function extendApi(
   }
 
   (api as IExtendedPolkadotAPI).getNextNonce = getNextNonce;
+  (api as IExtendedPolkadotAPI).getBalance = getBalance;
   (api as IExtendedPolkadotAPI).txToExtrinsic = txToExtrinsic;
   (api as IExtendedPolkadotAPI).parseTx = parseTx;
   (api as IExtendedPolkadotAPI).fetchTransactionMetadata = fetchTransactionMetadata;
