@@ -10,6 +10,11 @@ import * as ethUtils from './ethereum/utils';
 import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 
+const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map(str =>
+  str.toLowerCase(),
+);
+const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
+
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
   find(id: string): Promise<IScheduled>;
@@ -41,11 +46,8 @@ export class ScheduleService implements IScheduleService {
     transaction.assetValue = metadata.assetValue;
     transaction.createdAt = new Date().toISOString();
 
-    const paymentsEnabled = process.env.PAYMENT === 'true';
-    const isDevTx =
-      request.paymentEmail === process.env.DEV_PAYMENT_EMAIL &&
-      request.paymentRefundAddress === process.env.DEV_PAYMENT_REFUND_ADDRESS;
-    const freeTx = isDevTx || !paymentsEnabled;
+    const isDevTx = this.isDevTx(request.paymentEmail);
+    const freeTx = isDevTx || !PAYMENTS_ENABLED;
 
     transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
     transaction.paymentAddress = freeTx
@@ -94,5 +96,9 @@ export class ScheduleService implements IScheduleService {
 
   private findBySignedTransaction(signedTransaction: string) {
     return Scheduled.findOne({ signedTransaction }).exec();
+  }
+
+  private isDevTx(email: string): boolean {
+    return DEV_PAYMENT_EMAILS.includes(email.toLowerCase());
   }
 }
