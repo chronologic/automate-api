@@ -106,7 +106,7 @@ function extendApi(
     const assetValue = 0;
     try {
       const { value: txAmount } = await parseTx(transaction.signedTransaction);
-      assetAmount = txAmount;
+      assetAmount = txAmount || '0';
     } catch (e) {
       logger.error(e);
     }

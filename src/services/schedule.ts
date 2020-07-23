@@ -10,9 +10,9 @@ import * as ethUtils from './ethereum/utils';
 import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 
-const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map(str =>
-  str.toLowerCase(),
-);
+const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(
+  ';',
+).map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
 
 export interface IScheduleService {
@@ -53,6 +53,9 @@ export class ScheduleService implements IScheduleService {
     transaction.paymentAddress = freeTx
       ? ''
       : PaymentService.getNextPaymentAddress();
+
+    // tslint:disable-next-line: no-console
+    console.log(transaction);
 
     return transaction.save();
   }
