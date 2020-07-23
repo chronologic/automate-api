@@ -3,7 +3,8 @@ import { u32, Text, u64, Bytes } from '@polkadot/types';
 import { Struct } from '@polkadot/types/codec';
 import { Registry } from '@polkadot/types/types';
 import { VotingTypes, VoteStage } from './voting';
-import AccountId from '@polkadot/types/primitive/Generic/AccountId';
+
+class AccountId {}
 
 export class ProposalRecord extends Struct {
   constructor(registry: Registry, value: any) {
@@ -11,7 +12,7 @@ export class ProposalRecord extends Struct {
       registry,
       {
         index: u32,
-        author: AccountId,
+        author: AccountId as any,
         stage: VoteStage,
         transition_time: u32,
         title: Text,

@@ -12,7 +12,8 @@ import {
 } from '@polkadot/types';
 import U8aFixed from '@polkadot/types/codec/U8aFixed';
 import { AnyU8a, Registry } from '@polkadot/types/types';
-import AccountId from '@polkadot/types/primitive/Generic/AccountId';
+
+class AccountId {}
 
 export class PreVoting extends Null {}
 export class Commit extends Null {}
@@ -86,7 +87,7 @@ export class VoteData extends Struct {
     super(
       registry,
       {
-        initiator: AccountId,
+        initiator: AccountId as any,
         stage: VoteStage,
         vote_type: VoteType,
         tally_type: TallyType,
@@ -113,10 +114,10 @@ export class VoteData extends Struct {
 }
 
 export class Commitments extends Vec.with(
-  Tuple.with([AccountId, VoteOutcome]),
+  Tuple.with([AccountId as any, VoteOutcome]),
 ) {}
 export class Reveals extends Vec.with(
-  Tuple.with([AccountId, Vec.with(VoteOutcome)]),
+  Tuple.with([AccountId as any, Vec.with(VoteOutcome)]),
 ) {}
 
 export class VoteRecord extends Struct {

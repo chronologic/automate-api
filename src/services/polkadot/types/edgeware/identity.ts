@@ -2,7 +2,8 @@
 import { Bytes, Text, u32, Null } from '@polkadot/types';
 import { Option, Struct, Enum } from '@polkadot/types/codec';
 import { Registry } from '@polkadot/types/types';
-import AccountId from '@polkadot/types/primitive/Generic/AccountId';
+
+class AccountId {}
 
 export class MetadataRecord extends Struct {
   constructor(registry: Registry, value: any) {
@@ -51,7 +52,7 @@ export class IdentityRecord extends Struct {
     super(
       registry,
       {
-        account: AccountId,
+        account: AccountId as any,
         identity_type: Text,
         identity: Bytes,
         stage: IdentityStage,
