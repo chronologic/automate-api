@@ -29,8 +29,8 @@ export class ScheduleController {
   }
 
   public async getScheduled(req: Request, res: Response) {
-    const id: string = req.query.id;
-    const key: string = req.query.key;
+    const id: string = req.query.id as string;
+    const key: string = req.query.key as string;
 
     if (!this.auth(id, key, res)) {
       return;
@@ -58,8 +58,8 @@ export class ScheduleController {
   }
 
   public async cancel(req: Request, res: Response) {
-    const id: string = req.query.id;
-    const key: string = req.query.key;
+    const id: string = req.query.id as string;
+    const key: string = req.query.key as string;
 
     if (!this.auth(id, key, res)) {
       return;

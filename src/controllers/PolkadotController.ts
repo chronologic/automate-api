@@ -5,7 +5,7 @@ import getApi from '../services/polkadot/api';
 export class PolkadotController {
   public async getBalance(req: Request, res: Response) {
     const api = await getApi(+req.query.chainId);
-    const balance = await api.getBalance(req.query.address);
+    const balance = await api.getBalance(req.query.address as string);
     return res.json({
       balance: balance.toFixed(0),
     });
@@ -14,7 +14,7 @@ export class PolkadotController {
   public async parseTx(req: Request, res: Response) {
     try {
       const api = await getApi(+req.query.chainId);
-      const parsed = await api.parseTx(req.query.tx);
+      const parsed = await api.parseTx(req.query.tx as string);
       return res.json(parsed);
     } catch (e) {
       return res.status(400).json({
@@ -25,7 +25,7 @@ export class PolkadotController {
 
   public async getNextNonce(req: Request, res: Response) {
     const api = await getApi(+req.query.chainId);
-    const nonce = await api.getNextNonce(req.query.address);
+    const nonce = await api.getNextNonce(req.query.address as string);
     return res.json({
       nonce,
     });
