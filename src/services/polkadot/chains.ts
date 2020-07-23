@@ -19,11 +19,11 @@ const chains: {
   [key in PolkadotChainId]?: IPolkadotChain;
 } = {};
 
-chains[PolkadotChainId.Kusama] = {
+chains[PolkadotChainId.PolkadotMainnet] = {
   uri: process.env.POLKADOT_URI,
   decimals: 12,
-  tokenSymbol: 'KSM',
-  name: PolkadotChainId[PolkadotChainId.Kusama],
+  tokenSymbol: 'DOT',
+  name: PolkadotChainId[PolkadotChainId.PolkadotMainnet],
   types: {
     Keys: 'SessionKeys5',
   },

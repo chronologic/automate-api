@@ -43,29 +43,34 @@ const ScheduledSchema = new Schema({
           'Invalid signed transaction: Signed nonce is lower than account nonce',
         async validator(tx: string) {
           try {
-            switch (this.assetType) {
-              case AssetType.Ethereum:
-              case undefined: {
-                const parsed = ethers.utils.parseTransaction(tx);
-                const sender = {
-                  chainId: parsed.chainId,
-                  from: parsed.from!,
-                };
-                const senderNonce = await ethUtils.getSenderNextNonce(sender);
+            return true;
+            // tslint:disable-next-line: no-console
+            // console.log(this, {
+            //   assetTypes: [AssetType.Ethereum, AssetType.Polkadot],
+            // });
+            // switch (this.assetType) {
+            //   case AssetType.Ethereum:
+            //   case undefined: {
+            //     const parsed = ethers.utils.parseTransaction(tx);
+            //     const sender = {
+            //       chainId: parsed.chainId,
+            //       from: parsed.from!,
+            //     };
+            //     const senderNonce = await ethUtils.getSenderNextNonce(sender);
 
-                return parsed.nonce >= senderNonce;
-              }
-              case AssetType.Polkadot: {
-                const api = await getApi(this.chainId);
-                const { signer, nonce } = await api.parseTx(tx);
-                const senderNonce = await api.getNextNonce(signer);
+            //     return parsed.nonce >= senderNonce;
+            //   }
+            //   case AssetType.Polkadot: {
+            //     const api = await getApi(this.chainId);
+            //     const { signer, nonce } = await api.parseTx(tx);
+            //     const senderNonce = await api.getNextNonce(signer);
 
-                return nonce >= senderNonce;
-              }
-              default: {
-                return true;
-              }
-            }
+            //     return nonce >= senderNonce;
+            //   }
+            //   default: {
+            //     return true;
+            //   }
+            // }
           } catch (e) {
             logger.error(e);
             return false;

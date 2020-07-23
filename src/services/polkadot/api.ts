@@ -39,7 +39,7 @@ export default async function getApi(
     types: chains[chainId].types,
   });
 
-  return apiPromise.then(api => {
+  return apiPromise.then((api) => {
     const extendedApi = extendApi(api, chainId);
     apis[chainId] = extendedApi;
     return extendedApi;

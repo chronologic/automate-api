@@ -20,7 +20,7 @@ export class Watcher {
     }
 
     async function getBlockNumber(): Promise<number> {
-      const api = await getApi(PolkadotChainId.Kusama);
+      const api = await getApi(PolkadotChainId.PolkadotMainnet);
       const block: any = await api.rpc.chain.getHeader();
 
       return block.number.toNumber();
