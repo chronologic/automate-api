@@ -39,7 +39,7 @@ async function send(scheduledTx: IScheduled): Promise<void> {
     from: 'team@chronologic.network',
     templateId: success ? successTemplateId : failureTemplateId,
     dynamicTemplateData: {
-      id: scheduledTx.id,
+      id: scheduledTx._id,
       amount: (scheduledTx.assetAmount || 0).toFixed(2),
       value: (scheduledTx.assetValue || 0).toFixed(2),
       name: scheduledTx.assetName || '',
@@ -57,6 +57,7 @@ async function send(scheduledTx: IScheduled): Promise<void> {
       paymentEmail: scheduledTx.paymentEmail,
       paymentAddress: scheduledTx.paymentAddress,
       paymentRefundAddress: scheduledTx.paymentRefundAddress,
+      error: scheduledTx.error,
     },
   });
 }
