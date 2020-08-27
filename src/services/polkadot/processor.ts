@@ -99,7 +99,7 @@ export class Processor {
 
       // tslint:disable-next-line: no-object-literal-type-assertion
       sendMail({
-        ...scheduled,
+        ...scheduled.toJSON(),
         transactionHash,
         status,
         error,
