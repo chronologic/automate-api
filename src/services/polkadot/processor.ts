@@ -1,5 +1,6 @@
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
+import sendMail from '../mail';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
 
@@ -26,7 +27,7 @@ export class Processor {
     );
 
     const inProgress = [];
-    groups.forEach(transactions =>
+    groups.forEach((transactions) =>
       inProgress.push(this.processTransactions(transactions, blockNum)),
     );
 
@@ -38,7 +39,7 @@ export class Processor {
       `${sender}-${chainId.toString()}`;
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
-    scheduled.forEach(s => {
+    scheduled.forEach((s) => {
       const key = makeKey(s.from, s.chainId);
 
       if (!groups.has(key)) {
@@ -95,6 +96,18 @@ export class Processor {
           assetValue,
         })
         .exec();
+
+      // tslint:disable-next-line: no-object-literal-type-assertion
+      sendMail({
+        ...scheduled,
+        transactionHash,
+        status,
+        error,
+        executedAt,
+        assetName: assetName || scheduled.assetName,
+        assetAmount: assetAmount || scheduled.assetAmount,
+        assetValue: assetValue || scheduled.assetValue,
+      } as IScheduled);
 
       return true;
     } else if (scheduled.conditionBlock === 0) {
