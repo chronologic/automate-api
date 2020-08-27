@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "postinstall": "yarn build",
+    "postinstall": "npm run build",
     "dev": "ts-node ./src/server.ts",
     "start": "nodemon ./dist/server.js",
     "lint": "tslint --project ."
