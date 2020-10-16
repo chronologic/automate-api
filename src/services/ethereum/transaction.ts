@@ -85,7 +85,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       provider,
     );
     let isGasPriceConditionMet = true;
-    if (isConditionMet) {
+    if (isConditionMet && scheduled.gasPriceAware) {
       logger.info(`${id} checking gas price...`);
       isGasPriceConditionMet = await this.isGasPriceConditionMet(
         scheduled,
