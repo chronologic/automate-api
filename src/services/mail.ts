@@ -84,7 +84,7 @@ async function send(
       paymentAddress: scheduledTx.paymentAddress,
       paymentRefundAddress: scheduledTx.paymentRefundAddress,
       error: scheduledTx.error,
-      networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(0),
+      networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(),
       txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
     },
   });
