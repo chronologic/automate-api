@@ -82,6 +82,8 @@ export class Processor {
       assetName,
       assetAmount,
       assetValue,
+      executionAttempts,
+      lastExecutionAttempt,
     } = await this.transactionExecutor.execute(scheduled, blockNum);
 
     if (status !== Status.Pending) {
@@ -99,22 +101,27 @@ export class Processor {
         })
         .exec();
 
-      // tslint:disable-next-line: no-object-literal-type-assertion
-      sendMail({
-        ...scheduled.toJSON(),
-        transactionHash,
-        status,
-        error,
-        executedAt,
-        assetName: assetName || scheduled.assetName,
-        assetAmount: assetAmount || scheduled.assetAmount,
-        assetValue: assetValue || scheduled.assetValue,
-      } as IScheduled);
+      sendMail(
+        // tslint:disable-next-line: no-object-literal-type-assertion
+        {
+          ...scheduled.toJSON(),
+          transactionHash,
+          status,
+          error,
+          executedAt,
+          assetName: assetName || scheduled.assetName,
+          assetAmount: assetAmount || scheduled.assetAmount,
+          assetValue: assetValue || scheduled.assetValue,
+        } as IScheduled,
+        error ? 'failure' : 'success',
+      );
 
       return true;
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
+    } else if (lastExecutionAttempt) {
+      scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
     }
 
     return false;

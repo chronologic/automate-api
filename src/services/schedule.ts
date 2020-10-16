@@ -32,6 +32,7 @@ export class ScheduleService implements IScheduleService {
     if (transaction) {
       transaction.conditionAmount = request.conditionAmount;
       transaction.conditionAsset = request.conditionAsset;
+      transaction.gasPriceAware = request.gasPriceAware;
       transaction.signedTransaction = request.signedTransaction;
       transaction.timeCondition = request.timeCondition;
       transaction.timeConditionTZ = request.timeConditionTZ;

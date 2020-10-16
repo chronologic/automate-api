@@ -1,4 +1,6 @@
+// tslint:disable: no-object-literal-type-assertion
 import * as client from '@sendgrid/mail';
+import BigNumber from 'bignumber.js';
 
 import { IScheduled } from '../models/Models';
 import logger from './logger';
@@ -6,21 +8,45 @@ import logger from './logger';
 const API_KEY = process.env.SENDGRID_API_KEY;
 const SUCCESS_EMAILS = process.env.SUCCESS_EMAILS === 'true';
 const FAILURE_EMAILS = process.env.FAILURE_EMAILS === 'true';
+const DELAYED_EMAILS = process.env.DELAYED_EMAILS === 'true';
 const EXTERNAL_RECIPIENTS = process.env.EXTERNAL_RECIPIENTS === 'true';
 
 const RECIPIENTS = process.env.EMAIL_RECIPIENTS.split(';');
 
 const successTemplateId = 'd-2f91d8bbb6494ae7a869b0c94f6079c9';
 const failureTemplateId = 'd-2ab9ac45ca864550bd69900bccd0a8ee';
+const delayedGasPriceTemplateId = 'd-1e832369e2cc42489011610c8bf191d2';
 
 client.setApiKey(API_KEY);
 
-async function send(scheduledTx: IScheduled): Promise<void> {
-  const success = !scheduledTx.error;
-  if (success && !SUCCESS_EMAILS) {
+interface IMailParams extends Partial<IScheduled> {
+  networkGasPrice?: BigNumber;
+  txGasPrice?: BigNumber;
+}
+
+type MailStatus = 'success' | 'failure' | 'delayed_gasPrice';
+
+const templateIds = {
+  success: successTemplateId,
+  failure: failureTemplateId,
+  delayed_gasPrice: delayedGasPriceTemplateId,
+};
+
+const mailSubjects = {
+  success: '[AUTOMATE] ✅ SUCCESS',
+  failure: '[AUTOMATE] ❌ ERROR',
+  delayed_gasPrice: '[AUTOMATE] ⏳ DELAYED due to gas price',
+};
+
+async function send(
+  scheduledTx: IMailParams,
+  status: MailStatus,
+): Promise<void> {
+  if (status === 'success' && !SUCCESS_EMAILS) {
     return;
-  }
-  if (!success && !FAILURE_EMAILS) {
+  } else if (status === 'failure' && !FAILURE_EMAILS) {
+    return;
+  } else if (status === 'delayed_gasPrice' && !DELAYED_EMAILS) {
     return;
   }
 
@@ -29,15 +55,15 @@ async function send(scheduledTx: IScheduled): Promise<void> {
     recipients.push(scheduledTx.paymentEmail);
   }
   logger.info(
-    `Sending ${success ? 'SUCCESS' : 'ERROR'} email for tx ${scheduledTx.id} ${
+    `Sending ${status.toUpperCase()} email for tx ${scheduledTx.id} ${
       scheduledTx.transactionHash
     } to ${JSON.stringify(recipients)}`,
   );
   await client.send({
     to: recipients,
-    subject: success ? '[AUTOMATE] SUCCESS' : '[AUTOMATE] ERROR',
+    subject: mailSubjects[status],
     from: 'team@chronologic.network',
-    templateId: success ? successTemplateId : failureTemplateId,
+    templateId: templateIds[status],
     dynamicTemplateData: {
       id: scheduledTx._id,
       amount: (scheduledTx.assetAmount || 0).toFixed(2),
@@ -58,6 +84,8 @@ async function send(scheduledTx: IScheduled): Promise<void> {
       paymentAddress: scheduledTx.paymentAddress,
       paymentRefundAddress: scheduledTx.paymentRefundAddress,
       error: scheduledTx.error,
+      networkGasPrice: (scheduledTx.networkGasPrice || 0).toFixed(0),
+      txGasPrice: (scheduledTx.txGasPrice || 0).toFixed(0),
     },
   });
 }

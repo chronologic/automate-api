@@ -23,6 +23,14 @@ function getSenderNextNonce({ chainId, from }): Promise<number> {
   return ethers.getDefaultProvider(network).getTransactionCount(from);
 }
 
+export async function fetchNetworkGasPrice(
+  chainId: number,
+): Promise<ethers.utils.BigNumber> {
+  const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
+
+  return provider.getGasPrice();
+}
+
 async function fetchTransactionMetadata(
   transaction: IScheduled,
 ): Promise<ITransactionMetadata> {
@@ -122,7 +130,7 @@ async function scrapeTokenMetadata(txHash) {
   try {
     const res = await fetch(
       `https://etherscan.io/tx/${txHash}`,
-    ).then(response => response.text());
+    ).then((response) => response.text());
     const $ = cheerio.load(res);
     const tokenDetails = $('.row .list-unstyled');
     const values = [0, 0];
@@ -133,7 +141,7 @@ async function scrapeTokenMetadata(txHash) {
         .text()
         .trim()
         .split(' ')
-        .map(val => Number(val.trim().replace(/[\(\)\$,]/g, '')));
+        .map((val) => Number(val.trim().replace(/[\(\)\$,]/g, '')));
       values[0] = values[0] + rowValues[0];
       values[1] = values[1] + rowValues[1];
     });
@@ -229,7 +237,7 @@ async function fetchAssetPrice(
     logger.debug(`fetchAssetPrice dateParam from ${timestamp}: ${dateParam}`);
     let res = await fetch(
       `https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
-    ).then(response => response.json());
+    ).then((response) => response.json());
 
     try {
       return res.market_data.current_price.usd;
@@ -239,7 +247,7 @@ async function fetchAssetPrice(
       );
       res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd`,
-      ).then(response => response.json());
+      ).then((response) => response.json());
       return res[assetId].usd;
     }
   } catch (e) {
@@ -250,7 +258,7 @@ async function fetchAssetPrice(
 
 async function fetchCoinGeckoAssetId(symbol): Promise<string> {
   const fallbackAssetId = '_';
-  let asset = coinGeckoCoins.find(coin => coin.symbol === symbol);
+  let asset = coinGeckoCoins.find((coin) => coin.symbol === symbol);
 
   if (asset) {
     return asset.id;
@@ -259,8 +267,8 @@ async function fetchCoinGeckoAssetId(symbol): Promise<string> {
   try {
     coinGeckoCoins = await fetch(
       'https://api.coingecko.com/api/v3/coins/list',
-    ).then(response => response.json());
-    asset = coinGeckoCoins.find(coin => coin.symbol === symbol);
+    ).then((response) => response.json());
+    asset = coinGeckoCoins.find((coin) => coin.symbol === symbol);
 
     return asset.id || fallbackAssetId;
   } catch (e) {
@@ -304,7 +312,7 @@ async function fetchABI(contractAddress: string): Promise<any> {
   try {
     const res = await fetch(
       `https://api.etherscan.io/api?module=contract&action=getabi&address=${contractAddress}&apikey=${process.env.ETHERSCAN_API_KEY}`,
-    ).then(response => response.json());
+    ).then((response) => response.json());
 
     return JSON.parse(res.result);
   } catch (e) {
@@ -318,7 +326,7 @@ async function fetchTokenName(contractAddress: string): Promise<string> {
   try {
     const res = await fetch(
       `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`,
-    ).then(response => response.json());
+    ).then((response) => response.json());
 
     return res.symbol || fallbackName;
   } catch (e) {

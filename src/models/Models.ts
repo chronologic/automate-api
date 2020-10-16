@@ -49,6 +49,9 @@ export interface IScheduled extends Document {
   conditionBlock: number;
   timeCondition: number;
   timeConditionTZ: string;
+  gasPriceAware: boolean;
+  executionAttempts: number;
+  lastExecutionAttempt: string;
   assetName: string;
   assetAmount: number;
   assetValue: number;
@@ -68,11 +71,14 @@ export interface IExecuteStatus {
   assetName?: string;
   assetAmount?: number;
   assetValue?: number;
+  executionAttempts?: number;
+  lastExecutionAttempt?: string;
 }
 
 export interface IScheduleRequest {
   conditionAmount: string;
   conditionAsset: string;
+  gasPriceAware: boolean;
   signedTransaction: string;
   timeCondition: number;
   timeConditionTZ: string;
