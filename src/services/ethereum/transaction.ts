@@ -259,12 +259,6 @@ export class TransactionExecutor implements ITransactionExecutor {
         logger.info(
           `${
             scheduled._id
-          } 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
-        );
-      } else {
-        logger.info(
-          `${
-            scheduled._id
           } 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
         );
 
@@ -287,6 +281,12 @@ export class TransactionExecutor implements ITransactionExecutor {
             'delayed_gasPrice',
           );
         }
+      } else {
+        logger.info(
+          `${
+            scheduled._id
+          } 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
+        );
       }
     }
 
