@@ -127,6 +127,15 @@ const ScheduledSchema = new Schema({
   timeConditionTZ: {
     type: String,
   },
+  gasPriceAware: {
+    type: Boolean,
+  },
+  executionAttempts: {
+    type: Number,
+  },
+  lastExecutionAttempt: {
+    type: String,
+  },
   from: {
     type: String,
   },
