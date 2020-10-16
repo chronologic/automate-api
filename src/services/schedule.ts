@@ -25,6 +25,8 @@ export interface IScheduleService {
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest) {
     await new Scheduled(request).validate();
+    // tslint:disable-next-line: no-console
+    console.log(request);
 
     let transaction = await this.findBySignedTransaction(
       request.signedTransaction,
@@ -46,6 +48,7 @@ export class ScheduleService implements IScheduleService {
     transaction.assetAmount = metadata.assetAmount;
     transaction.assetValue = metadata.assetValue;
     transaction.createdAt = new Date().toISOString();
+    transaction.gasPriceAware = request.gasPriceAware;
 
     const isDevTx = this.isDevTx(request.paymentEmail);
     const freeTx = isDevTx || !PAYMENTS_ENABLED;
