@@ -265,7 +265,7 @@ export class TransactionExecutor implements ITransactionExecutor {
         const now = new Date().getTime();
         const minTimeDiffBetweenEmails = 1000 * 60 * 15; // 15 min
         const lastExecutionAttempt = new Date(
-          scheduled.lastExecutionAttempt,
+          scheduled.lastExecutionAttempt || 0,
         ).getTime();
         const shouldNotify =
           now - lastExecutionAttempt > minTimeDiffBetweenEmails;
