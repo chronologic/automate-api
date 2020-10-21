@@ -36,7 +36,7 @@
     "express-winston": "^3.0.1",
     "keen-tracking": "^4.2.4",
     "moment": "^2.24.0",
-    "mongoose": "^5.9.26",
+    "mongoose": "^5.10.9",
     "node-fetch": "^2.6.0",
     "rxjs": "^6.5.4",
     "winston": "^3.1.0"

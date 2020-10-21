@@ -16,7 +16,7 @@ class App {
   public app: express.Application;
   public routes: Routes = new Routes();
   public mongoUrl: string =
-    process.env.MONGODB_URI || 'mongodb://root:example@localhost:27017';
+    process.env.DB_URI || 'mongodb://root:example@localhost:27017';
 
   constructor() {
     this.app = express();

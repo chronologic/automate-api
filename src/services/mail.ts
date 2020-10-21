@@ -55,7 +55,7 @@ async function send(
     recipients.push(scheduledTx.paymentEmail);
   }
   logger.info(
-    `Sending ${status.toUpperCase()} email for tx ${scheduledTx.id} ${
+    `Sending ${status.toUpperCase()} email for tx ${scheduledTx._id} ${
       scheduledTx.transactionHash
     } to ${JSON.stringify(recipients)}`,
   );
