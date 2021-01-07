@@ -14,6 +14,9 @@ const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(
   ';',
 ).map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
+const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) =>
+  str.toLowerCase(),
+);
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest): Promise<IScheduled>;
@@ -51,7 +54,10 @@ export class ScheduleService implements IScheduleService {
     transaction.gasPriceAware = request.gasPriceAware;
 
     const isDevTx = this.isDevTx(request.paymentEmail);
-    const freeTx = isDevTx || !PAYMENTS_ENABLED;
+    const isValidCouponCode = this.isValidCouponCode(
+      request.paymentRefundAddress,
+    );
+    const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
     transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
     transaction.paymentAddress = freeTx
@@ -107,5 +113,9 @@ export class ScheduleService implements IScheduleService {
 
   private isDevTx(email: string): boolean {
     return DEV_PAYMENT_EMAILS.includes(email.toLowerCase());
+  }
+
+  private isValidCouponCode(paymentRefundAddress: string): boolean {
+    return COUPON_CODES.includes(paymentRefundAddress.toLowerCase());
   }
 }
