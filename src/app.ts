@@ -9,7 +9,16 @@ import { Routes } from './routes/routes';
 import { Manager } from './services/manager';
 
 const corsOptions = {
-  origin: process.env.UI_URL,
+  origin: (origin, callback) => {
+    if (
+      process.env.UI_URL.match(origin) ||
+      origin.includes(/https?:\/\/localhost/i)
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
 };
 
 class App {
