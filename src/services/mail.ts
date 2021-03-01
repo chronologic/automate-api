@@ -32,6 +32,8 @@ type MailStatus =
   | 'delayed_gasPrice';
 
 const templateIds = {
+  scheduled: successTemplateId,
+  cancelled: successTemplateId,
   success: successTemplateId,
   failure: failureTemplateId,
   delayed_gasPrice: delayedGasPriceTemplateId,
@@ -72,7 +74,7 @@ async function send(
   const from = scheduledTx.from;
   const subject = `${mailSubjects[status]} ${amount} ${name} from ${from}`;
 
-  await client.send({
+  console.log({
     to: recipients,
     subject,
     from: 'team@chronologic.network',
@@ -101,6 +103,40 @@ async function send(
       txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
     },
   });
+
+  try {
+    await client.send({
+      to: recipients,
+      subject,
+      from: 'team@chronologic.network',
+      templateId: templateIds[status],
+      dynamicTemplateData: {
+        id: scheduledTx._id,
+        amount,
+        value: (scheduledTx.assetValue || 0).toFixed(2),
+        name,
+        type: scheduledTx.assetType || '',
+        chainId: scheduledTx.chainId,
+        txHash: scheduledTx.transactionHash,
+        nonce: scheduledTx.nonce,
+        from,
+        conditionBlock: scheduledTx.conditionBlock,
+        conditionAmount: scheduledTx.conditionAmount,
+        conditionAsset: scheduledTx.conditionAsset,
+        timeCondition: scheduledTx.timeCondition,
+        timeConditionTZ: scheduledTx.timeConditionTZ,
+        createdAt: scheduledTx.createdAt,
+        paymentEmail: scheduledTx.paymentEmail,
+        paymentAddress: scheduledTx.paymentAddress,
+        paymentRefundAddress: scheduledTx.paymentRefundAddress,
+        error: scheduledTx.error,
+        networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(),
+        txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
+      },
+    });
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 export default send;
