@@ -59,54 +59,19 @@ async function send(
     return;
   }
 
-  const recipients = [...RECIPIENTS];
-  if (EXTERNAL_RECIPIENTS && scheduledTx.paymentEmail) {
-    recipients.push(scheduledTx.paymentEmail);
-  }
-  logger.info(
-    `Sending ${status.toUpperCase()} email for tx ${scheduledTx._id} ${
-      scheduledTx.transactionHash
-    } to ${JSON.stringify(recipients)}`,
-  );
-
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
   const subject = `${mailSubjects[status]} ${amount} ${name} from ${from}`;
 
-  console.log({
-    to: recipients,
-    subject,
-    from: 'team@chronologic.network',
-    templateId: templateIds[status],
-    dynamicTemplateData: {
-      id: scheduledTx._id,
-      amount,
-      value: (scheduledTx.assetValue || 0).toFixed(2),
-      name,
-      type: scheduledTx.assetType || '',
-      chainId: scheduledTx.chainId,
-      txHash: scheduledTx.transactionHash,
-      nonce: scheduledTx.nonce,
-      from,
-      conditionBlock: scheduledTx.conditionBlock,
-      conditionAmount: scheduledTx.conditionAmount,
-      conditionAsset: scheduledTx.conditionAsset,
-      timeCondition: scheduledTx.timeCondition,
-      timeConditionTZ: scheduledTx.timeConditionTZ,
-      createdAt: scheduledTx.createdAt,
-      paymentEmail: scheduledTx.paymentEmail,
-      paymentAddress: scheduledTx.paymentAddress,
-      paymentRefundAddress: scheduledTx.paymentRefundAddress,
-      error: scheduledTx.error,
-      networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(),
-      txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
-    },
-  });
-
   try {
+    logger.info(
+      `Sending ${status.toUpperCase()} email for tx ${scheduledTx._id} ${
+        scheduledTx.transactionHash
+      } to ADMIN(S) ${JSON.stringify(RECIPIENTS)}`,
+    );
     await client.send({
-      to: recipients,
+      to: RECIPIENTS,
       subject,
       from: 'team@chronologic.network',
       templateId: templateIds[status],
@@ -134,6 +99,42 @@ async function send(
         txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
       },
     });
+    if (EXTERNAL_RECIPIENTS && scheduledTx.paymentEmail) {
+      logger.info(
+        `Sending ${status.toUpperCase()} email for tx ${scheduledTx._id} ${
+          scheduledTx.transactionHash
+        } to ${JSON.stringify(RECIPIENTS)}`,
+      );
+      await client.send({
+        to: scheduledTx.paymentEmail,
+        subject,
+        from: 'team@chronologic.network',
+        templateId: templateIds[status],
+        dynamicTemplateData: {
+          id: scheduledTx._id,
+          amount,
+          value: (scheduledTx.assetValue || 0).toFixed(2),
+          name,
+          type: scheduledTx.assetType || '',
+          chainId: scheduledTx.chainId,
+          txHash: scheduledTx.transactionHash,
+          nonce: scheduledTx.nonce,
+          from,
+          conditionBlock: scheduledTx.conditionBlock,
+          conditionAmount: scheduledTx.conditionAmount,
+          conditionAsset: scheduledTx.conditionAsset,
+          timeCondition: scheduledTx.timeCondition,
+          timeConditionTZ: scheduledTx.timeConditionTZ,
+          createdAt: scheduledTx.createdAt,
+          paymentEmail: scheduledTx.paymentEmail,
+          paymentAddress: scheduledTx.paymentAddress,
+          paymentRefundAddress: scheduledTx.paymentRefundAddress,
+          error: scheduledTx.error,
+          networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(),
+          txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
+        },
+      });
+    }
   } catch (e) {
     console.error(e);
   }
