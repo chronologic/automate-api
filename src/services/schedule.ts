@@ -7,6 +7,7 @@ import {
 } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
 import * as ethUtils from './ethereum/utils';
+import send from './mail';
 import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 
@@ -28,8 +29,6 @@ export interface IScheduleService {
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest) {
     await new Scheduled(request).validate();
-    // tslint:disable-next-line: no-console
-    console.log(request);
 
     let transaction = await this.findBySignedTransaction(
       request.signedTransaction,
@@ -64,21 +63,27 @@ export class ScheduleService implements IScheduleService {
       ? ''
       : PaymentService.getNextPaymentAddress();
 
-    // tslint:disable-next-line: no-console
-    console.log(transaction);
+    const scheduled = await transaction.save();
 
-    return transaction.save();
+    send(scheduled, 'scheduled');
+
+    return scheduled;
   }
 
   public find(id: string) {
     return Scheduled.findById(id).exec();
   }
 
-  public cancel(id: string) {
-    return Scheduled.updateOne(
+  public async cancel(id: string) {
+    const res = await Scheduled.updateOne(
       { _id: id },
       { status: Status.Cancelled },
     ).exec();
+
+    const scheduled = await Scheduled.findById(id).exec();
+    send(scheduled, 'cancelled');
+
+    return res;
   }
 
   public getPending(assetType: AssetType): Promise<IScheduled[]> {

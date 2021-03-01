@@ -24,7 +24,12 @@ interface IMailParams extends Partial<IScheduled> {
   txGasPrice?: BigNumber;
 }
 
-type MailStatus = 'success' | 'failure' | 'delayed_gasPrice';
+type MailStatus =
+  | 'scheduled'
+  | 'cancelled'
+  | 'success'
+  | 'failure'
+  | 'delayed_gasPrice';
 
 const templateIds = {
   success: successTemplateId,
@@ -33,9 +38,11 @@ const templateIds = {
 };
 
 const mailSubjects = {
-  success: '[AUTOMATE] ✅ SUCCESS',
-  failure: '[AUTOMATE] ❌ ERROR',
-  delayed_gasPrice: '[AUTOMATE] ⏳ DELAYED due to gas price',
+  scheduled: '[AUTOMATE] ⏰ Scheduled',
+  cancelled: '[AUTOMATE] 🚮 Cancelled',
+  success: '[AUTOMATE] ✅ Executed',
+  failure: '[AUTOMATE] ❌ Error',
+  delayed_gasPrice: '[AUTOMATE] ⏳ Delayed due to gas price',
 };
 
 async function send(
@@ -59,21 +66,27 @@ async function send(
       scheduledTx.transactionHash
     } to ${JSON.stringify(recipients)}`,
   );
+
+  const amount = (scheduledTx.assetAmount || 0).toFixed(2);
+  const name = scheduledTx.assetName || '';
+  const from = scheduledTx.from;
+  const subject = `${mailSubjects[status]} ${amount} ${name} from ${from}`;
+
   await client.send({
     to: recipients,
-    subject: mailSubjects[status],
+    subject,
     from: 'team@chronologic.network',
     templateId: templateIds[status],
     dynamicTemplateData: {
       id: scheduledTx._id,
-      amount: (scheduledTx.assetAmount || 0).toFixed(2),
+      amount,
       value: (scheduledTx.assetValue || 0).toFixed(2),
-      name: scheduledTx.assetName || '',
+      name,
       type: scheduledTx.assetType || '',
       chainId: scheduledTx.chainId,
       txHash: scheduledTx.transactionHash,
       nonce: scheduledTx.nonce,
-      from: scheduledTx.from,
+      from,
       conditionBlock: scheduledTx.conditionBlock,
       conditionAmount: scheduledTx.conditionAmount,
       conditionAsset: scheduledTx.conditionAsset,
