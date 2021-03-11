@@ -1,7 +1,6 @@
 import { ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 
-import * as ethUtils from '../services/ethereum/utils';
 import { makeLogger } from '../services/logger';
 import getApi from '../services/polkadot/api';
 import { AssetType, IScheduled, Status } from './Models';
@@ -139,6 +138,9 @@ const ScheduledSchema = new Schema({
   from: {
     type: String,
   },
+  to: {
+    type: String,
+  },
   nonce: {
     type: Number,
   },
@@ -185,6 +187,12 @@ const ScheduledSchema = new Schema({
   paymentTx: {
     type: String,
   },
+  userId: {
+    type: String,
+  },
+  notes: {
+    type: String,
+  },
 });
 
 // do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!
@@ -193,20 +201,47 @@ async function preSave(next: () => {}) {
     case AssetType.Ethereum:
     case undefined: {
       const parsed = ethers.utils.parseTransaction(this.signedTransaction);
-      this.from = parsed.from!;
+      this.from = (parsed.from || '').toLowerCase();
+      this.to = (parsed.to || '').toLowerCase();
       this.nonce = parsed.nonce;
       this.chainId = parsed.chainId;
+      this.transactionHash = parsed.hash;
+
+      // TODO: extract ERC20 data using code below
+      /*
+
+    try {
+      const { name, decimals } = await TokenAPI.tokenInfo(
+        signedRecipient,
+        decodedTransaction.chainId
+      );
+
+      const callDataParameters = '0x' + decodedTransaction.data.substring(10);
+      const params = ethers.utils.defaultAbiCoder.decode(
+        ['address', 'uint256'],
+        callDataParameters
+      );
+
+      signedAddress = decodedTransaction.to!;
+      signedAssetName = name;
+      signedAssetDecimals = decimals;
+      signedRecipient = params[0];
+      signedAmount = TokenAPI.withDecimals(params[1], decimals);
+      // tslint:disable-next-line:no-empty
+    } catch (e) {}
+    */
 
       break;
     }
     case AssetType.Polkadot: {
       const api = await getApi(this.chainId);
-      const { signer, nonce, chainId } = await api.parseTx(
+      const { signer, nonce, chainId, hash } = await api.parseTx(
         this.signedTransaction,
       );
       this.from = signer;
       this.nonce = nonce;
       this.chainId = chainId;
+      this.transactionHash = hash;
 
       break;
     }

@@ -1,15 +1,22 @@
 import {
   AssetType,
   IScheduled,
+  IScheduledForUser,
+  IScheduleParams,
   IScheduleRequest,
   ITransactionMetadata,
+  IUser,
   Status,
 } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
+import User from '../models/UserSchema';
 import * as ethUtils from './ethereum/utils';
 import send from './mail';
 import { PaymentService } from './payment';
+import { Key } from './key';
 import getApi from './polkadot/api';
+import { BadRequestError } from '../errors/BadRequestError';
+import { UserService } from './user';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(
   ';',
@@ -20,14 +27,24 @@ const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) =>
 );
 
 export interface IScheduleService {
-  schedule(request: IScheduleRequest): Promise<IScheduled>;
+  schedule(
+    request: IScheduleRequest,
+    params?: IScheduleParams,
+  ): Promise<IScheduled>;
   find(id: string): Promise<IScheduled>;
   cancel(id: string);
   getPending(assetType: AssetType): Promise<IScheduled[]>;
+  listForApiKey(apiKey: string): Promise<IScheduledForUser[]>;
+  getByHash(apiKey: string, hash: string): Promise<IScheduledForUser>;
+  getMaxNonce(
+    apiKey: string,
+    address: string,
+    chainId: number,
+  ): Promise<number>;
 }
 
 export class ScheduleService implements IScheduleService {
-  public async schedule(request: IScheduleRequest) {
+  public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
     await new Scheduled(request).validate();
 
     let transaction = await this.findBySignedTransaction(
@@ -56,9 +73,20 @@ export class ScheduleService implements IScheduleService {
     const isValidCouponCode = this.isValidCouponCode(
       request.paymentRefundAddress,
     );
+
+    if (params?.apiKey) {
+      const user = await UserService.validateApiKey(params.apiKey);
+
+      transaction.userId = user.id;
+    }
+
     const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
-    transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
+    if (params?.apiKey && params?.draft) {
+      transaction.status = transaction.status || Status.Draft;
+    } else {
+      transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
+    }
     transaction.paymentAddress = freeTx
       ? ''
       : PaymentService.getNextPaymentAddress();
@@ -95,6 +123,84 @@ export class ScheduleService implements IScheduleService {
     return Scheduled.where('status', Status.Pending)
       .where('assetType', assetTypeCondition)
       .exec();
+  }
+
+  public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {
+    const user = await UserService.validateApiKey(apiKey);
+
+    const scheduleds = await Scheduled.find({ userId: user.id }).exec();
+
+    return scheduleds.map((s) => this.mapToScheduledForUser(s));
+  }
+
+  public async getByHash(
+    apiKey: string,
+    hash: string,
+  ): Promise<IScheduledForUser> {
+    const user = await UserService.validateApiKey(apiKey);
+
+    const scheduled = await Scheduled.findOne({
+      userId: user.id,
+      transactionHash: hash,
+    }).exec();
+
+    if (scheduled) {
+      return this.mapToScheduledForUser(scheduled);
+    }
+
+    return null;
+  }
+
+  public async getMaxNonce(
+    apiKey: string,
+    address: string,
+    chainId: number,
+  ): Promise<number> {
+    const user = await UserService.validateApiKey(apiKey);
+
+    const [scheduled] = await Scheduled.find({
+      userId: user.id,
+      from: address.toLowerCase(),
+      chainId,
+    })
+      .sort({ nonce: 1 })
+      .limit(1)
+      .exec();
+
+    if (scheduled) {
+      return scheduled.nonce;
+    }
+
+    return -1;
+  }
+
+  private mapToScheduledForUser(scheduled: IScheduled): IScheduledForUser {
+    return {
+      id: scheduled.id,
+      assetAmount: scheduled.assetAmount,
+      assetName: scheduled.assetName,
+      assetType: scheduled.assetType,
+      assetValue: scheduled.assetValue,
+      chainId: scheduled.chainId,
+      conditionAmount: scheduled.conditionAmount,
+      conditionAsset: scheduled.conditionAsset,
+      conditionBlock: scheduled.conditionBlock,
+      createdAt: scheduled.createdAt,
+      error: scheduled.error,
+      executedAt: scheduled.executedAt,
+      executionAttempts: scheduled.executionAttempts,
+      from: scheduled.from,
+      gasPriceAware: scheduled.gasPriceAware,
+      lastExecutionAttempt: scheduled.lastExecutionAttempt,
+      nonce: scheduled.nonce,
+      signedTransaction: scheduled.signedTransaction,
+      status: scheduled.status,
+      timeCondition: scheduled.timeCondition,
+      timeConditionTZ: scheduled.timeConditionTZ,
+      transactionHash: scheduled.transactionHash,
+      txKey: Key.generate(scheduled._id),
+      notes: scheduled.notes,
+    };
   }
 
   private async getTransactionMetadata(

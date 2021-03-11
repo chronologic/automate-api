@@ -12,6 +12,7 @@ export enum Status {
   PendingPayment,
   PendingPaymentConfirmations,
   PaymentExpired,
+  Draft,
 }
 
 export enum AssetType {
@@ -61,6 +62,35 @@ export interface IScheduled extends Document {
   paymentRefundAddress: string;
   paymentAddress: string;
   paymentTx: string;
+  userId?: string;
+  notes?: string;
+}
+
+export interface IScheduledForUser {
+  id: string;
+  assetType: AssetType;
+  signedTransaction: string;
+  conditionAsset: string;
+  conditionAmount: string;
+  status: Status;
+  transactionHash: string;
+  error: string;
+  from: string;
+  nonce: number;
+  chainId: number;
+  conditionBlock: number;
+  timeCondition: number;
+  timeConditionTZ: string;
+  gasPriceAware: boolean;
+  executionAttempts: number;
+  lastExecutionAttempt: string;
+  assetName: string;
+  assetAmount: number;
+  assetValue: number;
+  createdAt: string;
+  executedAt: string;
+  txKey: string;
+  notes: string;
 }
 
 export interface IExecuteStatus {
@@ -86,6 +116,11 @@ export interface IScheduleRequest {
   paymentRefundAddress: string;
 }
 
+export interface IScheduleParams {
+  apiKey: string;
+  draft?: boolean;
+}
+
 export interface ITransactionMetadata {
   assetName: string;
   assetAmount: number;
@@ -104,4 +139,16 @@ export interface IPolkadotTx {
   dest?: string;
   value?: string;
   decimals?: number;
+}
+
+export interface IUserPublic {
+  login: string;
+  apiKey: string;
+  accessKey: string;
+}
+
+export interface IUser extends IUserPublic, Document {
+  passwordHash: string;
+  salt: string;
+  createdAt: string;
 }

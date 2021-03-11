@@ -1,4 +1,5 @@
-import { Request, Response } from 'express';
+import e, { Request, Response } from 'express';
+import { BadRequestError } from '../errors/BadRequestError';
 
 import { AssetType, Status } from '../models/Models';
 import { Key } from '../services/key';
@@ -13,15 +14,21 @@ export class ScheduleController {
 
   public async schedule(req: Request, res: Response) {
     try {
-      const stored = await this.scheduleService.schedule(req.body);
+      const stored = await this.scheduleService.schedule(
+        req.body,
+        req.query as any,
+      );
       res.json({
         id: stored._id,
         key: Key.generate(stored._id),
         createdAt: stored.createdAt,
         paymentAddress: stored.paymentAddress,
+        transactionHash: stored.transactionHash,
       });
     } catch (e) {
-      const errors = Object.values(e.errors).map((e: any) => e.message);
+      const errors = e.errors
+        ? Object.values(e.errors).map((e: any) => e.message)
+        : e.message;
 
       res.status(422);
       res.json({ errors });
@@ -57,6 +64,25 @@ export class ScheduleController {
     });
   }
 
+  public async getScheduledByHash(req: Request, res: Response) {
+    const scheduled = await this.scheduleService.getByHash(
+      req.query.apiKey as any,
+      req.query.hash as any,
+    );
+
+    res.json(scheduled);
+  }
+
+  public async getMaxNonce(req: Request, res: Response) {
+    const nonce = await this.scheduleService.getMaxNonce(
+      req.query.apiKey as any,
+      req.query.address as any,
+      req.query.chainId as any,
+    );
+
+    res.json({ nonce });
+  }
+
   public async cancel(req: Request, res: Response) {
     const id: string = req.query.id as string;
     const key: string = req.query.key as string;
@@ -67,6 +93,26 @@ export class ScheduleController {
 
     await this.scheduleService.cancel(id);
     res.json({ status: Status.Cancelled });
+  }
+
+  public async list(req: Request, res: Response) {
+    try {
+      const items = await this.scheduleService.listForApiKey(
+        req.query.apiKey as any,
+      );
+
+      res.json({
+        items,
+      });
+    } catch (e) {
+      if (e instanceof BadRequestError) {
+        res.status((e as BadRequestError).statusCode);
+      }
+
+      res.json({
+        error: e?.message,
+      });
+    }
   }
 
   private auth(id: string, key: string, res: Response) {
