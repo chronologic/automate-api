@@ -45,6 +45,7 @@ export interface IScheduleService {
 
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
+    console.log(request);
     await new Scheduled(request).validate();
 
     let transaction = await this.findBySignedTransaction(
