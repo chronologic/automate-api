@@ -119,11 +119,20 @@ const ScheduledSchema = new Schema({
       },
     },
   },
+  conditionAssetName: {
+    type: String,
+  },
+  conditionAssetDecimals: {
+    type: Number,
+  },
   timeCondition: {
     required: [true, 'Time condition is required'],
     type: Number,
   },
   timeConditionTZ: {
+    type: String,
+  },
+  gasPrice: {
     type: String,
   },
   gasPriceAware: {
@@ -172,6 +181,9 @@ const ScheduledSchema = new Schema({
   createdAt: {
     type: String,
   },
+  updatedAt: {
+    type: String,
+  },
   executedAt: {
     type: String,
   },
@@ -197,6 +209,9 @@ const ScheduledSchema = new Schema({
 
 // do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!
 async function preSave(next: () => {}) {
+  this.createdAt = this.createdAt || new Date().toISOString();
+  this.updatedAt = new Date().toISOString();
+
   switch (this.assetType) {
     case AssetType.Ethereum:
     case undefined: {
@@ -206,30 +221,17 @@ async function preSave(next: () => {}) {
       this.nonce = parsed.nonce;
       this.chainId = parsed.chainId;
       this.transactionHash = parsed.hash;
+      this.gasPrice = parsed.gasPrice;
 
-      // TODO: extract ERC20 data using code below
-      /*
+      try {
+        const callDataParameters = '0x' + parsed.data.substring(10);
+        const params = ethers.utils.defaultAbiCoder.decode(
+          ['address', 'uint256'],
+          callDataParameters,
+        );
 
-    try {
-      const { name, decimals } = await TokenAPI.tokenInfo(
-        signedRecipient,
-        decodedTransaction.chainId
-      );
-
-      const callDataParameters = '0x' + decodedTransaction.data.substring(10);
-      const params = ethers.utils.defaultAbiCoder.decode(
-        ['address', 'uint256'],
-        callDataParameters
-      );
-
-      signedAddress = decodedTransaction.to!;
-      signedAssetName = name;
-      signedAssetDecimals = decimals;
-      signedRecipient = params[0];
-      signedAmount = TokenAPI.withDecimals(params[1], decimals);
-      // tslint:disable-next-line:no-empty
-    } catch (e) {}
-    */
+        this.to = params[0];
+      } catch (e) {}
 
       break;
     }

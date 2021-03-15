@@ -1,11 +1,11 @@
 import {
   AssetType,
+  IAssetMetadata,
   IScheduled,
   IScheduledForUser,
   IScheduleParams,
   IScheduleRequest,
   ITransactionMetadata,
-  IUser,
   Status,
 } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
@@ -62,12 +62,19 @@ export class ScheduleService implements IScheduleService {
     } else {
       transaction = new Scheduled(request);
     }
+    transaction.notes = request.notes;
+
     const metadata = await this.getTransactionMetadata(transaction);
     transaction.assetName = metadata.assetName;
     transaction.assetAmount = metadata.assetAmount;
     transaction.assetValue = metadata.assetValue;
-    transaction.createdAt = new Date().toISOString();
     transaction.gasPriceAware = request.gasPriceAware;
+
+    const conditionAssetMetadata = await this.getConditionAssetMetadata(
+      transaction,
+    );
+    transaction.conditionAssetName = conditionAssetMetadata.name;
+    transaction.conditionAssetDecimals = conditionAssetMetadata.decimals;
 
     const isDevTx = this.isDevTx(request.paymentEmail);
     const isValidCouponCode = this.isValidCouponCode(
@@ -82,8 +89,12 @@ export class ScheduleService implements IScheduleService {
 
     const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
-    if (params?.apiKey && params?.draft) {
-      transaction.status = transaction.status || Status.Draft;
+    if (params?.apiKey) {
+      if (params?.draft) {
+        transaction.status = transaction.status || Status.Draft;
+      } else {
+        // leave status as is
+      }
     } else {
       transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
     }
@@ -184,12 +195,16 @@ export class ScheduleService implements IScheduleService {
       chainId: scheduled.chainId,
       conditionAmount: scheduled.conditionAmount,
       conditionAsset: scheduled.conditionAsset,
+      conditionAssetDecimals: scheduled.conditionAssetDecimals,
+      conditionAssetName: scheduled.conditionAssetName,
       conditionBlock: scheduled.conditionBlock,
       createdAt: scheduled.createdAt,
       error: scheduled.error,
       executedAt: scheduled.executedAt,
       executionAttempts: scheduled.executionAttempts,
       from: scheduled.from,
+      to: scheduled.from,
+      gasPrice: scheduled.gasPrice,
       gasPriceAware: scheduled.gasPriceAware,
       lastExecutionAttempt: scheduled.lastExecutionAttempt,
       nonce: scheduled.nonce,
@@ -201,6 +216,23 @@ export class ScheduleService implements IScheduleService {
       txKey: Key.generate(scheduled._id),
       notes: scheduled.notes,
     };
+  }
+
+  private async getConditionAssetMetadata(
+    transaction: IScheduled,
+  ): Promise<IAssetMetadata> {
+    switch (transaction.assetType) {
+      case AssetType.Ethereum:
+      case undefined: {
+        return ethUtils.fetchAssetMetadata(transaction);
+      }
+      case AssetType.Polkadot: {
+        return {
+          name: '',
+          decimals: 10,
+        };
+      }
+    }
   }
 
   private async getTransactionMetadata(

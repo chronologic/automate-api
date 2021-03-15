@@ -5,8 +5,14 @@ import { ethers } from 'ethers';
 import * as moment from 'moment';
 import fetch from 'node-fetch';
 
-import { IScheduled, ITransactionMetadata, Status } from '../../models/Models';
+import {
+  IAssetMetadata,
+  IScheduled,
+  ITransactionMetadata,
+  Status,
+} from '../../models/Models';
 import logger from './logger';
+import ERC20 from '../../abi/erc20';
 
 interface ICoinGeckoCoin {
   id: string;
@@ -335,4 +341,50 @@ async function fetchTokenName(contractAddress: string): Promise<string> {
   }
 }
 
-export { getSenderNextNonce, fetchTransactionMetadata };
+async function fetchAssetMetadata(
+  transaction: IScheduled,
+): Promise<IAssetMetadata> {
+  try {
+    if (!transaction.conditionAsset && !transaction.conditionAmount) {
+      return {
+        name: '',
+        decimals: null,
+      };
+    }
+
+    const isEth = transaction.conditionAsset === '';
+
+    if (isEth) {
+      return {
+        decimals: 18,
+        name: 'eth',
+      };
+    }
+
+    const provider = ethers.getDefaultProvider(
+      ethers.utils.getNetwork(transaction.chainId),
+    );
+
+    const contract = new ethers.Contract(
+      transaction.conditionAsset,
+      ERC20,
+      provider,
+    );
+
+    const name = await contract.functions.symbol();
+    const decimals = await contract.functions.decimals();
+
+    return {
+      name,
+      decimals,
+    };
+  } catch (e) {
+    logger.error(e);
+    return {
+      name: '',
+      decimals: 18,
+    };
+  }
+}
+
+export { getSenderNextNonce, fetchTransactionMetadata, fetchAssetMetadata };

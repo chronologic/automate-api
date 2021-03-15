@@ -40,16 +40,20 @@ export interface IScheduled extends Document {
   assetType: AssetType;
   signedTransaction: string;
   conditionAsset: string;
+  conditionAssetDecimals: number;
+  conditionAssetName: string;
   conditionAmount: string;
   status: Status;
   transactionHash: string;
   error: string;
   from: string;
+  to: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;
   timeCondition: number;
   timeConditionTZ: string;
+  gasPrice: string;
   gasPriceAware: boolean;
   executionAttempts: number;
   lastExecutionAttempt: string;
@@ -71,16 +75,20 @@ export interface IScheduledForUser {
   assetType: AssetType;
   signedTransaction: string;
   conditionAsset: string;
+  conditionAssetDecimals: number;
+  conditionAssetName: string;
   conditionAmount: string;
   status: Status;
   transactionHash: string;
   error: string;
   from: string;
+  to: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;
   timeCondition: number;
   timeConditionTZ: string;
+  gasPrice: string;
   gasPriceAware: boolean;
   executionAttempts: number;
   lastExecutionAttempt: string;
@@ -109,6 +117,7 @@ export interface IScheduleRequest {
   conditionAmount: string;
   conditionAsset: string;
   gasPriceAware: boolean;
+  notes: string;
   signedTransaction: string;
   timeCondition: number;
   timeConditionTZ: string;
@@ -127,6 +136,10 @@ export interface ITransactionMetadata {
   assetValue: number;
   executedAt: string;
 }
+export interface IAssetMetadata {
+  name: string;
+  decimals: number;
+}
 
 export interface IPolkadotTx {
   signer: string;
@@ -144,7 +157,7 @@ export interface IPolkadotTx {
 export interface IUserPublic {
   login: string;
   apiKey: string;
-  accessKey: string;
+  // accessKey: string;
 }
 
 export interface IUser extends IUserPublic, Document {

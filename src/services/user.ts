@@ -40,7 +40,7 @@ export class UserService implements IUserService {
 
       return {
         login,
-        accessKey: userDb.accessKey,
+        // accessKey: userDb.accessKey,
         apiKey: userDb.apiKey,
       };
     } else {
@@ -62,7 +62,7 @@ export class UserService implements IUserService {
 
       return {
         login,
-        accessKey,
+        // accessKey,
         apiKey,
       };
     }
