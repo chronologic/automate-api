@@ -45,7 +45,6 @@ export interface IScheduleService {
 
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
-    console.log(request);
     await new Scheduled(request).validate();
 
     let transaction = await this.findBySignedTransaction(
@@ -94,7 +93,7 @@ export class ScheduleService implements IScheduleService {
       if (params?.draft) {
         transaction.status = transaction.status || Status.Draft;
       } else {
-        // leave status as is
+        transaction.status = transaction.status || Status.Pending;
       }
     } else {
       transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
