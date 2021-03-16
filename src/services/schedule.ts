@@ -71,12 +71,6 @@ export class ScheduleService implements IScheduleService {
       const user = await UserService.validateApiKey(params.apiKey);
 
       transaction.userId = user.id;
-
-      // metamask will resubmit a tx if it does not get a receipt within a minute or so
-      // this will prevent the transaction from being saved in the db over and over again
-      if (transactionExists) {
-        return transaction;
-      }
     }
 
     const metadata = await this.getTransactionMetadata(transaction);
