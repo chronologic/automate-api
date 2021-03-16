@@ -50,7 +50,10 @@ export class ScheduleService implements IScheduleService {
     let transaction = await this.findBySignedTransaction(
       request.signedTransaction,
     );
+    let transactionExists = false;
+
     if (transaction) {
+      transactionExists = true;
       transaction.conditionAmount = request.conditionAmount;
       transaction.conditionAsset = request.conditionAsset;
       transaction.gasPriceAware = request.gasPriceAware;
@@ -63,6 +66,18 @@ export class ScheduleService implements IScheduleService {
       transaction = new Scheduled(request);
     }
     transaction.notes = request.notes;
+
+    if (params?.apiKey) {
+      const user = await UserService.validateApiKey(params.apiKey);
+
+      transaction.userId = user.id;
+
+      // metamask will resubmit a tx if it does not get a receipt within a minute or so
+      // this will prevent the transaction from being saved in the db over and over again
+      if (transactionExists) {
+        return transaction;
+      }
+    }
 
     const metadata = await this.getTransactionMetadata(transaction);
     transaction.assetName = metadata.assetName;
@@ -80,12 +95,6 @@ export class ScheduleService implements IScheduleService {
     const isValidCouponCode = this.isValidCouponCode(
       request.paymentRefundAddress,
     );
-
-    if (params?.apiKey) {
-      const user = await UserService.validateApiKey(params.apiKey);
-
-      transaction.userId = user.id;
-    }
 
     const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
@@ -141,7 +150,10 @@ export class ScheduleService implements IScheduleService {
 
     const scheduleds = await Scheduled.find({ userId: user.id }).exec();
 
-    return scheduleds.map((s) => this.mapToScheduledForUser(s));
+    return scheduleds
+      .map((s) => this.mapToScheduledForUser(s))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .reverse();
   }
 
   public async getByHash(
