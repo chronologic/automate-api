@@ -9,13 +9,11 @@ import {
   Status,
 } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
-import User from '../models/UserSchema';
 import * as ethUtils from './ethereum/utils';
 import send from './mail';
 import { PaymentService } from './payment';
 import { Key } from './key';
 import getApi from './polkadot/api';
-import { BadRequestError } from '../errors/BadRequestError';
 import { UserService } from './user';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(
@@ -50,10 +48,8 @@ export class ScheduleService implements IScheduleService {
     let transaction = await this.findBySignedTransaction(
       request.signedTransaction,
     );
-    let transactionExists = false;
 
     if (transaction) {
-      transactionExists = true;
       transaction.conditionAmount = request.conditionAmount;
       transaction.conditionAsset = request.conditionAsset;
       transaction.gasPriceAware = request.gasPriceAware;
@@ -96,8 +92,12 @@ export class ScheduleService implements IScheduleService {
       if (params?.draft) {
         transaction.status = transaction.status || Status.Draft;
       } else {
-        transaction.status = transaction.status || Status.Pending;
+        transaction.status =
+          transaction.status === Status.Draft
+            ? Status.Pending
+            : transaction.status;
       }
+      transaction.status = transaction.status || Status.Pending;
     } else {
       transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
     }
@@ -180,7 +180,7 @@ export class ScheduleService implements IScheduleService {
       from: address.toLowerCase(),
       chainId,
     })
-      .sort({ nonce: 1 })
+      .sort({ nonce: -1 })
       .limit(1)
       .exec();
 
@@ -209,7 +209,7 @@ export class ScheduleService implements IScheduleService {
       executedAt: scheduled.executedAt,
       executionAttempts: scheduled.executionAttempts,
       from: scheduled.from,
-      to: scheduled.from,
+      to: scheduled.to,
       gasPrice: scheduled.gasPrice,
       gasPriceAware: scheduled.gasPriceAware,
       lastExecutionAttempt: scheduled.lastExecutionAttempt,
