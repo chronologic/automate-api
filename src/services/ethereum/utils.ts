@@ -47,17 +47,19 @@ async function fetchTransactionMetadata(
   const method =
     parsedTx.value.toString() === '0' ? fetchTokenMetadata : fetchEthMetadata;
 
-  const { assetName, assetAmount, assetValue, executedAt } = await method.call(
-    null,
-    transaction,
-    parsedTx,
-    provider,
-  );
+  const {
+    assetName,
+    assetAmount,
+    assetValue,
+    assetContract,
+    executedAt,
+  } = await method.call(null, transaction, parsedTx, provider);
 
   return {
     assetName,
     assetAmount,
     assetValue,
+    assetContract,
     executedAt,
   };
 }
@@ -128,6 +130,8 @@ async function fetchTokenMetadata(
     transaction.assetAmount = assetAmount || transaction.assetAmount;
     transaction.assetValue = assetValue || transaction.assetValue;
   }
+
+  transaction.assetContract = parsedTx.to;
 
   return transaction;
 }
@@ -289,10 +293,9 @@ async function fetchTokenAmount(
   provider: ethers.providers.BaseProvider,
 ): Promise<number> {
   try {
-    const tokenAbi = await fetchABI(contractAddress);
-    const decoder = new InputDataDecoder(tokenAbi);
+    const decoder = new InputDataDecoder(ERC20);
     const decoded = decoder.decodeData(txData);
-    const token = new ethers.Contract(contractAddress, tokenAbi, provider);
+    const token = new ethers.Contract(contractAddress, ERC20, provider);
     const decimals = await token.functions.decimals();
     if (decoded.method === 'transfer') {
       const amount = new BigNumber(decoded.inputs[1].toString(10));

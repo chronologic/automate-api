@@ -178,6 +178,9 @@ const ScheduledSchema = new Schema({
   assetValue: {
     type: Number,
   },
+  assetContract: {
+    type: String,
+  },
   createdAt: {
     type: String,
   },

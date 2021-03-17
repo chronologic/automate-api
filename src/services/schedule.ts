@@ -73,6 +73,7 @@ export class ScheduleService implements IScheduleService {
     transaction.assetName = metadata.assetName;
     transaction.assetAmount = metadata.assetAmount;
     transaction.assetValue = metadata.assetValue;
+    transaction.assetContract = metadata.assetContract;
     transaction.gasPriceAware = request.gasPriceAware;
 
     const conditionAssetMetadata = await this.getConditionAssetMetadata(
@@ -201,6 +202,7 @@ export class ScheduleService implements IScheduleService {
       assetName: scheduled.assetName,
       assetType: scheduled.assetType,
       assetValue: scheduled.assetValue,
+      assetContract: scheduled.assetContract,
       chainId: scheduled.chainId,
       conditionAmount: scheduled.conditionAmount,
       conditionAsset: scheduled.conditionAsset,

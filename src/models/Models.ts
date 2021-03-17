@@ -60,6 +60,7 @@ export interface IScheduled extends Document {
   assetName: string;
   assetAmount: number;
   assetValue: number;
+  assetContract: string;
   createdAt: string;
   executedAt: string;
   paymentEmail: string;
@@ -95,6 +96,7 @@ export interface IScheduledForUser {
   assetName: string;
   assetAmount: number;
   assetValue: number;
+  assetContract: string;
   createdAt: string;
   executedAt: string;
   txKey: string;
@@ -134,6 +136,7 @@ export interface ITransactionMetadata {
   assetName: string;
   assetAmount: number;
   assetValue: number;
+  assetContract: string;
   executedAt: string;
 }
 export interface IAssetMetadata {
