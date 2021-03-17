@@ -179,6 +179,9 @@ export class ScheduleService implements IScheduleService {
       userId: user.id,
       from: address.toLowerCase(),
       chainId,
+      status: {
+        $nin: [Status.Cancelled],
+      },
     })
       .sort({ nonce: -1 })
       .limit(1)
