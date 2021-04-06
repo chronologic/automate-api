@@ -114,6 +114,8 @@ function extendApi(
     return {
       assetName: chain.tokenSymbol,
       assetAmount: +assetAmount,
+      assetAmountWei: assetAmount,
+      assetDecimals: 10,
       assetValue,
       assetContract: '',
       executedAt: null,
