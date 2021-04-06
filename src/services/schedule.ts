@@ -90,7 +90,7 @@ export class ScheduleService implements IScheduleService {
     const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
     if (params?.apiKey) {
-      if (params?.draft) {
+      if (params?.draft === true || (params?.draft as any) === 'true') {
         transaction.status = transaction.status || Status.Draft;
       } else {
         transaction.status =
