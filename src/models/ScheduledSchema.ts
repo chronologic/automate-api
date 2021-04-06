@@ -109,7 +109,6 @@ const ScheduledSchema = new Schema({
       msg: 'Invalid amount',
       validator: (conditionAmount: string) => {
         try {
-          console.log('TESTING CONDITION AMOUNT', conditionAmount);
           // tslint:disable-next-line:no-unused-expression
           new ethers.utils.BigNumber(conditionAmount);
         } catch (e) {

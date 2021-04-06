@@ -315,7 +315,7 @@ async function fetchTokenAmount(
 
       return {
         amount: amount.div(new BigNumber(10).pow(decimals)).toNumber(),
-        amountWei: amount.toString(),
+        amountWei: amount.toString(10),
         decimals,
       };
     } else if (decoded.method === 'transferFrom') {
@@ -323,7 +323,7 @@ async function fetchTokenAmount(
 
       return {
         amount: amount.div(new BigNumber(10).pow(decimals)).toNumber(),
-        amountWei: amount.toString(),
+        amountWei: amount.toString(10),
         decimals,
       };
     } else {
