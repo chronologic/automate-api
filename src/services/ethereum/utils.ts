@@ -50,6 +50,8 @@ async function fetchTransactionMetadata(
   const {
     assetName,
     assetAmount,
+    assetAmountWei,
+    assetDecimals,
     assetValue,
     assetContract,
     executedAt,
@@ -58,6 +60,8 @@ async function fetchTransactionMetadata(
   return {
     assetName,
     assetAmount,
+    assetAmountWei,
+    assetDecimals,
     assetValue,
     assetContract,
     executedAt,
@@ -79,11 +83,14 @@ async function fetchTokenMetadata(
 
   if (transaction.assetAmount == null) {
     logger.debug(`fetchTokenMetadata fetching assetAmount...`);
-    transaction.assetAmount = await fetchTokenAmount(
+    const amountData = await fetchTokenAmount(
       parsedTx.to,
       parsedTx.data,
       provider,
     );
+    transaction.assetAmount = amountData.amount;
+    transaction.assetAmountWei = amountData.amountWei;
+    transaction.assetDecimals = amountData.decimals;
     logger.debug(
       `fetchTokenMetadata fetched assetAmount: ${transaction.assetAmount}`,
     );
@@ -193,6 +200,8 @@ async function fetchEthMetadata(
       `fetchEthMetadata calculated assetAmount: ${transaction.assetAmount}`,
     );
   }
+  transaction.assetAmountWei = parsedTx.value.toString();
+  transaction.assetDecimals = 18;
 
   if (!transaction.executedAt && transaction.transactionHash) {
     logger.debug(`fetchEthMetadata fetching executedAt...`);
@@ -291,7 +300,11 @@ async function fetchTokenAmount(
   contractAddress: string,
   txData: string,
   provider: ethers.providers.BaseProvider,
-): Promise<number> {
+): Promise<{
+  amountWei: string;
+  amount: number;
+  decimals: number;
+}> {
   try {
     const decoder = new InputDataDecoder(ERC20);
     const decoded = decoder.decodeData(txData);
@@ -300,20 +313,36 @@ async function fetchTokenAmount(
     if (decoded.method === 'transfer') {
       const amount = new BigNumber(decoded.inputs[1].toString(10));
 
-      return amount.div(new BigNumber(10).pow(decimals)).toNumber();
+      return {
+        amount: amount.div(new BigNumber(10).pow(decimals)).toNumber(),
+        amountWei: amount.toString(),
+        decimals,
+      };
     } else if (decoded.method === 'transferFrom') {
       const amount = new BigNumber(decoded.inputs[2].toString(10));
 
-      return amount.div(new BigNumber(10).pow(decimals)).toNumber();
+      return {
+        amount: amount.div(new BigNumber(10).pow(decimals)).toNumber(),
+        amountWei: amount.toString(),
+        decimals,
+      };
     } else {
       logger.debug(
         `fetchTokenAmount unsupported decoded method: ${decoded.method}`,
       );
-      return 0;
+      return {
+        amountWei: '0',
+        amount: 0,
+        decimals: 18,
+      };
     }
   } catch (e) {
     logger.error(e);
-    return 0;
+    return {
+      amountWei: '0',
+      amount: 0,
+      decimals: 18,
+    };
   }
 }
 

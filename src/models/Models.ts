@@ -59,6 +59,8 @@ export interface IScheduled extends Document {
   lastExecutionAttempt: string;
   assetName: string;
   assetAmount: number;
+  assetAmountWei: string;
+  assetDecimals: number;
   assetValue: number;
   assetContract: string;
   createdAt: string;
@@ -135,6 +137,8 @@ export interface IScheduleParams {
 export interface ITransactionMetadata {
   assetName: string;
   assetAmount: number;
+  assetAmountWei: string;
+  assetDecimals: number;
   assetValue: number;
   assetContract: string;
   executedAt: string;

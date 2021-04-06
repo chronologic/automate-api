@@ -48,8 +48,10 @@ export class ScheduleService implements IScheduleService {
     let transaction = await this.findBySignedTransaction(
       request.signedTransaction,
     );
+    let transactionExists = false;
 
     if (transaction) {
+      transactionExists = true;
       transaction.conditionAmount = request.conditionAmount;
       transaction.conditionAsset = request.conditionAsset;
       transaction.gasPriceAware = request.gasPriceAware;
@@ -72,9 +74,20 @@ export class ScheduleService implements IScheduleService {
     const metadata = await this.getTransactionMetadata(transaction);
     transaction.assetName = metadata.assetName;
     transaction.assetAmount = metadata.assetAmount;
+    transaction.assetAmountWei = metadata.assetAmountWei;
+    transaction.assetDecimals = metadata.assetDecimals;
     transaction.assetValue = metadata.assetValue;
     transaction.assetContract = metadata.assetContract;
-    transaction.gasPriceAware = request.gasPriceAware;
+    transaction.gasPriceAware =
+      request.gasPriceAware === true ||
+      (request.gasPriceAware as any) === 'true';
+
+    // if newly creating a tx, autopopulate condition to match the asset being transferred
+    if (!transactionExists && params?.apiKey) {
+      transaction.conditionAsset = metadata.assetContract;
+      transaction.conditionAmount = metadata.assetAmountWei;
+      transaction.conditionAssetDecimals = metadata.assetDecimals;
+    }
 
     const conditionAssetMetadata = await this.getConditionAssetMetadata(
       transaction,

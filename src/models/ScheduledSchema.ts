@@ -175,6 +175,12 @@ const ScheduledSchema = new Schema({
   assetAmount: {
     type: Number,
   },
+  assetAmountWei: {
+    type: String,
+  },
+  assetDecimals: {
+    type: Number,
+  },
   assetValue: {
     type: Number,
   },
