@@ -216,6 +216,7 @@ export class ScheduleService implements IScheduleService {
       assetType: scheduled.assetType,
       assetValue: scheduled.assetValue,
       assetContract: scheduled.assetContract,
+      assetDecimals: scheduled.assetDecimals,
       chainId: scheduled.chainId,
       conditionAmount: scheduled.conditionAmount,
       conditionAsset: scheduled.conditionAsset,

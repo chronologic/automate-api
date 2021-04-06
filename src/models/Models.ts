@@ -97,6 +97,7 @@ export interface IScheduledForUser {
   lastExecutionAttempt: string;
   assetName: string;
   assetAmount: number;
+  assetDecimals: number;
   assetValue: number;
   assetContract: string;
   createdAt: string;
