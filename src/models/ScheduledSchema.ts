@@ -232,15 +232,17 @@ async function preSave(next: () => {}) {
       this.transactionHash = parsed.hash;
       this.gasPrice = parsed.gasPrice;
 
-      try {
-        const callDataParameters = '0x' + parsed.data.substring(10);
-        const params = ethers.utils.defaultAbiCoder.decode(
-          ['address', 'uint256'],
-          callDataParameters,
-        );
+      if (this.conditionAsset && this.conditionAsset !== 'eth') {
+        try {
+          const callDataParameters = '0x' + parsed.data.substring(10);
+          const params = ethers.utils.defaultAbiCoder.decode(
+            ['address', 'uint256'],
+            callDataParameters,
+          );
 
-        this.to = params[0];
-      } catch (e) {}
+          this.to = params[0];
+        } catch (e) {}
+      }
 
       break;
     }
