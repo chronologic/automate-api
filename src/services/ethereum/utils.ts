@@ -73,9 +73,12 @@ async function fetchTokenMetadata(
   parsedTx: ethers.utils.Transaction,
   provider: ethers.providers.BaseProvider,
 ): Promise<IScheduled> {
-  if (!transaction.assetName) {
+  if (!transaction.assetName || transaction.assetName === '_') {
     logger.debug(`fetchTokenMetadata fetching assetName...`);
-    transaction.assetName = await fetchTokenName(parsedTx.to);
+    transaction.assetName = await fetchTokenName(
+      parsedTx.to,
+      transaction.chainId,
+    );
     logger.debug(
       `fetchTokenMetadata fetched assetName: ${transaction.assetName}`,
     );
@@ -359,8 +362,26 @@ async function fetchABI(contractAddress: string): Promise<any> {
   }
 }
 
-async function fetchTokenName(contractAddress: string): Promise<string> {
+async function fetchTokenName(
+  contractAddress: string,
+  chainId = 1,
+): Promise<string> {
   const fallbackName = '_';
+
+  try {
+    const provider = ethers.getDefaultProvider(
+      ethers.utils.getNetwork(chainId),
+    );
+
+    const contract = new ethers.Contract(contractAddress, ERC20, provider);
+
+    const name = await contract.functions.symbol();
+
+    return name;
+  } catch (e) {
+    logger.error(e);
+  }
+
   try {
     const res = await fetch(
       `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`,
