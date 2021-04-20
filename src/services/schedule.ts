@@ -15,6 +15,7 @@ import { PaymentService } from './payment';
 import { Key } from './key';
 import getApi from './polkadot/api';
 import { UserService } from './user';
+import { ethers } from 'ethers';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(
   ';',
@@ -102,6 +103,8 @@ export class ScheduleService implements IScheduleService {
 
     const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
+    const prevStatus = transaction.status;
+
     if (params?.apiKey) {
       if (params?.draft === true || (params?.draft as any) === 'true') {
         transaction.status = transaction.status || Status.Draft;
@@ -121,7 +124,12 @@ export class ScheduleService implements IScheduleService {
 
     const scheduled = await transaction.save();
 
-    send(scheduled, 'scheduled');
+    if (
+      transaction.status !== prevStatus &&
+      transaction.status === Status.Pending
+    ) {
+      send(scheduled, 'scheduled');
+    }
 
     return scheduled;
   }
@@ -260,6 +268,7 @@ export class ScheduleService implements IScheduleService {
     }
   }
 
+  // optimize this function - takes too much time
   private async getTransactionMetadata(
     transaction: IScheduled,
   ): Promise<ITransactionMetadata> {

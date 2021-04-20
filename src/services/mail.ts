@@ -13,6 +13,8 @@ const EXTERNAL_RECIPIENTS = process.env.EXTERNAL_RECIPIENTS === 'true';
 
 const RECIPIENTS = process.env.EMAIL_RECIPIENTS.split(';');
 
+const scheduledTemplateId = 'd-31682cf5bd904f7ca0ed0fdfe4405451';
+const cancelledTemplateId = 'd-2297e2d4f3de48e487c885601642603e';
 const successTemplateId = 'd-2f91d8bbb6494ae7a869b0c94f6079c9';
 const failureTemplateId = 'd-2ab9ac45ca864550bd69900bccd0a8ee';
 const delayedGasPriceTemplateId = 'd-1e832369e2cc42489011610c8bf191d2';
@@ -32,16 +34,16 @@ type MailStatus =
   | 'delayed_gasPrice';
 
 const templateIds = {
-  scheduled: successTemplateId,
-  cancelled: successTemplateId,
+  scheduled: scheduledTemplateId,
+  cancelled: cancelledTemplateId,
   success: successTemplateId,
   failure: failureTemplateId,
   delayed_gasPrice: delayedGasPriceTemplateId,
 };
 
 const mailSubjects = {
-  scheduled: '[AUTOMATE] ⏰ Scheduled',
-  cancelled: '[AUTOMATE] 🚮 Cancelled',
+  scheduled: '[AUTOMATE] 🕒 Scheduled',
+  cancelled: '[AUTOMATE] 🗳 Cancelled',
   success: '[AUTOMATE] ✅ Executed',
   failure: '[AUTOMATE] ❌ Error',
   delayed_gasPrice: '[AUTOMATE] ⏳ Delayed due to gas price',
@@ -51,14 +53,6 @@ async function send(
   scheduledTx: IMailParams,
   status: MailStatus,
 ): Promise<void> {
-  if (status === 'success' && !SUCCESS_EMAILS) {
-    return;
-  } else if (status === 'failure' && !FAILURE_EMAILS) {
-    return;
-  } else if (status === 'delayed_gasPrice' && !DELAYED_EMAILS) {
-    return;
-  }
-
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
