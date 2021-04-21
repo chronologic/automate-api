@@ -45,7 +45,9 @@ async function fetchTransactionMetadata(
   );
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
   const method =
-    parsedTx.value.toString() === '0' ? fetchTokenMetadata : fetchEthMetadata;
+    parsedTx.value.toString() === '0' && parsedTx.data !== '0x'
+      ? fetchTokenMetadata
+      : fetchEthMetadata;
 
   const {
     assetName,
@@ -192,9 +194,11 @@ async function fetchEthMetadata(
   parsedTx: ethers.utils.Transaction,
   provider: ethers.providers.BaseProvider,
 ): Promise<IScheduled> {
-  if (!transaction.assetName) {
+  if (!transaction.assetName || transaction.assetName === fallbackAssetName) {
     transaction.assetName = 'eth';
   }
+
+  transaction.assetContract = '';
 
   if (transaction.assetAmount == null) {
     logger.debug(`fetchEthMetadata calculating assetAmount...`);
@@ -206,7 +210,11 @@ async function fetchEthMetadata(
   transaction.assetAmountWei = parsedTx.value.toString();
   transaction.assetDecimals = 18;
 
-  if (!transaction.executedAt && transaction.transactionHash) {
+  if (
+    !transaction.executedAt &&
+    transaction.transactionHash &&
+    transaction.status !== Status.Draft
+  ) {
     logger.debug(`fetchEthMetadata fetching executedAt...`);
     transaction.executedAt = await fetchExecutedAt(
       transaction.transactionHash,
