@@ -59,8 +59,10 @@ export class ScheduleService implements IScheduleService {
       transaction.signedTransaction = request.signedTransaction;
       transaction.timeCondition = request.timeCondition;
       transaction.timeConditionTZ = request.timeConditionTZ;
-      transaction.paymentEmail = request.paymentEmail;
-      transaction.paymentRefundAddress = request.paymentRefundAddress;
+      transaction.paymentEmail =
+        request.paymentEmail || transaction.paymentEmail;
+      transaction.paymentRefundAddress =
+        request.paymentRefundAddress || transaction.paymentRefundAddress;
     } else {
       transaction = new Scheduled(request);
     }
