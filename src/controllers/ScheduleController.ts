@@ -1,5 +1,4 @@
-import e, { Request, Response } from 'express';
-import { BadRequestError } from '../errors/BadRequestError';
+import { Request, Response } from 'express';
 
 import { AssetType, Status } from '../models/Models';
 import { Key } from '../services/key';
@@ -96,23 +95,13 @@ export class ScheduleController {
   }
 
   public async list(req: Request, res: Response) {
-    try {
-      const items = await this.scheduleService.listForApiKey(
-        req.query.apiKey as any,
-      );
+    const items = await this.scheduleService.listForApiKey(
+      req.query.apiKey as any,
+    );
 
-      res.json({
-        items,
-      });
-    } catch (e) {
-      if (e instanceof BadRequestError) {
-        res.status((e as BadRequestError).statusCode);
-      }
-
-      res.json({
-        error: e?.message,
-      });
-    }
+    res.json({
+      items,
+    });
   }
 
   private auth(id: string, key: string, res: Response) {

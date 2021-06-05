@@ -1,6 +1,7 @@
 import { ApiPromise } from '@polkadot/api';
 import BigNumber from 'bignumber.js';
 import { Document } from 'mongoose';
+import { Request } from 'express';
 
 export enum Status {
   Pending,
@@ -165,6 +166,7 @@ export interface IPolkadotTx {
 export interface IUserPublic {
   login: string;
   apiKey: string;
+  source: string;
   // accessKey: string;
 }
 
@@ -172,4 +174,8 @@ export interface IUser extends IUserPublic, Document {
   passwordHash: string;
   salt: string;
   createdAt: string;
+}
+
+export interface RequestWithAuth extends Request {
+  user: IUserPublic;
 }

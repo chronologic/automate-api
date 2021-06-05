@@ -5,6 +5,8 @@ import * as expressWinston from 'express-winston';
 import * as mongoose from 'mongoose';
 import * as winston from 'winston';
 
+import { LOG_LEVEL } from './env';
+import { ApplicationError } from './errors';
 import { Routes } from './routes/routes';
 import { Manager } from './services/manager';
 
@@ -31,6 +33,23 @@ class App {
     this.app = express();
     this.config();
     this.routes.init(this.app);
+    this.app.use(
+      (
+        err: ApplicationError,
+        req: express.Request,
+        res: express.Response,
+        next: express.NextFunction,
+      ) => {
+        if (res.headersSent) {
+          return next(err);
+        }
+
+        return res.status(err.status || 500).json({
+          error: LOG_LEVEL === 'debug' ? err : err.message,
+          message: err.message,
+        });
+      },
+    );
     this.mongoSetup();
 
     Manager.init();

@@ -1,5 +1,4 @@
-import { Request, Response } from 'express';
-import { BadRequestError } from '../errors/BadRequestError';
+import { NextFunction, Request, Response } from 'express';
 
 import { IUserService } from '../services/user';
 
@@ -10,22 +9,30 @@ export class UserController {
     this.userService = userService;
   }
 
-  public async loginOrSignup(req: Request, res: Response) {
-    try {
-      const user = await this.userService.loginOrSignup(
-        req.body.login,
-        req.body.password,
-      );
+  public async loginOrSignup(req: Request, res: Response, next: NextFunction) {
+    const user = await this.userService.loginOrSignup(
+      req.body.login,
+      req.body.password,
+    );
 
-      res.json(user);
-    } catch (e) {
-      if (e instanceof BadRequestError) {
-        res.status((e as BadRequestError).statusCode);
-      }
+    res.json(user);
+  }
 
-      res.json({
-        error: e?.message,
-      });
-    }
+  public async login(req: Request, res: Response) {
+    const user = await this.userService.login(
+      req.body.login,
+      req.body.password,
+    );
+
+    res.json(user);
+  }
+
+  public async signup(req: Request, res: Response) {
+    const user = await this.userService.signup(
+      req.body.login,
+      req.body.password,
+    );
+
+    res.json(user);
   }
 }

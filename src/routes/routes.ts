@@ -8,6 +8,9 @@ import { UserController } from '../controllers/UserController';
 import { ScheduleService } from '../services/schedule';
 import { StatsService } from '../services/stats';
 import { UserService } from '../services/user';
+import { authMiddleware, requestMiddleware } from '../middleware';
+import { TransactionController } from '../controllers/TransactionController';
+import { TransactionService } from '../services/transaction';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(
@@ -19,6 +22,10 @@ export class Routes {
   private polkadotController: PolkadotController = new PolkadotController();
   private userController: UserController = new UserController(
     new UserService(),
+  );
+  private transactionController: TransactionController = new TransactionController(
+    new TransactionService(),
+    new ScheduleService(),
   );
 
   public init(app: IRouter): void {
@@ -58,8 +65,39 @@ export class Routes {
       .route('/polkadot/nextNonce')
       .get(this.polkadotController.getNextNonce.bind(this.polkadotController));
 
+    //////////////////////////////////////
+
     app
       .route('/auth')
-      .post(this.userController.loginOrSignup.bind(this.userController));
+      .post(
+        requestMiddleware(
+          this.userController.loginOrSignup.bind(this.userController),
+        ),
+      );
+    app
+      .route('/auth/login')
+      .post(
+        requestMiddleware(this.userController.login.bind(this.userController)),
+      );
+    app
+      .route('/auth/signup')
+      .post(
+        requestMiddleware(this.userController.login.bind(this.userController)),
+      );
+
+    app
+      .route('/transactions')
+      .get(
+        authMiddleware,
+        this.transactionController.list.bind(this.transactionController),
+      )
+      .post(
+        authMiddleware,
+        this.transactionController.edit.bind(this.transactionController),
+      )
+      .delete(
+        authMiddleware,
+        this.transactionController.cancel.bind(this.transactionController),
+      );
   }
 }

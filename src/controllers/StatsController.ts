@@ -10,11 +10,7 @@ export class StatsController {
   }
 
   public async getStats(req: Request, res: Response) {
-    try {
-      const stats = await this.statsService.getStats();
-      res.json(stats);
-    } catch (e) {
-      res.status(500).json({ error: e });
-    }
+    const stats = await this.statsService.getStats();
+    res.json(stats);
   }
 }

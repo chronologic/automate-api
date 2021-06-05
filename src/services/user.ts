@@ -1,12 +1,18 @@
 import * as bcrypt from 'bcrypt';
 import ShortUniqueId from 'short-unique-id';
 
-import { BadRequestError } from '../errors/BadRequestError';
+import { BadRequestError } from '../errors';
 import { IUser, IUserPublic } from '../models/Models';
 import User from '../models/UserSchema';
 
 export interface IUserService {
-  loginOrSignup(login: string, password: string): Promise<IUserPublic>;
+  login(email: string, password: string): Promise<IUserPublic>;
+  signup(
+    email: string,
+    password: string,
+    source?: string,
+  ): Promise<IUserPublic>;
+  loginOrSignup(email: string, password: string): Promise<IUserPublic>;
 }
 
 const apiKeygen = new ShortUniqueId({ length: 16 });
@@ -23,10 +29,8 @@ export class UserService implements IUserService {
     return user;
   }
 
-  public async loginOrSignup(
-    login: string,
-    password: string,
-  ): Promise<IUserPublic> {
+  public async login(login: string, password: string): Promise<IUserPublic> {
+    this.validateEmail(login);
     this.validatePassword(password);
 
     const userDb = await User.findOne({ login }).exec();
@@ -40,31 +44,70 @@ export class UserService implements IUserService {
 
       return {
         login,
+        source: userDb.source,
         // accessKey: userDb.accessKey,
         apiKey: userDb.apiKey,
       };
-    } else {
-      const salt = await bcrypt.genSalt(5);
-      const passwordHash = await bcrypt.hash(password, salt);
-      const apiKey = apiKeygen();
-      const accessKey = accessKeygen();
+    }
 
-      const user = new User({
-        login,
-        salt,
-        passwordHash,
-        apiKey,
-        accessKey,
-        createdAt: new Date().toISOString(),
-      });
+    throw new BadRequestError('Invalid credentials');
+  }
 
-      await user.save();
+  public async signup(
+    login: string,
+    password: string,
+    source?: string,
+  ): Promise<IUserPublic> {
+    this.validateEmail(login);
+    this.validatePassword(password);
 
-      return {
-        login,
-        // accessKey,
-        apiKey,
-      };
+    const userDb = await User.findOne({ login }).exec();
+
+    if (userDb) {
+      throw new BadRequestError('Email already taken');
+    }
+
+    const salt = await bcrypt.genSalt(5);
+    const passwordHash = await bcrypt.hash(password, salt);
+    const apiKey = apiKeygen();
+    const accessKey = accessKeygen();
+
+    const user = new User({
+      login,
+      source,
+      salt,
+      passwordHash,
+      apiKey,
+      accessKey,
+      createdAt: new Date().toISOString(),
+    });
+
+    await user.save();
+
+    return {
+      login,
+      source,
+      // accessKey,
+      apiKey,
+    };
+  }
+
+  public async loginOrSignup(
+    login: string,
+    password: string,
+  ): Promise<IUserPublic> {
+    const userDb = await User.findOne({ login }).exec();
+
+    if (userDb) {
+      return this.login(login, password);
+    }
+    return this.signup(login, password);
+  }
+
+  private validateEmail(email: string): void {
+    const emailRegex = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/i;
+    if (!emailRegex.test(email)) {
+      throw new BadRequestError('Invalid email');
     }
   }
 
