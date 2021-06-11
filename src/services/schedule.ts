@@ -12,42 +12,30 @@ import Scheduled from '../models/ScheduledSchema';
 import * as ethUtils from './ethereum/utils';
 import send from './mail';
 import { PaymentService } from './payment';
-import { Key } from './key';
 import getApi from './polkadot/api';
 import { UserService } from './user';
+import tgBot from './telegram';
+import { mapToScheduledForUser } from '../utils';
 
-const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(
-  ';',
-).map((str) => str.toLowerCase());
+const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
-const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) =>
-  str.toLowerCase(),
-);
+const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) => str.toLowerCase());
 
 export interface IScheduleService {
-  schedule(
-    request: IScheduleRequest,
-    params?: IScheduleParams,
-  ): Promise<IScheduled>;
+  schedule(request: IScheduleRequest, params?: IScheduleParams): Promise<IScheduled>;
   find(id: string): Promise<IScheduled>;
   cancel(id: string);
   getPending(assetType: AssetType): Promise<IScheduled[]>;
   listForApiKey(apiKey: string): Promise<IScheduledForUser[]>;
   getByHash(apiKey: string, hash: string): Promise<IScheduledForUser>;
-  getMaxNonce(
-    apiKey: string,
-    address: string,
-    chainId: number,
-  ): Promise<number>;
+  getMaxNonce(apiKey: string, address: string, chainId: number): Promise<number>;
 }
 
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
     await new Scheduled(request).validate();
 
-    let transaction = await this.findBySignedTransaction(
-      request.signedTransaction,
-    );
+    let transaction = await this.findBySignedTransaction(request.signedTransaction);
     let transactionExists = false;
 
     if (transaction) {
@@ -58,10 +46,8 @@ export class ScheduleService implements IScheduleService {
       transaction.signedTransaction = request.signedTransaction;
       transaction.timeCondition = request.timeCondition;
       transaction.timeConditionTZ = request.timeConditionTZ;
-      transaction.paymentEmail =
-        request.paymentEmail || transaction.paymentEmail;
-      transaction.paymentRefundAddress =
-        request.paymentRefundAddress || transaction.paymentRefundAddress;
+      transaction.paymentEmail = request.paymentEmail || transaction.paymentEmail;
+      transaction.paymentRefundAddress = request.paymentRefundAddress || transaction.paymentRefundAddress;
     } else {
       transaction = new Scheduled(request);
     }
@@ -80,9 +66,12 @@ export class ScheduleService implements IScheduleService {
     transaction.assetDecimals = metadata.assetDecimals;
     transaction.assetValue = metadata.assetValue;
     transaction.assetContract = metadata.assetContract;
-    transaction.gasPriceAware =
-      request.gasPriceAware === true ||
-      (request.gasPriceAware as any) === 'true';
+    transaction.gasPriceAware = request.gasPriceAware === true || (request.gasPriceAware as any) === 'true';
+
+    transaction.scheduledEthPrice = metadata.ethPrice;
+    transaction.scheduledGasPrice = metadata.gasPrice;
+    transaction.gasPaid = metadata.gasPaid;
+    transaction.gasSaved = metadata.gasSaved;
 
     // if newly creating a tx, autopopulate condition to match the asset being transferred
     if (!transactionExists && params?.apiKey) {
@@ -91,16 +80,12 @@ export class ScheduleService implements IScheduleService {
       transaction.conditionAssetDecimals = metadata.assetDecimals;
     }
 
-    const conditionAssetMetadata = await this.getConditionAssetMetadata(
-      transaction,
-    );
+    const conditionAssetMetadata = await this.getConditionAssetMetadata(transaction);
     transaction.conditionAssetName = conditionAssetMetadata.name;
     transaction.conditionAssetDecimals = conditionAssetMetadata.decimals;
 
     const isDevTx = this.isDevTx(request.paymentEmail);
-    const isValidCouponCode = this.isValidCouponCode(
-      request.paymentRefundAddress,
-    );
+    const isValidCouponCode = this.isValidCouponCode(request.paymentRefundAddress);
 
     const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
@@ -110,26 +95,20 @@ export class ScheduleService implements IScheduleService {
       if (params?.draft === true || (params?.draft as any) === 'true') {
         transaction.status = transaction.status || Status.Draft;
       } else {
-        transaction.status =
-          transaction.status === Status.Draft
-            ? Status.Pending
-            : transaction.status;
+        transaction.status = transaction.status === Status.Draft ? Status.Pending : transaction.status;
       }
       transaction.status = transaction.status || Status.Pending;
     } else {
       transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
     }
-    transaction.paymentAddress = freeTx
-      ? ''
-      : PaymentService.getNextPaymentAddress();
+    transaction.paymentAddress = freeTx ? '' : PaymentService.getNextPaymentAddress();
 
     const scheduled = await transaction.save();
 
-    if (
-      transaction.status !== prevStatus &&
-      transaction.status === Status.Pending
-    ) {
+    if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
       send(scheduled, 'scheduled');
+      tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
+      // TODO: webhook here
     }
 
     return scheduled;
@@ -140,10 +119,7 @@ export class ScheduleService implements IScheduleService {
   }
 
   public async cancel(id: string) {
-    const res = await Scheduled.updateOne(
-      { _id: id },
-      { status: Status.Cancelled },
-    ).exec();
+    const res = await Scheduled.updateOne({ _id: id }, { status: Status.Cancelled }).exec();
 
     const scheduled = await Scheduled.findById(id).exec();
     send(scheduled, 'cancelled');
@@ -157,9 +133,7 @@ export class ScheduleService implements IScheduleService {
     if ([undefined, AssetType.Ethereum].includes(assetType)) {
       assetTypeCondition = [undefined, assetType];
     }
-    return Scheduled.where('status', Status.Pending)
-      .where('assetType', assetTypeCondition)
-      .exec();
+    return Scheduled.where('status', Status.Pending).where('assetType', assetTypeCondition).exec();
   }
 
   public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {
@@ -168,15 +142,12 @@ export class ScheduleService implements IScheduleService {
     const scheduleds = await Scheduled.find({ userId: user.id }).exec();
 
     return scheduleds
-      .map((s) => this.mapToScheduledForUser(s))
+      .map((s) => mapToScheduledForUser(s))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .reverse();
   }
 
-  public async getByHash(
-    apiKey: string,
-    hash: string,
-  ): Promise<IScheduledForUser> {
+  public async getByHash(apiKey: string, hash: string): Promise<IScheduledForUser> {
     const user = await UserService.validateApiKey(apiKey);
 
     const scheduled = await Scheduled.findOne({
@@ -185,17 +156,13 @@ export class ScheduleService implements IScheduleService {
     }).exec();
 
     if (scheduled) {
-      return this.mapToScheduledForUser(scheduled);
+      return mapToScheduledForUser(scheduled);
     }
 
     return null;
   }
 
-  public async getMaxNonce(
-    apiKey: string,
-    address: string,
-    chainId: number,
-  ): Promise<number> {
+  public async getMaxNonce(apiKey: string, address: string, chainId: number): Promise<number> {
     const user = await UserService.validateApiKey(apiKey);
 
     const [scheduled] = await Scheduled.find({
@@ -217,44 +184,7 @@ export class ScheduleService implements IScheduleService {
     return -1;
   }
 
-  private mapToScheduledForUser(scheduled: IScheduled): IScheduledForUser {
-    return {
-      id: scheduled.id,
-      assetAmount: scheduled.assetAmount,
-      assetName: scheduled.assetName,
-      assetType: scheduled.assetType,
-      assetValue: scheduled.assetValue,
-      assetContract: scheduled.assetContract,
-      assetDecimals: scheduled.assetDecimals,
-      chainId: scheduled.chainId,
-      conditionAmount: scheduled.conditionAmount,
-      conditionAsset: scheduled.conditionAsset,
-      conditionAssetDecimals: scheduled.conditionAssetDecimals,
-      conditionAssetName: scheduled.conditionAssetName,
-      conditionBlock: scheduled.conditionBlock,
-      createdAt: scheduled.createdAt,
-      error: scheduled.error,
-      executedAt: scheduled.executedAt,
-      executionAttempts: scheduled.executionAttempts,
-      from: scheduled.from,
-      to: scheduled.to,
-      gasPrice: scheduled.gasPrice,
-      gasPriceAware: scheduled.gasPriceAware,
-      lastExecutionAttempt: scheduled.lastExecutionAttempt,
-      nonce: scheduled.nonce,
-      signedTransaction: scheduled.signedTransaction,
-      status: scheduled.status,
-      timeCondition: scheduled.timeCondition,
-      timeConditionTZ: scheduled.timeConditionTZ,
-      transactionHash: scheduled.transactionHash,
-      txKey: Key.generate(scheduled._id),
-      notes: scheduled.notes,
-    };
-  }
-
-  private async getConditionAssetMetadata(
-    transaction: IScheduled,
-  ): Promise<IAssetMetadata> {
+  private async getConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
     switch (transaction.assetType) {
       case AssetType.Ethereum:
       case undefined: {
@@ -270,9 +200,7 @@ export class ScheduleService implements IScheduleService {
   }
 
   // optimize this function - takes too much time
-  private async getTransactionMetadata(
-    transaction: IScheduled,
-  ): Promise<ITransactionMetadata> {
+  private async getTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
     switch (transaction.assetType) {
       case AssetType.Ethereum:
       case undefined: {

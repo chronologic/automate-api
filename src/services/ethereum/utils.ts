@@ -5,14 +5,11 @@ import { ethers } from 'ethers';
 import * as moment from 'moment';
 import fetch from 'node-fetch';
 
-import {
-  IAssetMetadata,
-  IScheduled,
-  ITransactionMetadata,
-  Status,
-} from '../../models/Models';
+import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';
 import logger from './logger';
 import ERC20 from '../../abi/erc20';
+import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
+import { weiToGwei } from '../../utils';
 
 interface ICoinGeckoCoin {
   id: string;
@@ -29,25 +26,16 @@ function getSenderNextNonce({ chainId, from }): Promise<number> {
   return ethers.getDefaultProvider(network).getTransactionCount(from);
 }
 
-export async function fetchNetworkGasPrice(
-  chainId: number,
-): Promise<ethers.utils.BigNumber> {
+export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.utils.BigNumber> {
   const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
 
   return provider.getGasPrice();
 }
 
-async function fetchTransactionMetadata(
-  transaction: IScheduled,
-): Promise<ITransactionMetadata> {
-  const provider = ethers.getDefaultProvider(
-    ethers.utils.getNetwork(transaction.chainId),
-  );
+async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
+  const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(transaction.chainId));
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
-  const method =
-    parsedTx.value.toString() === '0' && parsedTx.data !== '0x'
-      ? fetchTokenMetadata
-      : fetchEthMetadata;
+  const method = parsedTx.value.toString() === '0' && parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
 
   const {
     assetName,
@@ -59,6 +47,8 @@ async function fetchTransactionMetadata(
     executedAt,
   } = await method.call(null, transaction, parsedTx, provider);
 
+  const priceStats = await getPriceStats(parsedTx);
+
   return {
     assetName,
     assetAmount,
@@ -67,7 +57,48 @@ async function fetchTransactionMetadata(
     assetValue,
     assetContract,
     executedAt,
+    ...priceStats,
   };
+}
+
+export async function getPriceStats(tx: ethers.utils.Transaction): Promise<IGasStats> {
+  try {
+    const { gasPrice: gasPriceWei, gasLimit, chainId } = tx;
+
+    const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
+
+    const ethPrice = await fetchEthPrice();
+    const networkGasPriceWei = await provider.getGasPrice();
+    let gasUsed = gasLimit;
+    try {
+      const txReceipt = await provider.getTransactionReceipt(tx.hash);
+      gasUsed = txReceipt.gasUsed || gasLimit;
+    } catch (e) {}
+    const gasPaidWei = new ethers.utils.BigNumber(gasPriceWei).mul(new ethers.utils.BigNumber(gasUsed));
+    const networkGasPaidWei = new ethers.utils.BigNumber(networkGasPriceWei).mul(new ethers.utils.BigNumber(gasUsed));
+
+    const gasPaid = await convertWeiToUsd(gasPaidWei);
+    const networkGasPaid = await convertWeiToUsd(networkGasPaidWei);
+
+    const gasSaved = gasPaid < networkGasPaid ? networkGasPaid - gasPaid : 0;
+
+    return {
+      ethPrice,
+      gasPrice: weiToGwei(networkGasPriceWei),
+      gasPaid,
+      gasSaved,
+    };
+  } catch (e) {
+    console.log(e);
+    logger.error(e);
+
+    return {
+      ethPrice: 0,
+      gasPaid: 0,
+      gasPrice: 0,
+      gasSaved: 0,
+    };
+  }
 }
 
 async function fetchTokenMetadata(
@@ -77,66 +108,36 @@ async function fetchTokenMetadata(
 ): Promise<IScheduled> {
   if (!transaction.assetName || transaction.assetName === '_') {
     logger.debug(`fetchTokenMetadata fetching assetName...`);
-    transaction.assetName = await fetchTokenName(
-      parsedTx.to,
-      transaction.chainId,
-    );
-    logger.debug(
-      `fetchTokenMetadata fetched assetName: ${transaction.assetName}`,
-    );
+    transaction.assetName = await fetchTokenName(parsedTx.to, transaction.chainId);
+    logger.debug(`fetchTokenMetadata fetched assetName: ${transaction.assetName}`);
   }
 
   if (transaction.assetAmount == null) {
     logger.debug(`fetchTokenMetadata fetching assetAmount...`);
-    const amountData = await fetchTokenAmount(
-      parsedTx.to,
-      parsedTx.data,
-      provider,
-    );
+    const amountData = await fetchTokenAmount(parsedTx.to, parsedTx.data, provider);
     transaction.assetAmount = amountData.amount;
     transaction.assetAmountWei = amountData.amountWei;
     transaction.assetDecimals = amountData.decimals;
-    logger.debug(
-      `fetchTokenMetadata fetched assetAmount: ${transaction.assetAmount}`,
-    );
+    logger.debug(`fetchTokenMetadata fetched assetAmount: ${transaction.assetAmount}`);
   }
 
   if (!transaction.executedAt && transaction.transactionHash) {
     logger.debug(`fetchTokenMetadata fetching executedAt...`);
-    transaction.executedAt = await fetchExecutedAt(
-      transaction.transactionHash,
-      provider,
-    );
-    logger.debug(
-      `fetchTokenMetadata fetched executedAt: ${transaction.executedAt}`,
-    );
+    transaction.executedAt = await fetchExecutedAt(transaction.transactionHash, provider);
+    logger.debug(`fetchTokenMetadata fetched executedAt: ${transaction.executedAt}`);
   }
 
-  if (
-    transaction.assetValue == null ||
-    transaction.status === Status.Completed
-  ) {
+  if (transaction.assetValue == null || transaction.status === Status.Completed) {
     logger.debug(`fetchTokenMetadata fetching assetValue...`);
-    const price = await fetchAssetPrice(
-      transaction.assetName,
-      transaction.executedAt,
-    );
+    const price = await fetchAssetPrice(transaction.assetName, transaction.executedAt);
 
     transaction.assetValue = transaction.assetAmount * price;
-    logger.debug(
-      `fetchTokenMetadata fetched assetValue: ${transaction.assetValue}`,
-    );
+    logger.debug(`fetchTokenMetadata fetched assetValue: ${transaction.assetValue}`);
   }
 
-  if (
-    (transaction.assetName === fallbackAssetName ||
-      transaction.assetValue === 0) &&
-    transaction.transactionHash
-  ) {
+  if ((transaction.assetName === fallbackAssetName || transaction.assetValue === 0) && transaction.transactionHash) {
     logger.debug('fetchTokenMetadata scraping data as fallback...');
-    const { assetName, assetAmount, assetValue } = await scrapeTokenMetadata(
-      transaction.transactionHash,
-    );
+    const { assetName, assetAmount, assetValue } = await scrapeTokenMetadata(transaction.transactionHash);
 
     transaction.assetName = assetName || transaction.assetName;
     transaction.assetAmount = assetAmount || transaction.assetAmount;
@@ -150,9 +151,7 @@ async function fetchTokenMetadata(
 
 async function scrapeTokenMetadata(txHash) {
   try {
-    const res = await fetch(
-      `https://etherscan.io/tx/${txHash}`,
-    ).then((response) => response.text());
+    const res = await fetch(`https://etherscan.io/tx/${txHash}`).then((response) => response.text());
     const $ = cheerio.load(res);
     const tokenDetails = $('.row .list-unstyled');
     const values = [0, 0];
@@ -203,48 +202,29 @@ async function fetchEthMetadata(
   if (transaction.assetAmount == null) {
     logger.debug(`fetchEthMetadata calculating assetAmount...`);
     transaction.assetAmount = Number(ethers.utils.formatEther(parsedTx.value));
-    logger.debug(
-      `fetchEthMetadata calculated assetAmount: ${transaction.assetAmount}`,
-    );
+    logger.debug(`fetchEthMetadata calculated assetAmount: ${transaction.assetAmount}`);
   }
   transaction.assetAmountWei = parsedTx.value.toString();
   transaction.assetDecimals = 18;
 
-  if (
-    !transaction.executedAt &&
-    transaction.transactionHash &&
-    transaction.status !== Status.Draft
-  ) {
+  if (!transaction.executedAt && transaction.transactionHash && transaction.status !== Status.Draft) {
     logger.debug(`fetchEthMetadata fetching executedAt...`);
-    transaction.executedAt = await fetchExecutedAt(
-      transaction.transactionHash,
-      provider,
-    );
-    logger.debug(
-      `fetchEthMetadata fetched executedAt: ${transaction.executedAt}`,
-    );
+    transaction.executedAt = await fetchExecutedAt(transaction.transactionHash, provider);
+    logger.debug(`fetchEthMetadata fetched executedAt: ${transaction.executedAt}`);
   }
 
-  if (
-    transaction.assetValue == null ||
-    transaction.status === Status.Completed
-  ) {
+  if (transaction.assetValue == null || transaction.status === Status.Completed) {
     logger.debug(`fetchEthMetadata fetching assetValue...`);
     const price = await fetchAssetPrice('eth', transaction.executedAt);
 
     transaction.assetValue = transaction.assetAmount * price;
-    logger.debug(
-      `fetchEthMetadata fetched assetValue: ${transaction.assetValue}`,
-    );
+    logger.debug(`fetchEthMetadata fetched assetValue: ${transaction.assetValue}`);
   }
 
   return transaction;
 }
 
-async function fetchExecutedAt(
-  txHash: string,
-  provider: ethers.providers.BaseProvider,
-): Promise<string> {
+async function fetchExecutedAt(txHash: string, provider: ethers.providers.BaseProvider): Promise<string> {
   try {
     const tx = await provider.getTransaction(txHash);
     const block = await provider.getBlock(tx.blockHash);
@@ -255,10 +235,7 @@ async function fetchExecutedAt(
   }
 }
 
-async function fetchAssetPrice(
-  symbol: string,
-  timestamp: string,
-): Promise<number> {
+async function fetchAssetPrice(symbol: string, timestamp: string): Promise<number> {
   try {
     logger.debug(`fetchAssetPrice fetching assetId...`);
     const assetId = await fetchCoinGeckoAssetId(symbol);
@@ -272,9 +249,7 @@ async function fetchAssetPrice(
     try {
       return res.market_data.current_price.usd;
     } catch (e) {
-      logger.debug(
-        `fetchAssetPrice historical data not available, trying current data...`,
-      );
+      logger.debug(`fetchAssetPrice historical data not available, trying current data...`);
       res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd`,
       ).then((response) => response.json());
@@ -295,9 +270,7 @@ async function fetchCoinGeckoAssetId(symbol): Promise<string> {
   }
 
   try {
-    coinGeckoCoins = await fetch(
-      'https://api.coingecko.com/api/v3/coins/list',
-    ).then((response) => response.json());
+    coinGeckoCoins = await fetch('https://api.coingecko.com/api/v3/coins/list').then((response) => response.json());
     asset = coinGeckoCoins.find((coin) => coin.symbol === symbol);
 
     return asset.id || fallbackAssetId;
@@ -338,9 +311,7 @@ async function fetchTokenAmount(
         decimals,
       };
     } else {
-      logger.debug(
-        `fetchTokenAmount unsupported decoded method: ${decoded.method}`,
-      );
+      logger.debug(`fetchTokenAmount unsupported decoded method: ${decoded.method}`);
       return {
         amountWei: '0',
         amount: 0,
@@ -370,16 +341,11 @@ async function fetchABI(contractAddress: string): Promise<any> {
   }
 }
 
-async function fetchTokenName(
-  contractAddress: string,
-  chainId = 1,
-): Promise<string> {
+async function fetchTokenName(contractAddress: string, chainId = 1): Promise<string> {
   const fallbackName = '_';
 
   try {
-    const provider = ethers.getDefaultProvider(
-      ethers.utils.getNetwork(chainId),
-    );
+    const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
 
     const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
@@ -402,9 +368,7 @@ async function fetchTokenName(
   }
 }
 
-async function fetchAssetMetadata(
-  transaction: IScheduled,
-): Promise<IAssetMetadata> {
+async function fetchAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
   try {
     if (!transaction.conditionAsset && !transaction.conditionAmount) {
       return {
@@ -422,15 +386,9 @@ async function fetchAssetMetadata(
       };
     }
 
-    const provider = ethers.getDefaultProvider(
-      ethers.utils.getNetwork(transaction.chainId),
-    );
+    const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(transaction.chainId));
 
-    const contract = new ethers.Contract(
-      transaction.conditionAsset,
-      ERC20,
-      provider,
-    );
+    const contract = new ethers.Contract(transaction.conditionAsset, ERC20, provider);
 
     const name = await contract.functions.symbol();
     const decimals = await contract.functions.decimals();

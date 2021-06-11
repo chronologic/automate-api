@@ -38,8 +38,7 @@ const ScheduledSchema = new Schema({
         },
       },
       {
-        msg:
-          'Invalid signed transaction: Signed nonce is lower than account nonce',
+        msg: 'Invalid signed transaction: Signed nonce is lower than account nonce',
         async validator(tx: string) {
           try {
             return true;
@@ -214,6 +213,24 @@ const ScheduledSchema = new Schema({
   notes: {
     type: String,
   },
+  gasPaid: {
+    type: Number,
+  },
+  gasSaved: {
+    type: Number,
+  },
+  scheduledEthPrice: {
+    type: Number,
+  },
+  scheduledGasPrice: {
+    type: Number,
+  },
+  executedEthPrice: {
+    type: Number,
+  },
+  executedGasPrice: {
+    type: Number,
+  },
 });
 
 // do not change this to lambda, otherwise the apply doesn't set the this context correctly !!!
@@ -235,10 +252,7 @@ async function preSave(next: () => {}) {
       if (this.conditionAsset && this.conditionAsset !== 'eth') {
         try {
           const callDataParameters = '0x' + parsed.data.substring(10);
-          const params = ethers.utils.defaultAbiCoder.decode(
-            ['address', 'uint256'],
-            callDataParameters,
-          );
+          const params = ethers.utils.defaultAbiCoder.decode(['address', 'uint256'], callDataParameters);
 
           this.to = params[0];
         } catch (e) {}
@@ -248,9 +262,7 @@ async function preSave(next: () => {}) {
     }
     case AssetType.Polkadot: {
       const api = await getApi(this.chainId);
-      const { signer, nonce, chainId, hash } = await api.parseTx(
-        this.signedTransaction,
-      );
+      const { signer, nonce, chainId, hash } = await api.parseTx(this.signedTransaction);
       this.from = signer;
       this.nonce = nonce;
       this.chainId = chainId;

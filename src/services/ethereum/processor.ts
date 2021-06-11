@@ -1,17 +1,18 @@
+import { ethers } from 'ethers';
+
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
 import sendMail from '../mail';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
+import { getPriceStats } from './utils';
+import tgBot from '../telegram';
 
 export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
 
-  constructor(
-    scheduleService: IScheduleService,
-    transactionExecutor: ITransactionExecutor,
-  ) {
+  constructor(scheduleService: IScheduleService, transactionExecutor: ITransactionExecutor) {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
   }
@@ -22,21 +23,16 @@ export class Processor {
     const scheduled = await this.scheduleService.getPending(AssetType.Ethereum);
     const groups = this.groupBySenderAndChain(scheduled);
 
-    logger.info(
-      `Found ${scheduled.length} pending transactions in ${groups.size} groups`,
-    );
+    logger.info(`Found ${scheduled.length} pending transactions in ${groups.size} groups`);
 
     const inProgress = [];
-    groups.forEach((transactions) =>
-      inProgress.push(this.processTransactions(transactions, blockNum)),
-    );
+    groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions, blockNum)));
 
     return Promise.all(inProgress);
   }
 
   private groupBySenderAndChain(scheduled: IScheduled[]) {
-    const makeKey = (sender: string, chainId: number) =>
-      `${sender}-${chainId.toString()}`;
+    const makeKey = (sender: string, chainId: number) => `${sender}-${chainId.toString()}`;
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach((s) => {
@@ -70,10 +66,7 @@ export class Processor {
     }
   }
 
-  private async processTransaction(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): Promise<boolean> {
+  private async processTransaction(scheduled: IScheduled, blockNum: number): Promise<boolean> {
     const {
       transactionHash,
       status,
@@ -89,6 +82,10 @@ export class Processor {
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
 
+      const priceStats = await getPriceStats(ethers.utils.parseTransaction(scheduled.signedTransaction));
+      const gasPaid = priceStats.gasPaid || scheduled.gasSaved;
+      const gasSaved = scheduled.gasSaved > priceStats.gasSaved ? scheduled.gasSaved : priceStats.gasSaved;
+
       scheduled
         .update({
           transactionHash,
@@ -98,6 +95,10 @@ export class Processor {
           assetName,
           assetAmount,
           assetValue,
+          executedEthPrice: priceStats.ethPrice,
+          executedGasPrice: priceStats.gasPrice,
+          gasPaid,
+          gasSaved,
         })
         .exec();
 
@@ -115,6 +116,10 @@ export class Processor {
         } as IScheduled,
         error ? 'failure' : 'success',
       );
+
+      tgBot.executed({ value: assetValue, savings: gasSaved });
+
+      // TODO: webhook here
 
       return true;
     } else if (scheduled.conditionBlock === 0) {

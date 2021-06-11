@@ -32,9 +32,7 @@ export interface IExtendedPolkadotAPI extends ApiPromise {
   getBalance(address: string): Promise<BigNumber>;
   txToExtrinsic(tx: string): Promise<any>;
   parseTx(tx: string): Promise<IPolkadotTx>;
-  fetchTransactionMetadata(
-    transaction: IScheduled,
-  ): Promise<ITransactionMetadata>;
+  fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata>;
 }
 
 export interface IScheduled extends Document {
@@ -72,6 +70,12 @@ export interface IScheduled extends Document {
   paymentTx: string;
   userId?: string;
   notes?: string;
+  scheduledEthPrice?: number;
+  scheduledGasPrice?: number;
+  executedEthPrice?: number;
+  executedGasPrice?: number;
+  gasPaid?: number;
+  gasSaved?: number;
 }
 
 export interface IScheduledForUser {
@@ -105,6 +109,8 @@ export interface IScheduledForUser {
   executedAt: string;
   txKey: string;
   notes: string;
+  gasPaid: number;
+  gasSaved: number;
 }
 
 export interface IExecuteStatus {
@@ -136,7 +142,7 @@ export interface IScheduleParams {
   draft?: boolean;
 }
 
-export interface ITransactionMetadata {
+export interface ITransactionMetadata extends IGasStats {
   assetName: string;
   assetAmount: number;
   assetAmountWei: string;
@@ -144,7 +150,19 @@ export interface ITransactionMetadata {
   assetValue: number;
   assetContract: string;
   executedAt: string;
+  ethPrice?: number;
+  gasPrice?: number;
+  gasPaid?: number;
+  gasSaved?: number;
 }
+
+export interface IGasStats {
+  ethPrice?: number;
+  gasPrice?: number;
+  gasPaid?: number;
+  gasSaved?: number;
+}
+
 export interface IAssetMetadata {
   name: string;
   decimals: number;
