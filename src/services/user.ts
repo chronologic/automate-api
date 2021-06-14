@@ -7,11 +7,7 @@ import User from '../models/UserSchema';
 
 export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
-  signup(
-    email: string,
-    password: string,
-    source?: string,
-  ): Promise<IUserPublic>;
+  signup(email: string, password: string, source?: string): Promise<IUserPublic>;
   loginOrSignup(email: string, password: string): Promise<IUserPublic>;
 }
 
@@ -36,11 +32,7 @@ export class UserService implements IUserService {
     const userDb = await User.findOne({ login }).exec();
 
     if (userDb) {
-      await this.validateCredentials(
-        password,
-        userDb.salt,
-        userDb.passwordHash,
-      );
+      await this.validateCredentials(password, userDb.salt, userDb.passwordHash);
 
       return {
         login,
@@ -53,11 +45,7 @@ export class UserService implements IUserService {
     throw new BadRequestError('Invalid credentials');
   }
 
-  public async signup(
-    login: string,
-    password: string,
-    source?: string,
-  ): Promise<IUserPublic> {
+  public async signup(login: string, password: string, source?: string): Promise<IUserPublic> {
     this.validateEmail(login);
     this.validatePassword(password);
 
@@ -92,10 +80,7 @@ export class UserService implements IUserService {
     };
   }
 
-  public async loginOrSignup(
-    login: string,
-    password: string,
-  ): Promise<IUserPublic> {
+  public async loginOrSignup(login: string, password: string): Promise<IUserPublic> {
     const userDb = await User.findOne({ login }).exec();
 
     if (userDb) {
@@ -113,9 +98,7 @@ export class UserService implements IUserService {
 
   private validatePassword(password: string): void {
     if (!/(?=.*[A-Z])(?=.*[a-z]).*/.test(password)) {
-      throw new BadRequestError(
-        'Password must contain lower and uppercase characters',
-      );
+      throw new BadRequestError('Password must contain lower and uppercase characters');
     }
     if (!/.{8,}/.test(password)) {
       throw new BadRequestError('Password must be at least 8 characters');
@@ -125,11 +108,7 @@ export class UserService implements IUserService {
     }
   }
 
-  private async validateCredentials(
-    password: string,
-    salt: string,
-    passwordHash: string,
-  ): Promise<void> {
+  private async validateCredentials(password: string, salt: string, passwordHash: string): Promise<void> {
     const hashed = await bcrypt.hash(password, salt);
     if (hashed !== passwordHash) {
       throw new BadRequestError('Invalid credentials');
