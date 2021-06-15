@@ -3,12 +3,9 @@ import { ethers } from 'ethers';
 
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import logger from './logger';
-import {
-  fetchTransactionMetadata,
-  getSenderNextNonce,
-  fetchNetworkGasPrice,
-} from './utils';
+import { fetchTransactionMetadata, getSenderNextNonce, fetchNetworkGasPrice } from './utils';
 import sendMail from '../mail';
+import './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 const CONFIRMATIONS = 3;
@@ -28,10 +25,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private static queue: Set<string> = new Set<string>();
 
-  public async execute(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): Promise<IExecuteStatus> {
+  public async execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
 
     if (TransactionExecutor.queue.has(id)) {
@@ -47,19 +41,13 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
   }
 
-  private async executeTransaction(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): Promise<IExecuteStatus> {
+  private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const provider = this.getProvider(scheduled.chainId);
 
     logger.info(`${id} Checking execute conditions...`);
 
-    const isWaitingForConfirmations = this.isWaitingForConfirmations(
-      scheduled,
-      blockNum,
-    );
+    const isWaitingForConfirmations = this.isWaitingForConfirmations(scheduled, blockNum);
     if (isWaitingForConfirmations.res) {
       return isWaitingForConfirmations.status!;
     }
@@ -69,9 +57,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       return hasCorrectNonce.status!;
     }
 
-    const transaction = ethers.utils.parseTransaction(
-      scheduled.signedTransaction,
-    );
+    const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
     const networkTransaction = await provider.getTransaction(transaction.hash!);
     if (networkTransaction && networkTransaction.hash) {
@@ -79,18 +65,11 @@ export class TransactionExecutor implements ITransactionExecutor {
       return this.pending;
     }
 
-    const isConditionMet = await this.isConditionMet(
-      scheduled,
-      transaction,
-      provider,
-    );
+    const isConditionMet = await this.isConditionMet(scheduled, transaction, provider);
     let isGasPriceConditionMet = true;
     if (isConditionMet && scheduled.gasPriceAware) {
       logger.info(`${id} checking gas price...`);
-      isGasPriceConditionMet = await this.isGasPriceConditionMet(
-        scheduled,
-        transaction,
-      );
+      isGasPriceConditionMet = await this.isGasPriceConditionMet(scheduled, transaction);
     }
 
     if (!(isConditionMet && isGasPriceConditionMet)) {
@@ -111,9 +90,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     try {
       logger.info(`${id} Executing...`);
-      const response = await provider.sendTransaction(
-        scheduled.signedTransaction,
-      );
+      const response = await provider.sendTransaction(scheduled.signedTransaction);
       logger.info(`${id} Sent ${response.hash}`);
 
       const receipt = await response.wait(CONFIRMATIONS);
@@ -123,11 +100,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       scheduled.transactionHash = receipt.transactionHash;
       scheduled.executedAt = new Date().toISOString();
 
-      const {
-        assetName,
-        assetAmount,
-        assetValue,
-      } = await fetchTransactionMetadata(scheduled);
+      const { assetName, assetAmount, assetValue } = await fetchTransactionMetadata(scheduled);
 
       return {
         status: scheduled.status,
@@ -152,13 +125,8 @@ export class TransactionExecutor implements ITransactionExecutor {
     return ethers.getDefaultProvider(network);
   }
 
-  private isWaitingForConfirmations(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): IValidationResult {
-    const isWaitingForConfirmations =
-      scheduled.conditionBlock &&
-      scheduled.conditionBlock + CONFIRMATIONS > blockNum;
+  private isWaitingForConfirmations(scheduled: IScheduled, blockNum: number): IValidationResult {
+    const isWaitingForConfirmations = scheduled.conditionBlock && scheduled.conditionBlock + CONFIRMATIONS > blockNum;
 
     if (isWaitingForConfirmations) {
       logger.info(
@@ -175,14 +143,10 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { res: false };
   }
 
-  private async hasCorrectNonce(
-    scheduled: IScheduled,
-  ): Promise<IValidationResult> {
+  private async hasCorrectNonce(scheduled: IScheduled): Promise<IValidationResult> {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
 
-    logger.info(
-      `${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`,
-    );
+    logger.info(`${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
 
     if (senderNonce > scheduled.nonce) {
       logger.info(`${scheduled._id} Transaction nonce already spent`);
@@ -206,49 +170,36 @@ export class TransactionExecutor implements ITransactionExecutor {
     transaction: ethers.utils.Transaction,
     provider: ethers.providers.BaseProvider,
   ) {
-    logger.info(
-      `${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`,
-    );
+    logger.info(`${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`);
 
     let currentConditionAmount;
 
     try {
       const token = new ethers.Contract(transaction.to, abi, provider);
-      currentConditionAmount = (await token.balanceOf(
-        transaction.from,
-      )) as BigNumber;
+      currentConditionAmount = (await token.balanceOf(transaction.from)) as BigNumber;
     } catch (e) {
       currentConditionAmount = await provider.getBalance(transaction.from!);
     }
 
     const condition = new BigNumber(scheduled.conditionAmount);
-    const isStateConditionMet = new BigNumber(currentConditionAmount).gte(
-      condition,
-    );
+    const isStateConditionMet = new BigNumber(currentConditionAmount).gte(condition);
 
-    logger.info(
-      `${
-        scheduled._id
-      } Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`,
-    );
+    logger.info(`${scheduled._id} Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`);
 
     const currentTime = new Date().getTime();
     const timeCondition = scheduled.timeCondition || 0;
     const isTimeConditionMet = currentTime > timeCondition;
 
     logger.info(
-      `${scheduled._id} Time condition=${new Date(
-        timeCondition,
-      ).toISOString()} Current=${new Date(currentTime).toISOString()}`,
+      `${scheduled._id} Time condition=${new Date(timeCondition).toISOString()} Current=${new Date(
+        currentTime,
+      ).toISOString()}`,
     );
 
     return isStateConditionMet && isTimeConditionMet;
   }
 
-  private async isGasPriceConditionMet(
-    scheduled: IScheduled,
-    transaction: ethers.utils.Transaction,
-  ) {
+  private async isGasPriceConditionMet(scheduled: IScheduled, transaction: ethers.utils.Transaction) {
     let isGasPriceConditionMet = true;
     if (scheduled.gasPriceAware) {
       const networkGasPrice = await fetchNetworkGasPrice(scheduled.chainId);
@@ -256,19 +207,12 @@ export class TransactionExecutor implements ITransactionExecutor {
 
       if (networkGasPrice.gt(txGasPrice)) {
         isGasPriceConditionMet = false;
-        logger.info(
-          `${
-            scheduled._id
-          } 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
-        );
+        logger.info(`${scheduled._id} 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
 
         const now = new Date().getTime();
         const minTimeDiffBetweenEmails = 1000 * 60 * 15; // 15 min
-        const lastExecutionAttempt = new Date(
-          scheduled.lastExecutionAttempt || 0,
-        ).getTime();
-        const shouldNotify =
-          now - lastExecutionAttempt > minTimeDiffBetweenEmails;
+        const lastExecutionAttempt = new Date(scheduled.lastExecutionAttempt || 0).getTime();
+        const shouldNotify = now - lastExecutionAttempt > minTimeDiffBetweenEmails;
 
         if (shouldNotify) {
           sendMail(
@@ -282,11 +226,7 @@ export class TransactionExecutor implements ITransactionExecutor {
           );
         }
       } else {
-        logger.info(
-          `${
-            scheduled._id
-          } 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
-        );
+        logger.info(`${scheduled._id} 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
       }
     }
 

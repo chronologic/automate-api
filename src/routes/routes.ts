@@ -11,6 +11,7 @@ import { UserService } from '../services/user';
 import { authMiddleware, requestMiddleware } from '../middleware';
 import { TransactionController } from '../controllers/TransactionController';
 import { TransactionService } from '../services/transaction';
+import { gasController } from '../controllers/GasController';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(new ScheduleService());
@@ -40,6 +41,8 @@ export class Routes {
     app.route('/polkadot/balance').get(this.polkadotController.getBalance.bind(this.polkadotController));
     app.route('/polkadot/parseTx').get(this.polkadotController.parseTx.bind(this.polkadotController));
     app.route('/polkadot/nextNonce').get(this.polkadotController.getNextNonce.bind(this.polkadotController));
+
+    app.route('/ethereum/estimateGasSavings').get(gasController.estimateGasSavings);
 
     //////////////////////////////////////
 

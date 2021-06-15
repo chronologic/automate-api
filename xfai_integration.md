@@ -24,3 +24,15 @@ async function isConnectedToAutomate() {
   return res.client === 'automate';
 }
 ```
+
+### Estimating gas savings
+
+To get an estimate of how much a user can save on gas fees, call the following endpoint:
+
+`GET https://automate-api.chronologic.network/ethereum/estimateGasSavings`
+
+And the response will be:
+
+`{ "savingsPercent": 82.14 }`
+
+The endpoint compares the current network gas prices with historical gas prices from past few days to come up with the result. The result is an ideal-case scenario and actual savings might be different.
