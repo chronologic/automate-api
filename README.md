@@ -2,29 +2,23 @@
 
 # Automate API
 
-This contains API project for Automate project.
+⏱️ This repositery contains API source code for [Automate](https://blog.chronologic.network/automate/home).
 
-UI project here https://github.com/chronologic/automate-ui
+UI source code can be found [here](https://github.com/chronologic/automate-ui)
 
-**LIVE version available here** [https://automate.chronologic.network/](https://automate.chronologic.network/)
+📌 **LIVE version is available here** [https://automate.chronologic.network/](https://automate.chronologic.network/)
 
-**ProductHunt:**[here](https://www.producthunt.com/posts/automate-1)
+**ProductHunt is** [here](https://www.producthunt.com/posts/automate-1)
 
-**Tutorials and help:** [here](https://blog.chronologic.network/automate/home)
+❓ **Tutorials and help are** [here](https://blog.chronologic.network/automate/home)
 
-## Development
+## Running the project
 
-### How to start
+Install with `npm install`
 
-`npm install`
+Start development instance with `npm run dev`
 
-To start the express server
-
-`npm run dev`
-
-To create a production build
-
-`npm run build`
+Create production build with `npm run build`
 
 ### MongoDB
 
@@ -33,10 +27,3 @@ Start MongoDB instance using
 `docker-compose -f mongo.yml up`
 
 or any other instance compatible with `mongodb://root:example@localhost:27017` connection string.
-
-### Stack
-
-Typescript
-Ethers
-Express
-MongoDB + Mongoose
