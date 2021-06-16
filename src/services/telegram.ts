@@ -2,6 +2,7 @@ import * as TelegramBot from 'node-telegram-bot-api';
 console.log('TG', TelegramBot);
 
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from '../env';
+import logger from '../logger';
 
 interface ITelegramMessenger {
   sendMessage(msg: string): void;
@@ -54,6 +55,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
 }
 
 function sendMessage(chatId: string, msg: string): void {
+  logger.info(`Sending msg "${msg}" to ${chatId}...`);
   chatId && telegramBot.sendMessage(chatId, msg);
 }
 
