@@ -43,6 +43,7 @@ export class Routes {
     app.route('/polkadot/nextNonce').get(this.polkadotController.getNextNonce.bind(this.polkadotController));
 
     app.route('/ethereum/estimateGasSavings').get(gasController.estimateGasSavings);
+    app.route('/ethereum/estimateGas').get(gasController.estimateGas);
 
     //////////////////////////////////////
 
