@@ -5,7 +5,6 @@ import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import logger from './logger';
 import { fetchTransactionMetadata, getSenderNextNonce, fetchNetworkGasPrice } from './utils';
 import sendMail from '../mail';
-import './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 const CONFIRMATIONS = 3;

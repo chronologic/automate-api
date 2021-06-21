@@ -13,4 +13,9 @@ export class StatsController {
     const stats = await this.statsService.getStats();
     res.json(stats);
   }
+
+  public async getStatsForAddress(req: Request, res: Response) {
+    const stats = await this.statsService.getStatsForAddress(req.params.address);
+    res.json(stats);
+  }
 }

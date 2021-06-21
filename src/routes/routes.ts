@@ -37,6 +37,7 @@ export class Routes {
     app.route('/address/maxNonce').get(this.scheduleController.getMaxNonce.bind(this.scheduleController));
 
     app.route('/stats').get(this.statsController.getStats.bind(this.statsController));
+    app.route('/stats/:address').get(this.statsController.getStatsForAddress.bind(this.statsController));
 
     app.route('/polkadot/balance').get(this.polkadotController.getBalance.bind(this.polkadotController));
     app.route('/polkadot/parseTx').get(this.polkadotController.parseTx.bind(this.polkadotController));
