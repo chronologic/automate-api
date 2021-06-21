@@ -52,3 +52,24 @@ And the response will be be:
   "savingsUsd": 13.37
 }
 ```
+
+### Webhook - consuming updates from Automate API
+
+Automate will send updates to the XFai webhook for the following events:
+
+- new transaction scheduled
+- transaction executed
+
+Only transactions involving XFai contracts will be reported.
+
+The data shape will be:
+
+```json
+{
+  "event": "scheduled", // scheduled/executed
+  "email": "user@email.com",
+  "txHash": "0x123...",
+  "gasPaidUsd": 3.21,
+  "gasSavedUsd": 13.37
+}
+```
