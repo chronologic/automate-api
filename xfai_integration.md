@@ -39,6 +39,8 @@ The endpoint compares the current network gas prices with historical gas prices 
 
 ### Getting statistics for a given address
 
+🚧 _Under construction - only a mock version of the endpoint is currently available and the response is the same for every address._ 🚧
+
 To get data on how many transactions a given address has pending and completed, as well as total savings in USD, call this endpoint:
 
 `GET https://automate-api.chronologic.network/stats/:address` (e.g. `GET https://automate-api.chronologic.network/stats/0x0000000000000000000000000000000000000000`)
@@ -54,6 +56,8 @@ And the response will be be:
 ```
 
 ### Webhook - consuming updates from Automate API
+
+🚧 _Under construction - webhook will not be triggered and only the response shape is defined for now._ 🚧
 
 Automate will send updates to the XFai webhook for the following events:
 
