@@ -66,7 +66,7 @@ Automate will send updates to the XFai webhook for the following events:
 
 Only transactions involving XFai contracts will be reported.
 
-The data shape for all events will be:
+The events will be send via `POST` request and the data shape will be:
 
 ```json
 {
