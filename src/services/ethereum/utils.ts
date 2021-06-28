@@ -1,8 +1,8 @@
 import BigNumber from 'bignumber.js';
-import * as cheerio from 'cheerio';
-import * as InputDataDecoder from 'ethereum-input-data-decoder';
+import cheerio from 'cheerio';
+import InputDataDecoder from 'ethereum-input-data-decoder';
 import { ethers } from 'ethers';
-import * as moment from 'moment';
+import moment from 'moment';
 import fetch from 'node-fetch';
 
 import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';

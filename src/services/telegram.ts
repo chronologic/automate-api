@@ -1,5 +1,5 @@
-import * as TelegramBot from 'node-telegram-bot-api';
-console.log('TG', TelegramBot);
+import TelegramBot from 'node-telegram-bot-api';
+import random from 'lodash/random';
 
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from '../env';
 import logger from '../logger';
@@ -30,11 +30,11 @@ function createMessenger(chatId: string): ITelegramMessenger {
     scheduled({ value, savings }): void {
       let msg = '🕒 A transaction ';
       if (value) {
-        msg += `worth ${formatCurrency(value)} `;
+        msg += `worth ${formatCurrency(randomizeValue(value))} `;
       }
       msg += 'was just scheduled through Automate';
       if (savings) {
-        msg += `, saving the user ${formatCurrency(savings)} in gas fees`;
+        msg += `, saving the user ${formatCurrency(randomizeValue(savings))} in gas fees`;
       }
       msg += '!';
       sendMessage(chatId, msg);
@@ -42,11 +42,11 @@ function createMessenger(chatId: string): ITelegramMessenger {
     executed({ value, savings }): void {
       let msg = '🚀 A transaction ';
       if (value) {
-        msg += `worth ${formatCurrency(value)} `;
+        msg += `worth ${formatCurrency(randomizeValue(value))} `;
       }
       msg += 'was just executed through Automate';
       if (savings) {
-        msg += `, saving the user ${formatCurrency(savings)} in gas fees`;
+        msg += `, saving the user ${formatCurrency(randomizeValue(savings))} in gas fees`;
       }
       msg += '!';
       sendMessage(chatId, msg);
@@ -61,6 +61,13 @@ function sendMessage(chatId: string, msg: string): void {
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+}
+
+function randomizeValue(value: number, percentFrom = -3, percentTo = 5) {
+  const lower = (value * (100 + percentFrom)) / 100;
+  const upper = (value * (100 + percentTo)) / 100;
+
+  return random(lower, upper, true);
 }
 
 export default createMessenger(TELEGRAM_CHAT_ID);

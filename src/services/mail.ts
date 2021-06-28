@@ -1,5 +1,5 @@
 // tslint:disable: no-object-literal-type-assertion
-import * as client from '@sendgrid/mail';
+import client from '@sendgrid/mail';
 import BigNumber from 'bignumber.js';
 
 import { IScheduled } from '../models/Models';

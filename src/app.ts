@@ -1,9 +1,9 @@
-import * as bodyParser from 'body-parser';
-import * as cors from 'cors';
-import * as express from 'express';
-import * as expressWinston from 'express-winston';
-import * as mongoose from 'mongoose';
-import * as winston from 'winston';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import express from 'express';
+import expressWinston from 'express-winston';
+import mongoose from 'mongoose';
+import winston from 'winston';
 
 import { LOG_LEVEL } from './env';
 import { ApplicationError } from './errors';
@@ -12,10 +12,7 @@ import { Manager } from './services/manager';
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (
-      process.env.UI_URL.match(origin) ||
-      origin.includes(/https?:\/\/localhost/i)
-    ) {
+    if (process.env.UI_URL.match(origin) || origin.includes(/https?:\/\/localhost/i)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -26,30 +23,22 @@ const corsOptions = {
 class App {
   public app: express.Application;
   public routes: Routes = new Routes();
-  public mongoUrl: string =
-    process.env.DB_URI || 'mongodb://root:example@localhost:27017';
+  public mongoUrl: string = process.env.DB_URI || 'mongodb://root:example@localhost:27017';
 
   constructor() {
     this.app = express();
     this.config();
     this.routes.init(this.app);
-    this.app.use(
-      (
-        err: ApplicationError,
-        req: express.Request,
-        res: express.Response,
-        next: express.NextFunction,
-      ) => {
-        if (res.headersSent) {
-          return next(err);
-        }
+    this.app.use((err: ApplicationError, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (res.headersSent) {
+        return next(err);
+      }
 
-        return res.status(err.status || 500).json({
-          error: LOG_LEVEL === 'debug' ? err : err.message,
-          message: err.message,
-        });
-      },
-    );
+      return res.status(err.status || 500).json({
+        error: LOG_LEVEL === 'debug' ? err : err.message,
+        message: err.message,
+      });
+    });
     this.mongoSetup();
 
     Manager.init();
@@ -62,10 +51,7 @@ class App {
     this.app.use(cors(corsOptions));
     this.app.use(
       expressWinston.logger({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          winston.format.json(),
-        ),
+        format: winston.format.combine(winston.format.colorize(), winston.format.json()),
         transports: [new winston.transports.Console()],
       }),
     );
