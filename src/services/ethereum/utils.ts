@@ -106,6 +106,8 @@ async function fetchTokenMetadata(
   parsedTx: ethers.utils.Transaction,
   provider: ethers.providers.BaseProvider,
 ): Promise<IScheduled> {
+  transaction.assetContract = parsedTx.to;
+
   if (!transaction.assetName || transaction.assetName === '_') {
     logger.debug(`fetchTokenMetadata fetching assetName...`);
     transaction.assetName = await fetchTokenName(parsedTx.to, transaction.chainId);
@@ -129,7 +131,7 @@ async function fetchTokenMetadata(
 
   if (transaction.assetValue == null || transaction.status === Status.Completed) {
     logger.debug(`fetchTokenMetadata fetching assetValue...`);
-    const price = await fetchAssetPrice(transaction.assetName, transaction.executedAt);
+    const price = await fetchAssetPrice(transaction.assetContract, transaction.assetName, transaction.executedAt);
 
     transaction.assetValue = transaction.assetAmount * price;
     logger.debug(`fetchTokenMetadata fetched assetValue: ${transaction.assetValue}`);
@@ -143,8 +145,6 @@ async function fetchTokenMetadata(
     transaction.assetAmount = assetAmount || transaction.assetAmount;
     transaction.assetValue = assetValue || transaction.assetValue;
   }
-
-  transaction.assetContract = parsedTx.to;
 
   return transaction;
 }
@@ -215,7 +215,7 @@ async function fetchEthMetadata(
 
   if (transaction.assetValue == null || transaction.status === Status.Completed) {
     logger.debug(`fetchEthMetadata fetching assetValue...`);
-    const price = await fetchAssetPrice('eth', transaction.executedAt);
+    const price = await fetchAssetPrice('', 'eth', transaction.executedAt);
 
     transaction.assetValue = transaction.assetAmount * price;
     logger.debug(`fetchEthMetadata fetched assetValue: ${transaction.assetValue}`);
@@ -235,22 +235,33 @@ async function fetchExecutedAt(txHash: string, provider: ethers.providers.BasePr
   }
 }
 
-async function fetchAssetPrice(symbol: string, timestamp: string): Promise<number> {
+const wethContract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+async function fetchAssetPrice(contract: string, symbol: string, timestamp: string): Promise<number> {
+  let _contract = contract;
+
+  if (symbol === 'eth') {
+    _contract = wethContract;
+  }
+
   try {
     logger.debug(`fetchAssetPrice fetching assetId...`);
-    const assetId = await fetchCoinGeckoAssetId(symbol);
+    const assetId = await fetchCoinGeckoAssetId(contract);
     logger.debug(`fetchAssetPrice fetched assetId: ${assetId}`);
-    const dateParam = moment(timestamp).format('DD-MM-YYYY');
-    logger.debug(`fetchAssetPrice dateParam from ${timestamp}: ${dateParam}`);
-    let res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
-    ).then((response) => response.json());
 
-    try {
-      return res.market_data.current_price.usd;
-    } catch (e) {
-      logger.debug(`fetchAssetPrice historical data not available, trying current data...`);
-      res = await fetch(
+    let price = 0;
+
+    if (timestamp) {
+      const dateParam = moment(timestamp).format('DD-MM-YYYY');
+      logger.debug(`fetchAssetPrice dateParam from ${timestamp}: ${dateParam}`);
+      let res = await fetch(
+        `https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
+      ).then((response) => response.json());
+
+      price = res.market_data?.current_price?.usd;
+    }
+
+    if (!price) {
+      const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd`,
       ).then((response) => response.json());
       return res[assetId].usd;
@@ -261,19 +272,14 @@ async function fetchAssetPrice(symbol: string, timestamp: string): Promise<numbe
   }
 }
 
-async function fetchCoinGeckoAssetId(symbol): Promise<string> {
+async function fetchCoinGeckoAssetId(contract: string): Promise<string> {
   const fallbackAssetId = '_';
-  let asset = coinGeckoCoins.find((coin) => coin.symbol === symbol);
-
-  if (asset) {
-    return asset.id;
-  }
 
   try {
-    coinGeckoCoins = await fetch('https://api.coingecko.com/api/v3/coins/list').then((response) => response.json());
-    asset = coinGeckoCoins.find((coin) => coin.symbol === symbol);
-
-    return asset.id || fallbackAssetId;
+    const { id } = await fetch(
+      `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contract}`,
+    ).then((response) => response.json());
+    return id || fallbackAssetId;
   } catch (e) {
     logger.error(e);
     return fallbackAssetId;
