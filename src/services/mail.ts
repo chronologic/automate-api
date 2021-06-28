@@ -26,12 +26,7 @@ interface IMailParams extends Partial<IScheduled> {
   txGasPrice?: BigNumber;
 }
 
-type MailStatus =
-  | 'scheduled'
-  | 'cancelled'
-  | 'success'
-  | 'failure'
-  | 'delayed_gasPrice';
+type MailStatus = 'scheduled' | 'cancelled' | 'success' | 'failure' | 'delayed_gasPrice';
 
 const templateIds = {
   scheduled: scheduledTemplateId,
@@ -49,10 +44,7 @@ const mailSubjects = {
   delayed_gasPrice: '[AUTOMATE] ⏳ Delayed due to gas price',
 };
 
-async function send(
-  scheduledTx: IMailParams,
-  status: MailStatus,
-): Promise<void> {
+async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void> {
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
@@ -91,6 +83,8 @@ async function send(
         error: scheduledTx.error,
         networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(),
         txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
+        gasPaid: scheduledTx.gasPaid,
+        gasSaved: scheduledTx.gasSaved,
       },
     });
     if (EXTERNAL_RECIPIENTS && scheduledTx.paymentEmail) {
@@ -126,6 +120,8 @@ async function send(
           error: scheduledTx.error,
           networkGasPrice: (scheduledTx.networkGasPrice || '0').toString(),
           txGasPrice: (scheduledTx.txGasPrice || '0').toString(),
+          gasPaid: scheduledTx.gasPaid,
+          gasSaved: scheduledTx.gasSaved,
         },
       });
     }
