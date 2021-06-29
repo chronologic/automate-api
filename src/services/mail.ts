@@ -91,7 +91,7 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
       logger.info(
         `Sending ${status.toUpperCase()} email for tx ${scheduledTx._id} ${
           scheduledTx.transactionHash
-        } to ${JSON.stringify(RECIPIENTS)}`,
+        } to ${JSON.stringify(scheduledTx.paymentEmail)}`,
       );
       await client.send({
         to: scheduledTx.paymentEmail,
