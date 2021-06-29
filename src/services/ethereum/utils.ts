@@ -252,7 +252,9 @@ async function fetchAssetPrice(contract: string, symbol: string, timestamp: stri
 
     if (timestamp) {
       const dateParam = moment(timestamp).format('DD-MM-YYYY');
-      logger.debug(`fetchAssetPrice dateParam from ${timestamp}: ${dateParam}`);
+      logger.debug(
+        `fetchAssetPrice dateParam from ${timestamp}: ${dateParam}; https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
+      );
       let res = await fetch(
         `https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
       ).then((response) => response.json());
@@ -261,11 +263,16 @@ async function fetchAssetPrice(contract: string, symbol: string, timestamp: stri
     }
 
     if (!price) {
+      logger.debug(
+        `fetchAssetPrice fetching current price https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd`,
+      );
       const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${assetId}&vs_currencies=usd`,
       ).then((response) => response.json());
-      return res[assetId].usd;
+      price = res[assetId].usd;
     }
+
+    return price;
   } catch (e) {
     logger.error(e);
     return 0;
