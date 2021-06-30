@@ -1,11 +1,14 @@
 import * as bcrypt from 'bcrypt';
 import ShortUniqueId from 'short-unique-id';
-import ethers from 'ethers';
+import { utils } from 'ethers';
 
 import { BadRequestError } from '../errors';
 import { IPlatform, IUser, IUserPublic } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
+import { createLogger } from '../logger';
+
+const logger = createLogger('userService');
 
 export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
@@ -31,18 +34,16 @@ export class UserService implements IUserService {
     const platform = await UserService.matchTxToPlatform(tx);
     if (platform) {
       await Platform.updateOne({ _id: platform._id }, { credits: Math.max(platform.credits - 1, 0) });
+    } else if (user.credits > 0) {
+      await User.updateOne({ _id: user._id }, { credits: Math.max(user.credits - 1, 0) });
     } else {
-      if (user.credits > 0) {
-        await User.updateOne({ _id: user._id }, { credits: Math.max(user.credits - 1, 0) });
-      } else {
-        throw new BadRequestError('Not enough credits');
-      }
+      throw new BadRequestError('Not enough credits');
     }
   }
 
-  private static async matchTxToPlatform(tx: string): Promise<IPlatform> {
+  public static async matchTxToPlatform(tx: string): Promise<IPlatform> {
     try {
-      const parsed = ethers.utils.parseTransaction(tx);
+      const parsed = utils.parseTransaction(tx);
       const to = parsed.to.toLowerCase();
       const data = parsed.data.toLowerCase();
       const platforms = await Platform.find();
@@ -56,7 +57,9 @@ export class UserService implements IUserService {
           }
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      logger.error(e);
+    }
   }
 
   public async login(login: string, password: string): Promise<IUserPublic> {
@@ -149,3 +152,9 @@ export class UserService implements IUserService {
     }
   }
 }
+
+// Platform.create({ name: 'name', credits: 123, whitelist: ['0xabc'] } as any);
+
+UserService.matchTxToPlatform(
+  '0xf8ca688501dcd65000830bac4894d622dbd384d8c682f1dfe2ec18809c6bcd09bd4080b8645b395fdc0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000754d4c0000000000000000000000000000000000000000000000000000000000000000125a077a644419241a92ba04421a88e91646a56bdb64b811c81269aacc07f3a9dea92a048a40c99bddeaad242ad93ff8abef1c9706a3365da1d524f71ea601d22e01f82',
+).then(console.log);

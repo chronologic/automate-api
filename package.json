@@ -9,7 +9,8 @@
     "postinstall": "npm run build",
     "dev": "ts-node ./src/server.ts",
     "start": "nodemon ./dist/server.js",
-    "lint": "tslint --project ."
+    "lint": "tslint --project .",
+    "ngrok": "./ngrok http 3001"
   },
   "repository": {
     "type": "git",
