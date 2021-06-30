@@ -1,38 +1,20 @@
 import { model, Schema } from 'mongoose';
 
 import { makeLogger } from '../services/logger';
-import { IUser } from './Models';
+import { IPlatform } from './Models';
 
-const logger = makeLogger('UserSchema');
+const logger = makeLogger('PlatformSchema');
 
-const UserSchema = new Schema({
-  login: {
+const PlatformSchema = new Schema({
+  name: {
     type: String,
     required: true,
     unique: true,
   },
-  source: {
-    type: String,
-  },
   credits: {
     type: Number,
   },
-  passwordHash: {
-    type: String,
-    required: true,
-  },
-  salt: {
-    type: String,
-    required: true,
-  },
-  apiKey: {
-    type: String,
-    required: true,
-  },
-  accessKey: {
-    type: String,
-    required: true,
-  },
+  whitelist: [String],
   createdAt: {
     type: String,
   },
@@ -49,8 +31,8 @@ async function preSave(next: () => {}) {
   next();
 }
 
-UserSchema.pre('save', preSave);
+PlatformSchema.pre('save', preSave);
 
-const User = model<IUser>('User', UserSchema);
+const Platform = model<IPlatform>('Platform', PlatformSchema);
 
-export default User;
+export default Platform;

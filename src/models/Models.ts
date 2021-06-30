@@ -191,9 +191,19 @@ export interface IUserPublic {
 export interface IUser extends IUserPublic, Document {
   passwordHash: string;
   salt: string;
+  credits: number;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface RequestWithAuth extends Request {
   user: IUserPublic;
+}
+
+export interface IPlatform extends Document {
+  name: string;
+  credits: number;
+  whitelist: string[];
+  createdAt: string;
+  executedAt: string;
 }

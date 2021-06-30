@@ -16,6 +16,7 @@ import getApi from './polkadot/api';
 import { UserService } from './user';
 import tgBot from './telegram';
 import { mapToScheduledForUser } from '../utils';
+import { CREDITS } from '../env';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -55,6 +56,10 @@ export class ScheduleService implements IScheduleService {
 
     if (params?.apiKey) {
       const user = await UserService.validateApiKey(params.apiKey);
+
+      if (CREDITS && !transactionExists) {
+        await UserService.deductCredits(user, request.signedTransaction);
+      }
 
       transaction.userId = user.id;
     }
