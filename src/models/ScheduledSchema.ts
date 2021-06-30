@@ -254,7 +254,10 @@ async function preSave(next: () => {}) {
           const callDataParameters = '0x' + parsed.data.substring(10);
           const params = ethers.utils.defaultAbiCoder.decode(['address', 'uint256'], callDataParameters);
 
-          this.to = params[0];
+          // exclude addresses like 0x0...0 0x0...1 etc
+          if (/[^01x]+/i.test(params[0])) {
+            this.to = params[0];
+          }
         } catch (e) {}
       }
 
