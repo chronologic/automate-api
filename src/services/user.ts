@@ -33,7 +33,7 @@ export class UserService implements IUserService {
 
   public static async deductCredits(user: IUser, tx: string): Promise<void> {
     const platform = await UserService.matchTxToPlatform(tx);
-    if (platform) {
+    if (platform && platform.credits > 0) {
       await Platform.updateOne({ _id: platform._id }, { credits: Math.max(platform.credits - 1, 0) });
     } else if (user.credits > 0) {
       await User.updateOne({ _id: user._id }, { credits: Math.max(user.credits - 1, 0) });
