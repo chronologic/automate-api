@@ -197,7 +197,7 @@ export interface IUser extends IUserPublic, Document {
 }
 
 export interface RequestWithAuth extends Request {
-  user: IUserPublic;
+  user: IUser;
 }
 
 export interface IPlatform extends Document {
@@ -206,4 +206,9 @@ export interface IPlatform extends Document {
   whitelist: string[];
   createdAt: string;
   executedAt: string;
+}
+
+export interface IUserCredits {
+  user: number;
+  community: number;
 }

@@ -3,7 +3,7 @@ import ShortUniqueId from 'short-unique-id';
 import { utils } from 'ethers';
 
 import { BadRequestError } from '../errors';
-import { IPlatform, IUser, IUserPublic } from '../models/Models';
+import { IPlatform, IUser, IUserCredits, IUserPublic } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
 import { createLogger } from '../logger';
@@ -14,6 +14,7 @@ export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
   signup(email: string, password: string, source?: string): Promise<IUserPublic>;
   loginOrSignup(email: string, password: string): Promise<IUserPublic>;
+  getCredits(user: IUser): Promise<IUserCredits>;
 }
 
 const apiKeygen = new ShortUniqueId({ length: 16 });
@@ -60,6 +61,15 @@ export class UserService implements IUserService {
     } catch (e) {
       logger.error(e);
     }
+  }
+
+  public async getCredits(user: IUser): Promise<IUserCredits> {
+    const platform = await Platform.findOne({ name: user.source });
+
+    return {
+      user: user.credits || 0,
+      community: platform?.credits || 0,
+    };
   }
 
   public async login(login: string, password: string): Promise<IUserPublic> {

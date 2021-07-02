@@ -53,6 +53,10 @@ export class Routes {
     app.route('/auth/signup').post(requestMiddleware(this.userController.signup.bind(this.userController)));
 
     app
+      .route('/user/credits')
+      .get(authMiddleware, requestMiddleware(this.userController.credits.bind(this.userController)));
+
+    app
       .route('/transactions')
       .get(authMiddleware, this.transactionController.list.bind(this.transactionController))
       .post(authMiddleware, this.transactionController.edit.bind(this.transactionController))

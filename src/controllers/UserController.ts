@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 
+import { RequestWithAuth } from '../models/Models';
 import { IUserService } from '../services/user';
 
 export class UserController {
@@ -10,29 +11,26 @@ export class UserController {
   }
 
   public async loginOrSignup(req: Request, res: Response, next: NextFunction) {
-    const user = await this.userService.loginOrSignup(
-      req.body.login,
-      req.body.password,
-    );
+    const user = await this.userService.loginOrSignup(req.body.login, req.body.password);
 
     res.json(user);
   }
 
   public async login(req: Request, res: Response) {
-    const user = await this.userService.login(
-      req.body.login,
-      req.body.password,
-    );
+    const user = await this.userService.login(req.body.login, req.body.password);
 
     res.json(user);
   }
 
   public async signup(req: Request, res: Response) {
-    const user = await this.userService.signup(
-      req.body.login,
-      req.body.password,
-    );
+    const user = await this.userService.signup(req.body.login, req.body.password);
 
     res.json(user);
+  }
+
+  public async credits(req: RequestWithAuth, res: Response) {
+    const credits = await this.userService.getCredits(req.user);
+
+    res.json(credits);
   }
 }
