@@ -23,7 +23,7 @@ export class UserController {
   }
 
   public async signup(req: Request, res: Response) {
-    const user = await this.userService.signup(req.body.login, req.body.password);
+    const user = await this.userService.signup(req.body.login, req.body.password, req.body.source);
 
     res.json(user);
   }
