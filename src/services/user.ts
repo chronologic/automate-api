@@ -38,7 +38,7 @@ export class UserService implements IUserService {
     } else if (user.credits > 0) {
       await User.updateOne({ _id: user._id }, { credits: Math.max(user.credits - 1, 0) });
     } else {
-      throw new BadRequestError('Not enough credits');
+      throw new BadRequestError('Insufficient Automate credits');
     }
   }
 
