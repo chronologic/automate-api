@@ -98,6 +98,41 @@ export class StatsService implements IStatsService {
   }
 
   public getStatsForAddress(address: string): Promise<IAddressStats> {
-    return Promise.resolve({ pending: 1, completed: 2, savingsUsd: 13.37 });
+    const cachedRes = addressStatsCache.get(address);
+
+    if (cachedRes) {
+      return cachedRes;
+    }
+
+    const promise = this._getStatsForAddress(address);
+    addressStatsCache.put(address, promise);
+
+    return promise;
+  }
+
+  private async _getStatsForAddress(address: string): Promise<IAddressStats> {
+    const txs = await Scheduled.find({
+      from: new RegExp(`^${address}$`, 'i'),
+    });
+
+    const stats: IAddressStats = {
+      pending: 0,
+      completed: 0,
+      savingsUsd: 0,
+    };
+
+    txs.forEach((tx) => {
+      if (tx.status === Status.Pending) {
+        stats.pending += 1;
+      } else if (tx.status === Status.Completed) {
+        stats.completed += 1;
+      }
+
+      stats.savingsUsd += tx.gasSaved || 0;
+    });
+
+    stats.savingsUsd = Number(stats.savingsUsd.toFixed(2));
+
+    return stats;
   }
 }
