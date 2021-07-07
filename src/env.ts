@@ -15,4 +15,6 @@ export const GAS_PRICE_FEED_URL = process.env.GAS_PRICE_FEED_URL as string;
 
 export const CREDITS = process.env.CREDITS === 'true';
 
+export const SKIP_TX_BROADCAST = process.env.SKIP_TX_BROADCAST === 'true';
+
 export const PROD_BUILD = __filename.endsWith('.js');

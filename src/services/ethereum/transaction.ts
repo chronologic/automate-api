@@ -5,6 +5,7 @@ import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import logger from './logger';
 import { fetchTransactionMetadata, getSenderNextNonce, fetchNetworkGasPrice } from './utils';
 import sendMail from '../mail';
+import { SKIP_TX_BROADCAST } from '../../env';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 const CONFIRMATIONS = 3;
@@ -88,16 +89,24 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     try {
-      logger.info(`${id} Executing...`);
-      const response = await provider.sendTransaction(scheduled.signedTransaction);
-      logger.info(`${id} Sent ${response.hash}`);
+      if (SKIP_TX_BROADCAST) {
+        logger.info(`${id} broadcasting disabled, marking as executed...`);
+        scheduled.status = Status.Completed;
+        const parsed = ethers.utils.parseTransaction(scheduled.signedTransaction);
+        scheduled.transactionHash = parsed.hash;
+        scheduled.executedAt = new Date().toISOString();
+      } else {
+        logger.info(`${id} Executing...`);
+        const response = await provider.sendTransaction(scheduled.signedTransaction);
+        logger.info(`${id} Sent ${response.hash}`);
 
-      const receipt = await response.wait(CONFIRMATIONS);
-      logger.info(`${id} Confirmed ${receipt.transactionHash}`);
+        const receipt = await response.wait(CONFIRMATIONS);
+        logger.info(`${id} Confirmed ${receipt.transactionHash}`);
 
-      scheduled.status = Status.Completed;
-      scheduled.transactionHash = receipt.transactionHash;
-      scheduled.executedAt = new Date().toISOString();
+        scheduled.status = Status.Completed;
+        scheduled.transactionHash = receipt.transactionHash;
+        scheduled.executedAt = new Date().toISOString();
+      }
 
       const { assetName, assetAmount, assetValue } = await fetchTransactionMetadata(scheduled);
 
