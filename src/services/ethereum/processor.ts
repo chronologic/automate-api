@@ -7,6 +7,7 @@ import logger from './logger';
 import { ITransactionExecutor } from './transaction';
 import { getPriceStats } from './utils';
 import tgBot from '../telegram';
+import webhookService from '../webhook';
 
 export class Processor {
   private scheduleService: IScheduleService;
@@ -119,7 +120,7 @@ export class Processor {
 
       tgBot.executed({ value: assetValue, savings: gasSaved });
 
-      // TODO: webhook here
+      webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
 
       return true;
     } else if (scheduled.conditionBlock === 0) {

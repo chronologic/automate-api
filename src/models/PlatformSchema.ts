@@ -15,6 +15,9 @@ const PlatformSchema = new Schema({
     type: Number,
   },
   whitelist: [String],
+  webhook: {
+    type: String,
+  },
   createdAt: {
     type: String,
   },

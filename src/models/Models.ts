@@ -204,6 +204,7 @@ export interface IPlatform extends Document {
   name: string;
   credits: number;
   whitelist: string[];
+  webhook: string;
   createdAt: string;
   executedAt: string;
 }

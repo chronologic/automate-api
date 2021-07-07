@@ -1,14 +1,11 @@
 import * as bcrypt from 'bcrypt';
 import ShortUniqueId from 'short-unique-id';
-import { utils } from 'ethers';
 
 import { BadRequestError } from '../errors';
 import { IPlatform, IUser, IUserCredits, IUserPublic } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
-import { createLogger } from '../logger';
-
-const logger = createLogger('userService');
+import platformService from './platform';
 
 export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
@@ -32,34 +29,13 @@ export class UserService implements IUserService {
   }
 
   public static async deductCredits(user: IUser, tx: string): Promise<void> {
-    const platform = await UserService.matchTxToPlatform(tx);
+    const platform = await platformService.matchTxToPlatform(tx);
     if (platform && platform.credits > 0) {
       await Platform.updateOne({ _id: platform._id }, { credits: Math.max(platform.credits - 1, 0) });
     } else if (user.credits > 0) {
       await User.updateOne({ _id: user._id }, { credits: Math.max(user.credits - 1, 0) });
     } else {
       throw new BadRequestError('Insufficient Automate credits');
-    }
-  }
-
-  public static async matchTxToPlatform(tx: string): Promise<IPlatform> {
-    try {
-      const parsed = utils.parseTransaction(tx);
-      const to = parsed.to.toLowerCase();
-      const data = parsed.data.toLowerCase();
-      const platforms = await Platform.find();
-
-      for (const platform of platforms) {
-        for (const contract of platform.whitelist) {
-          const contractLower = contract.toLowerCase();
-          const contractNoPrefix = contractLower.substr(2);
-          if (to === contractLower || data.includes(contractNoPrefix)) {
-            return platform;
-          }
-        }
-      }
-    } catch (e) {
-      logger.error(e);
     }
   }
 

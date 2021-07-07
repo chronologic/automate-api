@@ -17,6 +17,7 @@ import { UserService } from './user';
 import tgBot from './telegram';
 import { mapToScheduledForUser } from '../utils';
 import { CREDITS } from '../env';
+import webhookService from './webhook';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -113,7 +114,7 @@ export class ScheduleService implements IScheduleService {
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
       send(scheduled, 'scheduled');
       tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
-      // TODO: webhook here
+      webhookService.notify(scheduled);
     }
 
     return scheduled;

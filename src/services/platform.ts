@@ -1,0 +1,39 @@
+import { utils } from 'ethers';
+
+import { IPlatform } from '../models/Models';
+import Platform from '../models/PlatformSchema';
+import { createLogger } from '../logger';
+
+const logger = createLogger('platformService');
+
+async function matchTxToPlatform(tx: string): Promise<IPlatform> {
+  try {
+    const parsed = utils.parseTransaction(tx);
+    const to = parsed.to.toLowerCase();
+    const data = parsed.data.toLowerCase();
+    const platforms = await Platform.find();
+
+    for (const platform of platforms) {
+      for (const contract of platform.whitelist) {
+        const contractLower = contract.toLowerCase();
+        const contractNoPrefix = contractLower.substr(2);
+        if (to === contractLower || data.includes(contractNoPrefix)) {
+          return platform;
+        }
+      }
+    }
+  } catch (e) {
+    logger.error(e);
+  }
+}
+
+async function matchTxToWebhook(tx: string): Promise<string> {
+  const platform = await matchTxToPlatform(tx);
+
+  return platform?.webhook;
+}
+
+export default {
+  matchTxToPlatform,
+  matchTxToWebhook,
+};
