@@ -21,8 +21,11 @@ const statusNames: {
   [Status.Completed]: 'executed',
 };
 
+const statusCodes = Object.keys(statusNames).map(Number);
+
 async function notify(scheduled: IScheduled): Promise<void> {
-  if (!Object.keys(statusNames).includes(scheduled.status as any)) {
+  if (!statusCodes.includes(scheduled.status as any)) {
+    logger.info(`${scheduled._id} is not in supported status: ${scheduled.status}, skipping`);
     return;
   }
 
