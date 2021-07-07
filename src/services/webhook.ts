@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 
 import { IScheduled, Status } from '../models/Models';
+import { createLogger } from '../logger';
 import platformService from './platform';
 
 interface IWebhookNotification {
@@ -10,6 +11,8 @@ interface IWebhookNotification {
   gasPaidUsd: number;
   gasSavedUsd: number;
 }
+
+const logger = createLogger('webhook');
 
 const statusNames: {
   [key: number]: string;
@@ -33,6 +36,7 @@ async function notify(scheduled: IScheduled): Promise<void> {
       gasPaidUsd: scheduled.gasPaid,
       gasSavedUsd: scheduled.gasSaved,
     };
+    logger.info(`Notifying ${url} about ${JSON.stringify(notification)}...`);
 
     fetch(url, {
       method: 'POST',
@@ -41,6 +45,8 @@ async function notify(scheduled: IScheduled): Promise<void> {
       },
       body: JSON.stringify(notification),
     });
+  } else {
+    logger.info('No match found');
   }
 }
 
