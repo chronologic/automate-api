@@ -58,7 +58,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
 
 function sendMessage(chatId: string, msg: string): void {
   logger.info(`Sending msg "${msg}" to ${chatId}...`);
-  chatId && telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML' });
+  chatId && telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
 }
 
 function formatCurrency(value: number): string {
