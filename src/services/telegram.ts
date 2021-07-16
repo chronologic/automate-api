@@ -22,7 +22,7 @@ const telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
 // });
 // or check ID in Plus Messenger
 
-const automateLink = '[Automate](https://blog.chronologic.network/automate/home)';
+const automateLink = '<a href="https://blog.chronologic.network/automate/home">Automate</a>';
 
 function createMessenger(chatId: string): ITelegramMessenger {
   return {
@@ -58,7 +58,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
 
 function sendMessage(chatId: string, msg: string): void {
   logger.info(`Sending msg "${msg}" to ${chatId}...`);
-  chatId && telegramBot.sendMessage(chatId, msg, { parse_mode: 'MarkdownV2' });
+  chatId && telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML' });
 }
 
 function formatCurrency(value: number): string {
