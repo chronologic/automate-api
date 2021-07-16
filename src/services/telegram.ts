@@ -32,7 +32,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
       if (value) {
         msg += `worth ${formatCurrency(randomizeValue(value))} `;
       }
-      msg += 'was just scheduled through Automate';
+      msg += 'was just scheduled through [Automate](https://automate.chronologic.network/)';
       if (savings) {
         msg += `, saving the user ${formatCurrency(randomizeValue(savings))} in gas fees`;
       }
@@ -44,7 +44,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
       if (value) {
         msg += `worth ${formatCurrency(randomizeValue(value))} `;
       }
-      msg += 'was just executed through Automate';
+      msg += 'was just executed through [Automate](https://automate.chronologic.network/)';
       if (savings) {
         msg += `, saving the user ${formatCurrency(randomizeValue(savings))} in gas fees`;
       }
@@ -56,7 +56,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
 
 function sendMessage(chatId: string, msg: string): void {
   logger.info(`Sending msg "${msg}" to ${chatId}...`);
-  chatId && telegramBot.sendMessage(chatId, msg);
+  chatId && telegramBot.sendMessage(chatId, msg, { parse_mode: 'MarkdownV2' });
 }
 
 function formatCurrency(value: number): string {
