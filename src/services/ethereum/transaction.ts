@@ -3,9 +3,10 @@ import { ethers } from 'ethers';
 
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import logger from './logger';
-import { fetchTransactionMetadata, getSenderNextNonce, fetchNetworkGasPrice } from './utils';
+import { fetchTransactionMetadata, getSenderNextNonce } from './utils';
 import sendMail from '../mail';
 import { SKIP_TX_BROADCAST } from '../../env';
+import { gasService } from './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
 const CONFIRMATIONS = 3;
@@ -210,7 +211,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   private async isGasPriceConditionMet(scheduled: IScheduled, transaction: ethers.utils.Transaction) {
     let isGasPriceConditionMet = true;
     if (scheduled.gasPriceAware) {
-      const networkGasPrice = await fetchNetworkGasPrice(scheduled.chainId);
+      const networkGasPrice = await gasService.getCurrentSafeLowGasPrice(scheduled.chainId);
       const txGasPrice = transaction.gasPrice;
 
       if (networkGasPrice.gt(txGasPrice)) {

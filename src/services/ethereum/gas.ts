@@ -1,13 +1,14 @@
 import fetch from 'node-fetch';
 import { ethers } from 'ethers';
+import { BigNumber } from 'ethers/utils';
 
-import { DAY_MILLIS, GWEI_DECIMALS, MINUTE_MILLIS } from '../../constants';
-import { GAS_PRICE_FEED_URL } from '../../env';
+import { DAY_MILLIS, GWEI_DECIMALS, MINUTE_MILLIS, SECOND_MILLIS } from '../../constants';
+import { CURRENT_GAS_PRICE_FEED_URL, GAS_PRICE_FEED_URL } from '../../env';
 import { bnToNumber, createTimedCache } from '../../utils';
 import { BadRequestError } from '../../errors';
+import { createLogger } from '../../logger';
 
 type IHistoricalGasPrice = [number, number];
-
 type GasPriceTimeRange = '1d' | '3d' | '5d' | '7d';
 
 interface IGasEstimateResponse {
@@ -17,9 +18,12 @@ interface IGasSavingsResponse {
   savingsPercent: number;
 }
 
+const logger = createLogger('gas');
+
 const gasEstimateCache = createTimedCache<Promise<IGasEstimateResponse>>(3 * MINUTE_MILLIS);
 const gasSavingsCache = createTimedCache<Promise<IGasSavingsResponse>>(5 * MINUTE_MILLIS);
 const gasPricesCache = createTimedCache<Promise<IHistoricalGasPrice[]>>(30 * MINUTE_MILLIS);
+const safeLowGasPriceCache = createTimedCache<Promise<BigNumber>>(30 * SECOND_MILLIS);
 
 async function estimateGas(range: GasPriceTimeRange): Promise<IGasEstimateResponse> {
   validateGasPriceTimeRange(range);
@@ -148,9 +152,45 @@ function validateGasPriceTimeRange(range: GasPriceTimeRange): void {
   }
 }
 
+async function getCurrentSafeLowGasPrice(chainId = 1): Promise<BigNumber> {
+  const cacheKey = `${chainId}`;
+  const res = safeLowGasPriceCache.get(cacheKey);
+
+  if (res) {
+    return res;
+  }
+
+  const promise = fetchCurrentSafeLowGasPrice(chainId);
+
+  safeLowGasPriceCache.put(cacheKey, promise);
+
+  return promise;
+}
+
+async function fetchCurrentSafeLowGasPrice(chainId: number): Promise<BigNumber> {
+  if (chainId !== 1) {
+    return ethers.utils.parseUnits('1', 'gwei');
+  }
+  try {
+    const res = await fetch(CURRENT_GAS_PRICE_FEED_URL);
+    const json = await res.json();
+
+    return ethers.utils.parseUnits(json.SafeGasPrice, 'gwei');
+  } catch (e) {
+    logger.error(e);
+    // fallback - 85% of network price
+    const network = ethers.utils.getNetwork(1);
+    const provider = ethers.getDefaultProvider(network);
+    const gasPrice = await provider.getGasPrice();
+
+    return gasPrice.mul(new BigNumber('85')).div(new BigNumber('100'));
+  }
+}
+
 const gasService = {
   estimateGas,
   estimateGasSavings,
+  getCurrentSafeLowGasPrice,
 };
 
 export { gasService };
