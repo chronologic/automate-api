@@ -22,6 +22,8 @@ const telegramBot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
 // });
 // or check ID in Plus Messenger
 
+const automateLink = '[Automate](https://blog.chronologic.network/automate/home)';
+
 function createMessenger(chatId: string): ITelegramMessenger {
   return {
     sendMessage(msg: string): void {
@@ -32,7 +34,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
       if (value) {
         msg += `worth ${formatCurrency(randomizeValue(value))} `;
       }
-      msg += 'was just scheduled through [Automate](https://automate.chronologic.network/)';
+      msg += `was just scheduled through ${automateLink}`;
       if (savings) {
         msg += `, saving the user ${formatCurrency(randomizeValue(savings))} in gas fees`;
       }
@@ -44,7 +46,7 @@ function createMessenger(chatId: string): ITelegramMessenger {
       if (value) {
         msg += `worth ${formatCurrency(randomizeValue(value))} `;
       }
-      msg += 'was just executed through [Automate](https://automate.chronologic.network/)';
+      msg += `was just executed through ${automateLink}`;
       if (savings) {
         msg += `, saving the user ${formatCurrency(randomizeValue(savings))} in gas fees`;
       }
