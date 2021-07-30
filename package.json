@@ -33,7 +33,7 @@
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "ethereum-input-data-decoder": "^0.2.1",
-    "ethers": "^4.0.13",
+    "ethers": "^5.4.3",
     "express": "^4.16.4",
     "express-winston": "^3.0.1",
     "keen-tracking": "^4.2.4",

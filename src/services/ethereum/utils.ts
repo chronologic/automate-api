@@ -21,19 +21,19 @@ const fallbackAssetName = '_';
 let coinGeckoCoins: ICoinGeckoCoin[] = [];
 
 function getSenderNextNonce({ chainId, from }): Promise<number> {
-  const network = ethers.utils.getNetwork(chainId);
+  const network = ethers.providers.getNetwork(chainId);
 
   return ethers.getDefaultProvider(network).getTransactionCount(from);
 }
 
-export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.utils.BigNumber> {
-  const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
+export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigNumber> {
+  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
 
   return provider.getGasPrice();
 }
 
 async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
-  const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(transaction.chainId));
+  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(transaction.chainId));
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
   const method = parsedTx.value.toString() === '0' && parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
 
@@ -61,11 +61,11 @@ async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITrans
   };
 }
 
-export async function getPriceStats(tx: ethers.utils.Transaction): Promise<IGasStats> {
+export async function getPriceStats(tx: ethers.Transaction): Promise<IGasStats> {
   try {
     const { gasPrice: gasPriceWei, gasLimit, chainId } = tx;
 
-    const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
+    const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
 
     const ethPrice = await fetchEthPrice();
     const networkGasPriceWei = await provider.getGasPrice();
@@ -74,8 +74,8 @@ export async function getPriceStats(tx: ethers.utils.Transaction): Promise<IGasS
       const txReceipt = await provider.getTransactionReceipt(tx.hash);
       gasUsed = txReceipt.gasUsed || gasLimit;
     } catch (e) {}
-    const gasPaidWei = new ethers.utils.BigNumber(gasPriceWei).mul(new ethers.utils.BigNumber(gasUsed));
-    const networkGasPaidWei = new ethers.utils.BigNumber(networkGasPriceWei).mul(new ethers.utils.BigNumber(gasUsed));
+    const gasPaidWei = ethers.BigNumber.from(gasPriceWei).mul(ethers.BigNumber.from(gasUsed));
+    const networkGasPaidWei = ethers.BigNumber.from(networkGasPriceWei).mul(ethers.BigNumber.from(gasUsed));
 
     const gasPaid = await convertWeiToUsd(gasPaidWei);
     const networkGasPaid = await convertWeiToUsd(networkGasPaidWei);
@@ -103,7 +103,7 @@ export async function getPriceStats(tx: ethers.utils.Transaction): Promise<IGasS
 
 async function fetchTokenMetadata(
   transaction: IScheduled,
-  parsedTx: ethers.utils.Transaction,
+  parsedTx: ethers.Transaction,
   provider: ethers.providers.BaseProvider,
 ): Promise<IScheduled> {
   transaction.assetContract = parsedTx.to;
@@ -190,7 +190,7 @@ async function scrapeTokenMetadata(txHash) {
 
 async function fetchEthMetadata(
   transaction: IScheduled,
-  parsedTx: ethers.utils.Transaction,
+  parsedTx: ethers.Transaction,
   provider: ethers.providers.BaseProvider,
 ): Promise<IScheduled> {
   if (!transaction.assetName || transaction.assetName === fallbackAssetName) {
@@ -358,7 +358,7 @@ async function fetchTokenName(contractAddress: string, chainId = 1): Promise<str
   const fallbackName = '_';
 
   try {
-    const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(chainId));
+    const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
 
     const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
@@ -399,7 +399,7 @@ async function fetchAssetMetadata(transaction: IScheduled): Promise<IAssetMetada
       };
     }
 
-    const provider = ethers.getDefaultProvider(ethers.utils.getNetwork(transaction.chainId));
+    const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(transaction.chainId));
 
     const contract = new ethers.Contract(transaction.conditionAsset, ERC20, provider);
 

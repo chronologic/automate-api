@@ -15,10 +15,10 @@ interface IPrices {
 const logger = createLogger('priceFeed');
 const cache = createTimedCache<IPrices>(MINUTE_MILLIS);
 
-async function convertWeiToUsd(wei: ethers.utils.BigNumberish): Promise<number> {
+async function convertWeiToUsd(wei: ethers.BigNumberish): Promise<number> {
   const ethToUsd = await fetchEthPrice();
   const ratioWei = numberToBnEth(ethToUsd);
-  const weiInUsd = new ethers.utils.BigNumber(wei).mul(ratioWei).div(new ethers.utils.BigNumber(10).pow(ETH_DECIMALS));
+  const weiInUsd = ethers.BigNumber.from(wei).mul(ratioWei).div(ethers.BigNumber.from(10).pow(ETH_DECIMALS));
   return bnToNumberEth(weiInUsd);
 }
 

@@ -130,7 +130,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   }
 
   private getProvider(chainId: number) {
-    const network = ethers.utils.getNetwork(chainId);
+    const network = ethers.providers.getNetwork(chainId);
     return ethers.getDefaultProvider(network);
   }
 
@@ -176,7 +176,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private async isConditionMet(
     scheduled: IScheduled,
-    transaction: ethers.utils.Transaction,
+    transaction: ethers.Transaction,
     provider: ethers.providers.BaseProvider,
   ) {
     logger.info(`${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`);
@@ -208,7 +208,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     return isStateConditionMet && isTimeConditionMet;
   }
 
-  private async isGasPriceConditionMet(scheduled: IScheduled, transaction: ethers.utils.Transaction) {
+  private async isGasPriceConditionMet(scheduled: IScheduled, transaction: ethers.Transaction) {
     let isGasPriceConditionMet = true;
     if (scheduled.gasPriceAware) {
       const networkGasPrice = await gasService.getCurrentSafeLowGasPrice(scheduled.chainId);

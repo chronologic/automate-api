@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 
 import { makeLogger } from '../services/logger';
@@ -109,7 +109,7 @@ const ScheduledSchema = new Schema({
       validator: (conditionAmount: string) => {
         try {
           // tslint:disable-next-line:no-unused-expression
-          new ethers.utils.BigNumber(conditionAmount);
+          BigNumber.from(conditionAmount);
         } catch (e) {
           return false;
         }

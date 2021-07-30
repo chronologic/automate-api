@@ -21,11 +21,11 @@ export function createTimedCache<T>(ttlMillis: number): ICache<T> {
   };
 }
 
-export function numberToBnEth(num: number): ethers.utils.BigNumber {
+export function numberToBnEth(num: number): ethers.BigNumber {
   return numberToBn(num, ETH_DECIMALS);
 }
 
-export function numberToBn(num: number, decimals = ETH_DECIMALS): ethers.utils.BigNumber {
+export function numberToBn(num: number, decimals = ETH_DECIMALS): ethers.BigNumber {
   let numStr = num.toString();
   const numDecimals = (numStr.split('.')[1] || '').length;
 
@@ -37,19 +37,21 @@ export function numberToBn(num: number, decimals = ETH_DECIMALS): ethers.utils.B
   return ethers.utils.parseUnits(`${numStr}`, decimals);
 }
 
-export function bnToNumberEth(bn: ethers.utils.BigNumberish, precision = 6): number {
+export function bnToNumberEth(bn: ethers.BigNumberish, precision = 6): number {
   return bnToNumber(bn, ETH_DECIMALS, precision);
 }
 
-export function bnToNumber(bn: ethers.utils.BigNumberish, decimals = ETH_DECIMALS, precision = 6): number {
-  const bnWithPrecision = new ethers.utils.BigNumber(bn).div(
-    new ethers.utils.BigNumber('10').pow(new ethers.utils.BigNumber(decimals - precision)),
+export function bnToNumber(bn: ethers.BigNumberish, decimals = ETH_DECIMALS, precision = 6): number {
+  const bnWithPrecision = ethers.BigNumber.from(bn).div(
+    ethers.BigNumber.from('10').pow(ethers.BigNumber.from(decimals - precision)),
   );
   return bnWithPrecision.toNumber() / 10 ** precision;
 }
 
-export function weiToGwei(wei: ethers.utils.BigNumberish): number {
-  return new ethers.utils.BigNumber(wei).div(10 ** 9).toNumber();
+export function weiToGwei(wei: ethers.BigNumberish): number {
+  return ethers.BigNumber.from(wei)
+    .div(10 ** 9)
+    .toNumber();
 }
 
 export function mapToScheduledForUser(scheduled: IScheduled): IScheduledForUser {
