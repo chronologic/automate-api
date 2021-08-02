@@ -190,8 +190,8 @@ export class TransactionExecutor implements ITransactionExecutor {
       currentConditionAmount = await provider.getBalance(transaction.from!);
     }
 
-    const condition = new BigNumber(scheduled.conditionAmount);
-    const isStateConditionMet = new BigNumber(currentConditionAmount).gte(condition);
+    const condition = ethers.BigNumber.from(scheduled.conditionAmount);
+    const isStateConditionMet = ethers.BigNumber.from(currentConditionAmount).gte(condition);
 
     logger.info(`${scheduled._id} Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`);
 

@@ -308,19 +308,19 @@ async function fetchTokenAmount(
     const token = new ethers.Contract(contractAddress, ERC20, provider);
     const decimals = await token.functions.decimals();
     if (decoded.method === 'transfer') {
-      const amount = new BigNumber(decoded.inputs[1].toString(10));
+      const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
 
       return {
-        amount: amount.div(new BigNumber(10).pow(decimals)).toNumber(),
-        amountWei: amount.toString(10),
+        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+        amountWei: amount.toString(),
         decimals,
       };
     } else if (decoded.method === 'transferFrom') {
-      const amount = new BigNumber(decoded.inputs[2].toString(10));
+      const amount = ethers.BigNumber.from(decoded.inputs[2].toString(10));
 
       return {
-        amount: amount.div(new BigNumber(10).pow(decimals)).toNumber(),
-        amountWei: amount.toString(10),
+        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+        amountWei: amount.toString(),
         decimals,
       };
     } else {

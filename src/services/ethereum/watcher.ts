@@ -16,9 +16,7 @@ export class Watcher {
 
     const processor = new Processor(new ScheduleService(), transactionExecutor);
 
-    ethers
-      .getDefaultProvider()
-      .on('block', (blockNum: number) => processor.process(blockNum));
+    ethers.getDefaultProvider().on('block', (blockNum: number) => processor.process(blockNum));
   }
 
   private static async fillMissingMetadata(): Promise<void> {

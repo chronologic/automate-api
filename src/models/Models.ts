@@ -1,7 +1,7 @@
 import { ApiPromise } from '@polkadot/api';
-import BigNumber from 'bignumber.js';
 import { Document } from 'mongoose';
 import { Request } from 'express';
+import { ethers } from 'ethers';
 
 export enum Status {
   Pending,
@@ -29,7 +29,7 @@ export enum PolkadotChainId {
 export interface IExtendedPolkadotAPI extends ApiPromise {
   chainName: string;
   getNextNonce(address: string): Promise<number>;
-  getBalance(address: string): Promise<BigNumber>;
+  getBalance(address: string): Promise<ethers.BigNumber>;
   txToExtrinsic(tx: string): Promise<any>;
   parseTx(tx: string): Promise<IPolkadotTx>;
   fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata>;

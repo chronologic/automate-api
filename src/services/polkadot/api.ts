@@ -1,5 +1,5 @@
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import BigNumber from 'bignumber.js';
+import { ethers } from 'ethers';
 
 import {
   IExtendedPolkadotAPI,
@@ -15,9 +15,7 @@ const apis: {
   [key in PolkadotChainId]?: IExtendedPolkadotAPI;
 } = {};
 
-export default async function getApi(
-  chainId: PolkadotChainId,
-): Promise<IExtendedPolkadotAPI> {
+export default async function getApi(chainId: PolkadotChainId): Promise<IExtendedPolkadotAPI> {
   if (apis[chainId]) {
     const api = apis[chainId];
     try {
@@ -46,10 +44,7 @@ export default async function getApi(
   });
 }
 
-function extendApi(
-  api: ApiPromise,
-  chainId: PolkadotChainId,
-): IExtendedPolkadotAPI {
+function extendApi(api: ApiPromise, chainId: PolkadotChainId): IExtendedPolkadotAPI {
   const chain = chains[chainId];
 
   // https://polkadot.js.org/api/start/FAQ.html#my-chain-does-not-support-system-account-queries
@@ -59,10 +54,10 @@ function extendApi(
     return accountNonce.toBn().toNumber();
   }
 
-  async function getBalance(address: string): Promise<BigNumber> {
+  async function getBalance(address: string): Promise<ethers.BigNumber> {
     const { freeBalance } = await api.derive.balances.account(address);
 
-    return new BigNumber(freeBalance.toBn().toString());
+    return ethers.BigNumber.from(freeBalance.toBn().toString());
   }
 
   // TODO: IExtrinsic
@@ -91,17 +86,16 @@ function extendApi(
     if (methodName === 'transfer') {
       const method = JSON.parse(extrinsic.method.toString());
       parsed.dest = method.args.dest;
-      parsed.value = new BigNumber(method.args.value)
-        .div(new BigNumber(10).pow(chain.decimals))
-        .toFormat(chain.decimals);
+      parsed.value = ethers.utils.formatUnits(
+        ethers.BigNumber.from(method.args.value).div(ethers.BigNumber.from(10).pow(chain.decimals)),
+        chain.decimals,
+      );
     }
 
     return parsed;
   }
 
-  async function fetchTransactionMetadata(
-    transaction: IScheduled,
-  ): Promise<ITransactionMetadata> {
+  async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
     let assetAmount = '0';
     const assetValue = 0;
     try {

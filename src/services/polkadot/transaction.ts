@@ -1,12 +1,6 @@
-import BigNumber from 'bignumber.js';
+import { ethers } from 'ethers';
 
-import {
-  IExecuteStatus,
-  IExtendedPolkadotAPI,
-  IScheduled,
-  PolkadotChainId,
-  Status,
-} from '../../models/Models';
+import { IExecuteStatus, IExtendedPolkadotAPI, IScheduled, PolkadotChainId, Status } from '../../models/Models';
 import getApi from './api';
 import logger from './logger';
 
@@ -19,20 +13,14 @@ export interface ITransactionExecutor {
   execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus>;
 }
 export class TransactionExecutor implements ITransactionExecutor {
-  public static async getSenderNextNonce(
-    from: string,
-    chainId: PolkadotChainId,
-  ): Promise<number> {
+  public static async getSenderNextNonce(from: string, chainId: PolkadotChainId): Promise<number> {
     const api = await getApi(chainId);
     return api.getNextNonce(from);
   }
 
   private static queue: Set<string> = new Set<string>();
 
-  public async execute(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): Promise<IExecuteStatus> {
+  public async execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
 
     if (TransactionExecutor.queue.has(id)) {
@@ -48,10 +36,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
   }
 
-  private async executeTransaction(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): Promise<IExecuteStatus> {
+  private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const api = await getApi(scheduled.chainId);
     logger.info(`${id} ${api.chainName} Checking execute conditions...`);
@@ -81,9 +66,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       logger.info(`${id} ${api.chainName} Condition not met`);
       return this.pending;
     } else if (!scheduled.conditionBlock) {
-      logger.info(
-        `${id} ${api.chainName} Condition met. Waiting for confirmations.`,
-      );
+      logger.info(`${id} ${api.chainName} Condition met. Waiting for confirmations.`);
       return this.pending;
     }
 
@@ -99,11 +82,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       scheduled.transactionHash = hash;
       scheduled.executedAt = new Date().toISOString();
 
-      const {
-        assetName,
-        assetAmount,
-        assetValue,
-      } = await api.fetchTransactionMetadata(scheduled);
+      const { assetName, assetAmount, assetValue } = await api.fetchTransactionMetadata(scheduled);
 
       return {
         status: scheduled.status,
@@ -129,18 +108,15 @@ export class TransactionExecutor implements ITransactionExecutor {
     return Promise.race([
       new Promise(async (resolve, reject) => {
         try {
-          await api.rpc.author.submitAndWatchExtrinsic(
-            extrinsic,
-            (result: any) => {
-              // // tslint:disable-next-line: no-console
-              // console.log(result);
-              if (result.isFinalized) {
-                return resolve(extrinsic.hash.toString());
-              } else if (result.isDropped || result.isInvalid) {
-                return reject(result.type);
-              }
-            },
-          );
+          await api.rpc.author.submitAndWatchExtrinsic(extrinsic, (result: any) => {
+            // // tslint:disable-next-line: no-console
+            // console.log(result);
+            if (result.isFinalized) {
+              return resolve(extrinsic.hash.toString());
+            } else if (result.isDropped || result.isInvalid) {
+              return reject(result.type);
+            }
+          });
         } catch (e) {
           reject(e.message);
         }
@@ -172,23 +148,14 @@ export class TransactionExecutor implements ITransactionExecutor {
   //   return { res: false };
   // }
 
-  private async hasCorrectNonce(
-    scheduled: IScheduled,
-  ): Promise<IValidationResult> {
-    const senderNonce = await TransactionExecutor.getSenderNextNonce(
-      scheduled.from,
-      scheduled.chainId,
-    );
+  private async hasCorrectNonce(scheduled: IScheduled): Promise<IValidationResult> {
+    const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled.from, scheduled.chainId);
     const api = await getApi(scheduled.chainId);
 
-    logger.info(
-      `${scheduled._id} ${api.chainName} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`,
-    );
+    logger.info(`${scheduled._id} ${api.chainName} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
 
     if (senderNonce > scheduled.nonce) {
-      logger.info(
-        `${scheduled._id} ${api.chainName} Transaction nonce already spent`,
-      );
+      logger.info(`${scheduled._id} ${api.chainName} Transaction nonce already spent`);
       return { res: false, status: { status: Status.StaleNonce } };
     }
 
@@ -204,16 +171,13 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { status: Status.Pending };
   }
 
-  private async isConditionMet(
-    scheduled: IScheduled,
-    api: IExtendedPolkadotAPI,
-  ) {
+  private async isConditionMet(scheduled: IScheduled, api: IExtendedPolkadotAPI) {
     logger.info(
       `${scheduled._id} ${api.chainName} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`,
     );
 
     const currentConditionAmount = await api.getBalance(scheduled.from!);
-    const condition = new BigNumber(scheduled.conditionAmount);
+    const condition = ethers.BigNumber.from(scheduled.conditionAmount);
     const isStateConditionMet = currentConditionAmount.gte(condition);
 
     logger.info(
@@ -227,9 +191,9 @@ export class TransactionExecutor implements ITransactionExecutor {
     const isTimeConditionMet = currentTime > timeCondition;
 
     logger.info(
-      `${scheduled._id} ${api.chainName} Time condition=${new Date(
-        timeCondition,
-      ).toISOString()} Current=${new Date(currentTime).toISOString()}`,
+      `${scheduled._id} ${api.chainName} Time condition=${new Date(timeCondition).toISOString()} Current=${new Date(
+        currentTime,
+      ).toISOString()}`,
     );
 
     return isStateConditionMet && isTimeConditionMet;

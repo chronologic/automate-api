@@ -7,7 +7,7 @@ export class PolkadotController {
     const api = await getApi(+req.query.chainId);
     const balance = await api.getBalance(req.query.address as string);
     return res.json({
-      balance: balance.toFixed(0),
+      balance: balance.toNumber().toFixed(0),
     });
   }
 
