@@ -1,4 +1,3 @@
-import BigNumber from 'bignumber.js';
 import cheerio from 'cheerio';
 import InputDataDecoder from 'ethereum-input-data-decoder';
 import { ethers } from 'ethers';
@@ -306,7 +305,7 @@ async function fetchTokenAmount(
     const decoder = new InputDataDecoder(ERC20);
     const decoded = decoder.decodeData(txData);
     const token = new ethers.Contract(contractAddress, ERC20, provider);
-    const decimals = await token.functions.decimals();
+    const [decimals] = await token.functions.decimals();
     if (decoded.method === 'transfer') {
       const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
 
@@ -362,7 +361,7 @@ async function fetchTokenName(contractAddress: string, chainId = 1): Promise<str
 
     const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
-    const name = await contract.functions.symbol();
+    const [name] = await contract.functions.symbol();
 
     return name;
   } catch (e) {
@@ -403,8 +402,8 @@ async function fetchAssetMetadata(transaction: IScheduled): Promise<IAssetMetada
 
     const contract = new ethers.Contract(transaction.conditionAsset, ERC20, provider);
 
-    const name = await contract.functions.symbol();
-    const decimals = await contract.functions.decimals();
+    const [name] = await contract.functions.symbol();
+    const [decimals] = await contract.functions.decimals();
 
     return {
       name,
