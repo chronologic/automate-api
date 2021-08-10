@@ -15,13 +15,16 @@ import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 import { UserService } from './user';
 import tgBot from './telegram';
-import { mapToScheduledForUser } from '../utils';
+import { createTimedCache, mapToScheduledForUser } from '../utils';
 import { CREDITS } from '../env';
 import webhookService from './webhook';
+import { MINUTE_MILLIS } from '../constants';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
 const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) => str.toLowerCase());
+
+const txCache = createTimedCache(MINUTE_MILLIS);
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest, params?: IScheduleParams): Promise<IScheduled>;
@@ -35,6 +38,12 @@ export interface IScheduleService {
 
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
+    if (txCache.get(request.signedTransaction)) {
+      throw new Error('Duplicate request');
+    }
+
+    txCache.put(request.signedTransaction, true);
+
     await new Scheduled(request).validate();
 
     let transaction = await this.findBySignedTransaction(request.signedTransaction);
