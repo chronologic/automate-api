@@ -38,11 +38,13 @@ export interface IScheduleService {
 
 export class ScheduleService implements IScheduleService {
   public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
-    if (txCache.get(request.signedTransaction)) {
-      throw new Error('Duplicate request');
-    }
+    if (params?.source === 'proxy') {
+      if (txCache.get(request.signedTransaction)) {
+        throw new Error('Duplicate request');
+      }
 
-    txCache.put(request.signedTransaction, true);
+      txCache.put(request.signedTransaction, true);
+    }
 
     await new Scheduled(request).validate();
 

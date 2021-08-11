@@ -140,6 +140,7 @@ export interface IScheduleRequest {
 export interface IScheduleParams {
   apiKey: string;
   draft?: boolean;
+  source?: string;
 }
 
 export interface ITransactionMetadata extends IGasStats {
