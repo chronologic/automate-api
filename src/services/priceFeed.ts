@@ -26,7 +26,7 @@ async function fetchEthPrice(): Promise<number> {
   const prices = await fetchPrices();
 
   const rate = prices.ethereum.usd;
-  logger.info(`ETH => USD rate is: ${rate}`);
+  logger.debug(`ETH => USD rate is: ${rate}`);
 
   return rate;
 }
@@ -40,7 +40,7 @@ async function fetchPrices(): Promise<IPrices> {
     return cachedVal;
   }
 
-  logger.info('Fetching prices from coingecko...');
+  logger.debug('Fetching prices from coingecko...');
   const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
   const json = await res.json();
   cache.put(cacheKey, json);

@@ -24,7 +24,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const id = scheduled._id.toString();
 
     if (TransactionExecutor.queue.has(id)) {
-      logger.info(`${id} Processing...`);
+      logger.debug(`${id} Processing...`);
       return { status: Status.Pending };
     }
 
@@ -39,7 +39,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const api = await getApi(scheduled.chainId);
-    logger.info(`${id} ${api.chainName} Checking execute conditions...`);
+    logger.debug(`${id} ${api.chainName} Checking execute conditions...`);
 
     // const isWaitingForConfirmations = this.isWaitingForConfirmations(
     //   scheduled,
@@ -63,15 +63,15 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const isConditionMet = await this.isConditionMet(scheduled, api);
     if (!isConditionMet) {
-      logger.info(`${id} ${api.chainName} Condition not met`);
+      logger.debug(`${id} ${api.chainName} Condition not met`);
       return this.pending;
     } else if (!scheduled.conditionBlock) {
-      logger.info(`${id} ${api.chainName} Condition met. Waiting for confirmations.`);
+      logger.debug(`${id} ${api.chainName} Condition met. Waiting for confirmations.`);
       return this.pending;
     }
 
     try {
-      logger.info(`${id} ${api.chainName} Executing...`);
+      logger.debug(`${id} ${api.chainName} Executing...`);
       const hash = await this.sendTx(api, scheduled.signedTransaction);
       // logger.info(`${id} Sent ${hash.toString()}`);
 
@@ -152,15 +152,15 @@ export class TransactionExecutor implements ITransactionExecutor {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled.from, scheduled.chainId);
     const api = await getApi(scheduled.chainId);
 
-    logger.info(`${scheduled._id} ${api.chainName} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
+    logger.debug(`${scheduled._id} ${api.chainName} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
 
     if (senderNonce > scheduled.nonce) {
-      logger.info(`${scheduled._id} ${api.chainName} Transaction nonce already spent`);
+      logger.debug(`${scheduled._id} ${api.chainName} Transaction nonce already spent`);
       return { res: false, status: { status: Status.StaleNonce } };
     }
 
     if (senderNonce !== scheduled.nonce) {
-      logger.info(`${scheduled._id} ${api.chainName} Nonce does not match`);
+      logger.debug(`${scheduled._id} ${api.chainName} Nonce does not match`);
       return { res: false, status: this.pending };
     }
 
@@ -172,7 +172,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   }
 
   private async isConditionMet(scheduled: IScheduled, api: IExtendedPolkadotAPI) {
-    logger.info(
+    logger.debug(
       `${scheduled._id} ${api.chainName} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`,
     );
 
@@ -180,7 +180,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const condition = ethers.BigNumber.from(scheduled.conditionAmount);
     const isStateConditionMet = currentConditionAmount.gte(condition);
 
-    logger.info(
+    logger.debug(
       `${scheduled._id} ${
         api.chainName
       } Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`,
@@ -190,7 +190,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const timeCondition = scheduled.timeCondition || 0;
     const isTimeConditionMet = currentTime > timeCondition;
 
-    logger.info(
+    logger.debug(
       `${scheduled._id} ${api.chainName} Time condition=${new Date(timeCondition).toISOString()} Current=${new Date(
         currentTime,
       ).toISOString()}`,

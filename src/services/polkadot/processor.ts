@@ -8,35 +8,27 @@ export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
 
-  constructor(
-    scheduleService: IScheduleService,
-    transactionExecutor: ITransactionExecutor,
-  ) {
+  constructor(scheduleService: IScheduleService, transactionExecutor: ITransactionExecutor) {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
   }
 
   public async process(blockNum: number) {
-    logger.info(`Triggered by ${blockNum}`);
+    logger.info(`Processing block ${blockNum}...`);
 
     const scheduled = await this.scheduleService.getPending(AssetType.Polkadot);
     const groups = this.groupBySenderAndChain(scheduled);
 
-    logger.info(
-      `Found ${scheduled.length} pending transactions in ${groups.size} groups`,
-    );
+    logger.debug(`Found ${scheduled.length} pending transactions in ${groups.size} groups`);
 
     const inProgress = [];
-    groups.forEach((transactions) =>
-      inProgress.push(this.processTransactions(transactions, blockNum)),
-    );
+    groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions, blockNum)));
 
     return Promise.all(inProgress);
   }
 
   private groupBySenderAndChain(scheduled: IScheduled[]) {
-    const makeKey = (sender: string, chainId: number) =>
-      `${sender}-${chainId.toString()}`;
+    const makeKey = (sender: string, chainId: number) => `${sender}-${chainId.toString()}`;
     const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
 
     scheduled.forEach((s) => {
@@ -68,10 +60,7 @@ export class Processor {
     }
   }
 
-  private async processTransaction(
-    scheduled: IScheduled,
-    blockNum: number,
-  ): Promise<boolean> {
+  private async processTransaction(scheduled: IScheduled, blockNum: number): Promise<boolean> {
     const {
       transactionHash,
       status,

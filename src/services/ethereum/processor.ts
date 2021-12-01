@@ -19,12 +19,12 @@ export class Processor {
   }
 
   public async process(blockNum: number) {
-    logger.info(`Triggered by ${blockNum}`);
+    logger.info(`Processing block ${blockNum}...`);
 
     const scheduled = await this.scheduleService.getPending(AssetType.Ethereum);
     const groups = this.groupBySenderAndChain(scheduled);
 
-    logger.info(`Found ${scheduled.length} pending transactions in ${groups.size} groups`);
+    logger.debug(`Found ${scheduled.length} pending transactions in ${groups.size} groups`);
 
     const inProgress = [];
     groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions, blockNum)));

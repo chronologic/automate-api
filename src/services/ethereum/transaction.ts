@@ -30,7 +30,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const id = scheduled._id.toString();
 
     if (TransactionExecutor.queue.has(id)) {
-      logger.info(`${id} Processing...`);
+      logger.debug(`${id} Processing...`);
       return { status: Status.Pending };
     }
 
@@ -46,7 +46,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const id = scheduled._id.toString();
     const provider = this.getProvider(scheduled.chainId);
 
-    logger.info(`${id} Checking execute conditions...`);
+    logger.debug(`${id} Checking execute conditions...`);
 
     const isWaitingForConfirmations = this.isWaitingForConfirmations(scheduled, blockNum);
     if (isWaitingForConfirmations.res) {
@@ -62,19 +62,19 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const networkTransaction = await provider.getTransaction(transaction.hash!);
     if (networkTransaction && networkTransaction.hash) {
-      logger.info(`${id} Already posted ${networkTransaction.hash}`);
+      logger.debug(`${id} Already posted ${networkTransaction.hash}`);
       return this.pending;
     }
 
     const isConditionMet = await this.isConditionMet(scheduled, transaction, provider);
     let isGasPriceConditionMet = true;
     if (isConditionMet && scheduled.gasPriceAware) {
-      logger.info(`${id} checking gas price...`);
+      logger.debug(`${id} checking gas price...`);
       isGasPriceConditionMet = await this.isGasPriceConditionMet(scheduled, transaction);
     }
 
     if (!(isConditionMet && isGasPriceConditionMet)) {
-      logger.info(`${id} Condition not met`);
+      logger.debug(`${id} Condition not met`);
       if (!isGasPriceConditionMet) {
         return {
           ...this.pending,
@@ -85,24 +85,24 @@ export class TransactionExecutor implements ITransactionExecutor {
         return this.pending;
       }
     } else if (!scheduled.conditionBlock) {
-      logger.info(`${id} Condition met. Waiting for confirmations.`);
+      logger.debug(`${id} Condition met. Waiting for confirmations.`);
       return this.pending;
     }
 
     try {
       if (SKIP_TX_BROADCAST) {
-        logger.info(`${id} broadcasting disabled, marking as executed...`);
+        logger.debug(`${id} broadcasting disabled, marking as executed...`);
         scheduled.status = Status.Completed;
         const parsed = ethers.utils.parseTransaction(scheduled.signedTransaction);
         scheduled.transactionHash = parsed.hash;
         scheduled.executedAt = new Date().toISOString();
       } else {
-        logger.info(`${id} Executing...`);
+        logger.debug(`${id} Executing...`);
         const response = await provider.sendTransaction(scheduled.signedTransaction);
-        logger.info(`${id} Sent ${response.hash}`);
+        logger.debug(`${id} Sent ${response.hash}`);
 
         const receipt = await response.wait(CONFIRMATIONS);
-        logger.info(`${id} Confirmed ${receipt.transactionHash}`);
+        logger.debug(`${id} Confirmed ${receipt.transactionHash}`);
 
         scheduled.status = Status.Completed;
         scheduled.transactionHash = receipt.transactionHash;
@@ -138,7 +138,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     const isWaitingForConfirmations = scheduled.conditionBlock && scheduled.conditionBlock + CONFIRMATIONS > blockNum;
 
     if (isWaitingForConfirmations) {
-      logger.info(
+      logger.debug(
         `${scheduled._id.toString()} Waiting for ${CONFIRMATIONS} confirmations. Condition met at ${
           scheduled.conditionBlock
         }, currently at ${blockNum} ${scheduled.nonce}`,
@@ -155,15 +155,15 @@ export class TransactionExecutor implements ITransactionExecutor {
   private async hasCorrectNonce(scheduled: IScheduled): Promise<IValidationResult> {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
 
-    logger.info(`${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
+    logger.debug(`${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
 
     if (senderNonce > scheduled.nonce) {
-      logger.info(`${scheduled._id} Transaction nonce already spent`);
+      logger.debug(`${scheduled._id} Transaction nonce already spent`);
       return { res: false, status: { status: Status.StaleNonce } };
     }
 
     if (senderNonce !== scheduled.nonce) {
-      logger.info(`${scheduled._id} Nonce does not match`);
+      logger.debug(`${scheduled._id} Nonce does not match`);
       return { res: false, status: this.pending };
     }
 
@@ -179,7 +179,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     transaction: ethers.Transaction,
     provider: ethers.providers.BaseProvider,
   ) {
-    logger.info(`${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`);
+    logger.debug(`${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`);
 
     let currentConditionAmount;
 
@@ -193,13 +193,13 @@ export class TransactionExecutor implements ITransactionExecutor {
     const condition = ethers.BigNumber.from(scheduled.conditionAmount);
     const isStateConditionMet = ethers.BigNumber.from(currentConditionAmount).gte(condition);
 
-    logger.info(`${scheduled._id} Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`);
+    logger.debug(`${scheduled._id} Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`);
 
     const currentTime = new Date().getTime();
     const timeCondition = scheduled.timeCondition || 0;
     const isTimeConditionMet = currentTime > timeCondition;
 
-    logger.info(
+    logger.debug(
       `${scheduled._id} Time condition=${new Date(timeCondition).toISOString()} Current=${new Date(
         currentTime,
       ).toISOString()}`,
@@ -216,7 +216,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
       if (networkGasPrice.gt(txGasPrice)) {
         isGasPriceConditionMet = false;
-        logger.info(`${scheduled._id} 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
+        logger.debug(`${scheduled._id} 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
 
         const now = new Date().getTime();
         const minTimeDiffBetweenEmails = 1000 * 60 * 15; // 15 min
@@ -235,7 +235,7 @@ export class TransactionExecutor implements ITransactionExecutor {
           );
         }
       } else {
-        logger.info(`${scheduled._id} 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
+        logger.debug(`${scheduled._id} 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
       }
     }
 
