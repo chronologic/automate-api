@@ -24,7 +24,7 @@ const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) =
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
 const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) => str.toLowerCase());
 
-const txCache = createTimedCache(MINUTE_MILLIS);
+const txCache = createTimedCache(5 * MINUTE_MILLIS);
 
 export interface IScheduleService {
   schedule(request: IScheduleRequest, params?: IScheduleParams): Promise<IScheduled>;
