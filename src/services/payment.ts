@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import ERC20 from '../abi/erc20';
 import { IScheduled, Status } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
-import { makeLogger } from './logger';
+import { createLogger } from './logger';
 
 const PAYMENT_ADDRESSES = (process.env.PAYMENT_ADDRESSES || '').split(',');
 const DAY_ADDRESS = '0xe814aee960a85208c3db542c53e7d4a6c8d5f60f';
@@ -12,7 +12,7 @@ const MAX_PAYMENT_LIFETIME = 60 * MINUTE_MILLIS;
 const CONFIRMATIONS = 3;
 const SCHEDULE_PRICE = ethers.BigNumber.from('10 000 000 000 000 000 000'.replace(/ /g, ''));
 
-const logger = makeLogger('payment');
+const logger = createLogger('payment');
 const tokenInterface = new ethers.utils.Interface(ERC20);
 const transferTopic = tokenInterface.getEventTopic('Transfer');
 

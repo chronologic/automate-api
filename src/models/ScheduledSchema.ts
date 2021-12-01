@@ -1,11 +1,11 @@
 import { BigNumber, ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 
-import { makeLogger } from '../services/logger';
+import { createLogger } from '../logger';
 import getApi from '../services/polkadot/api';
 import { AssetType, IScheduled, Status } from './Models';
 
-const logger = makeLogger('ScheduledSchema');
+const logger = createLogger('ScheduledSchema');
 
 const ScheduledSchema = new Schema({
   assetType: {

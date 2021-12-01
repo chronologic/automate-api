@@ -1,9 +1,9 @@
 import { model, Schema } from 'mongoose';
 
-import { makeLogger } from '../services/logger';
+import { createLogger } from '../logger';
 import { IPlatform } from './Models';
 
-const logger = makeLogger('PlatformSchema');
+const logger = createLogger('PlatformSchema');
 
 const PlatformSchema = new Schema({
   name: {

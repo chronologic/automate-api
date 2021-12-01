@@ -1,9 +1,9 @@
 import { model, Schema } from 'mongoose';
 
-import { makeLogger } from '../services/logger';
+import { createLogger } from '../logger';
 import { IUser } from './Models';
 
-const logger = makeLogger('UserSchema');
+const logger = createLogger('UserSchema');
 
 const UserSchema = new Schema({
   login: {

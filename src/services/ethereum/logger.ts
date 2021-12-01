@@ -1,3 +1,3 @@
-import { makeLogger } from '../logger';
+import { createLogger } from '../logger';
 
-export default makeLogger('ethereum');
+export default createLogger('ethereum');

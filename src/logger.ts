@@ -1,9 +1,4 @@
-import {
-  createLogger as createWinstonLogger,
-  format,
-  transports,
-  LeveledLogMethod,
-} from 'winston';
+import { createLogger as createWinstonLogger, format, transports, LeveledLogMethod } from 'winston';
 
 import { LOG_LEVEL } from './env';
 
@@ -24,8 +19,7 @@ export function createLogger(source: string): ICustomLogger {
       format.colorize(),
       format.timestamp(),
       format.printf(
-        ({ level, message, timestamp, stack = '' }) =>
-          `${timestamp} ${level} [${source}] ${message} ${stack}`,
+        ({ level, message, timestamp, stack = '' }) => `${timestamp} ${level} [${source}] ${message} ${stack}`,
       ),
     ),
     transports: [new transports.Console()],
@@ -38,8 +32,7 @@ export function createLogger(source: string): ICustomLogger {
       format.colorize(),
       format.timestamp(),
       format.printf(({ level, message, timestamp, ...rest }) => {
-        const formattedMessage =
-          typeof message === 'object' ? JSON.stringify(message) : message;
+        const formattedMessage = typeof message === 'object' ? JSON.stringify(message) : message;
         const extra = rest[Symbol.for('splat') as any];
         const formattedExtra = extra ? JSON.stringify(extra) : '';
 
@@ -56,10 +49,7 @@ export function createLogger(source: string): ICustomLogger {
       format.colorize(),
       format.timestamp(),
       format.printf(({ level, message, timestamp, ...rest }) => {
-        const formattedMessage =
-          typeof message === 'object'
-            ? JSON.stringify(message, null, 2)
-            : message;
+        const formattedMessage = typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
         const extra = rest[Symbol.for('splat') as any];
         const formattedExtra = extra ? JSON.stringify(extra, null, 2) : '';
 
