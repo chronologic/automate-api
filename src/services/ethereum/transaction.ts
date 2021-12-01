@@ -2,6 +2,7 @@ import BigNumber from 'bignumber.js';
 import { ethers } from 'ethers';
 
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
+import Scheduled from '../../models/ScheduledSchema';
 import logger from './logger';
 import { fetchTransactionMetadata, getSenderNextNonce } from './utils';
 import sendMail from '../mail';
@@ -159,7 +160,30 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     if (senderNonce > scheduled.nonce) {
       logger.debug(`${scheduled._id} Transaction nonce already spent`);
-      return { res: false, status: { status: Status.StaleNonce } };
+
+      let status = Status.StaleNonce;
+
+      // check if status in db has changed in the meantime
+      // e.g. we just got tx confirmation
+      const newScheduled = await Scheduled.findById(scheduled.id).exec();
+      if (newScheduled.status > Status.Pending) {
+        status = newScheduled.status;
+      } else {
+        // tx might've been just confirmed on chain so let's check that as well
+        try {
+          const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(scheduled.chainId));
+          const txReceipt = await provider.getTransactionReceipt(scheduled.transactionHash);
+          if (txReceipt.status === 1) {
+            status = Status.Completed;
+          } else if (txReceipt.status) {
+            status = Status.Error;
+          }
+        } catch (e) {
+          logger.error(e);
+        }
+      }
+
+      return { res: false, status: { status } };
     }
 
     if (senderNonce !== scheduled.nonce) {
