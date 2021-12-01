@@ -479,5 +479,3 @@ async function fetchCoingeckoAssetData(contractAddress: string): Promise<any> {
 }
 
 export { getSenderNextNonce, fetchTransactionMetadata, fetchConditionAssetMetadata };
-
-scrapeTokenMetadata('0xfbaa00dd79f147c5d1c37113dfea2eb56aa168173a6851524a6f8b334a987af6').then(console.log);
