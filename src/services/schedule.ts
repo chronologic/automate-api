@@ -205,7 +205,7 @@ export class ScheduleService implements IScheduleService {
     switch (transaction.assetType) {
       case AssetType.Ethereum:
       case undefined: {
-        return ethUtils.fetchAssetMetadata(transaction);
+        return ethUtils.fetchConditionAssetMetadata(transaction);
       }
       case AssetType.Polkadot: {
         return {

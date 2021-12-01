@@ -14,6 +14,7 @@ interface IPrices {
 
 const logger = createLogger('priceFeed');
 const cache = createTimedCache<IPrices>(MINUTE_MILLIS);
+let lastPrices: IPrices;
 
 async function convertWeiToUsd(wei: ethers.BigNumberish): Promise<number> {
   const ethToUsd = await fetchEthPrice();
@@ -40,14 +41,23 @@ async function fetchPrices(): Promise<IPrices> {
     return cachedVal;
   }
 
-  logger.debug('Fetching prices from coingecko...');
-  const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-  const json = await res.json();
-  cache.put(cacheKey, json);
+  try {
+    logger.debug('Fetching prices from coingecko...');
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    const json = await res.json();
+    cache.put(cacheKey, json);
+    lastPrices = json;
 
-  logger.debug(`Prices are: ${JSON.stringify(json)}`);
+    logger.debug(`Prices are: ${JSON.stringify(json)}`);
 
-  return json;
+    return json;
+  } catch (e) {
+    logger.error(e);
+    if (lastPrices) {
+      return lastPrices;
+    }
+    throw e;
+  }
 }
 
 export { convertWeiToUsd, fetchEthPrice };

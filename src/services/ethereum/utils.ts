@@ -3,6 +3,7 @@ import InputDataDecoder from 'ethereum-input-data-decoder';
 import { ethers } from 'ethers';
 import moment from 'moment';
 import fetch from 'node-fetch';
+import LRU from 'lru-cache';
 
 import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';
 import logger from './logger';
@@ -10,10 +11,18 @@ import ERC20 from '../../abi/erc20';
 import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
 import { weiToGwei } from '../../utils';
 
+const lru = new LRU({ max: 10000 });
+
 interface ICoinGeckoCoin {
   id: string;
   symbol: string;
   name: string;
+}
+
+interface ITokenMetadata {
+  assetAmount: number;
+  assetValue: number;
+  assetName: string;
 }
 
 const fallbackAssetName = '_';
@@ -34,7 +43,7 @@ export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigN
 async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
   const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(transaction.chainId));
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
-  const method = parsedTx.value.toString() === '0' && parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
+  const method = parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
 
   const {
     assetName,
@@ -46,7 +55,7 @@ async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITrans
     executedAt,
   } = await method.call(null, transaction, parsedTx, provider);
 
-  const priceStats = await getPriceStats(parsedTx);
+  const priceStats = await fetchPriceStats(parsedTx);
 
   return {
     assetName,
@@ -60,42 +69,51 @@ async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITrans
   };
 }
 
-export async function getPriceStats(tx: ethers.Transaction): Promise<IGasStats> {
+export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats> {
+  let ethPrice = 0;
+  let gasPaid = 0;
+  let gasPrice = 0;
+  let gasSaved = 0;
+
   try {
     const { gasPrice: gasPriceWei, gasLimit, chainId } = tx;
 
     const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
 
-    const ethPrice = await fetchEthPrice();
-    const networkGasPriceWei = await provider.getGasPrice();
+    ethPrice = await fetchEthPrice();
+
     let gasUsed = gasLimit;
     try {
       const txReceipt = await provider.getTransactionReceipt(tx.hash);
       gasUsed = txReceipt.gasUsed || gasLimit;
     } catch (e) {}
+
+    // TODO: cache gas price
+    const networkGasPriceWei = await provider.getGasPrice();
+    gasPrice = weiToGwei(networkGasPriceWei);
+
     const gasPaidWei = ethers.BigNumber.from(gasPriceWei).mul(ethers.BigNumber.from(gasUsed));
     const networkGasPaidWei = ethers.BigNumber.from(networkGasPriceWei).mul(ethers.BigNumber.from(gasUsed));
 
-    const gasPaid = await convertWeiToUsd(gasPaidWei);
+    gasPaid = await convertWeiToUsd(gasPaidWei);
     const networkGasPaid = await convertWeiToUsd(networkGasPaidWei);
 
-    const gasSaved = gasPaid < networkGasPaid ? networkGasPaid - gasPaid : 0;
+    gasSaved = gasPaid < networkGasPaid ? networkGasPaid - gasPaid : 0;
 
     return {
       ethPrice,
-      gasPrice: weiToGwei(networkGasPriceWei),
+      gasPrice,
       gasPaid,
       gasSaved,
     };
   } catch (e) {
-    console.log(e);
     logger.error(e);
 
     return {
-      ethPrice: 0,
-      gasPaid: 0,
-      gasPrice: 0,
-      gasSaved: 0,
+      ethPrice,
+      gasPaid,
+      gasPrice,
+      gasSaved,
     };
   }
 }
@@ -115,7 +133,11 @@ async function fetchTokenMetadata(
 
   if (transaction.assetAmount == null) {
     logger.debug(`fetchTokenMetadata fetching assetAmount...`);
-    const amountData = await fetchTokenAmount(parsedTx.to, parsedTx.data, provider);
+    const amountData = await fetchTokenAmount({
+      chainId: transaction.chainId,
+      contractAddress: parsedTx.to,
+      txData: parsedTx.data,
+    });
     transaction.assetAmount = amountData.amount;
     transaction.assetAmountWei = amountData.amountWei;
     transaction.assetDecimals = amountData.decimals;
@@ -148,24 +170,31 @@ async function fetchTokenMetadata(
   return transaction;
 }
 
-async function scrapeTokenMetadata(txHash) {
+async function scrapeTokenMetadata(txHash: string): Promise<ITokenMetadata> {
+  const cacheKey = `tokenMeta:${txHash}`;
+
+  if (lru.has(cacheKey)) {
+    return lru.get(cacheKey) as ITokenMetadata;
+  }
+
   try {
     const res = await fetch(`https://etherscan.io/tx/${txHash}`).then((response) => response.text());
     const $ = cheerio.load(res);
     const tokenDetails = $('.row .list-unstyled');
-    const values = [0, 0];
+    let assetAmount = 0;
+    let assetValue = 0;
     tokenDetails.find('.media-body').each((_, mb) => {
-      const rowValues = $(mb)
-        .find('> span.mr-1')
-        .last()
-        .text()
-        .trim()
-        .split(' ')
-        .map((val) => Number(val.trim().replace(/[\(\)\$,]/g, '')));
-      values[0] = values[0] + rowValues[0];
-      values[1] = values[1] + rowValues[1];
+      assetAmount = Number($(mb).find('> span.mr-1').last().text().trim().replace(/,/g, '')) || 0;
     });
-    const [assetAmount, assetValue] = values;
+
+    const transferDetails = tokenDetails.find('.media-body').text();
+
+    try {
+      assetValue = Number(/\(\$[0-9,.]+\)/.exec(transferDetails)[0].replace(/[\(\)\$,]/g, ''));
+    } catch (e) {
+      logger.error(e);
+    }
+
     const assetName = tokenDetails
       .find('.media-body > a')
       .first()
@@ -176,14 +205,18 @@ async function scrapeTokenMetadata(txHash) {
       .replace(/[\(\)]/g, '')
       .toLowerCase();
 
-    return {
-      assetAmount,
-      assetValue,
-      assetName,
+    const meta = {
+      assetAmount: assetAmount || 0,
+      assetValue: assetValue || 0,
+      assetName: assetName || '',
     };
+
+    lru.set(cacheKey, meta);
+
+    return meta;
   } catch (e) {
     logger.error(e);
-    return {};
+    return {} as ITokenMetadata;
   }
 }
 
@@ -280,58 +313,47 @@ async function fetchAssetPrice(contract: string, symbol: string, timestamp: stri
 
 async function fetchCoinGeckoAssetId(contract: string): Promise<string> {
   const fallbackAssetId = '_';
+  const { id } = await fetchCoingeckoAssetData(contract);
+  const res = id || fallbackAssetId;
 
-  try {
-    const { id } = await fetch(
-      `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contract}`,
-    ).then((response) => response.json());
-    return id || fallbackAssetId;
-  } catch (e) {
-    logger.error(e);
-    return fallbackAssetId;
-  }
+  return res;
 }
 
-async function fetchTokenAmount(
-  contractAddress: string,
-  txData: string,
-  provider: ethers.providers.BaseProvider,
-): Promise<{
+async function fetchTokenAmount({
+  contractAddress,
+  chainId,
+  txData,
+}: {
+  contractAddress: string;
+  txData: string;
+  chainId: number;
+}): Promise<{
   amountWei: string;
   amount: number;
   decimals: number;
 }> {
-  try {
-    const decoder = new InputDataDecoder(ERC20);
-    const decoded = decoder.decodeData(txData);
-    const token = new ethers.Contract(contractAddress, ERC20, provider);
-    const [decimals] = await token.functions.decimals();
-    if (decoded.method === 'transfer') {
-      const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
+  const decoder = new InputDataDecoder(ERC20);
+  const decoded = decoder.decodeData(txData);
+  const decimals = await fetchTokenDecimals(contractAddress, chainId);
 
-      return {
-        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
-        amountWei: amount.toString(),
-        decimals,
-      };
-    } else if (decoded.method === 'transferFrom') {
-      const amount = ethers.BigNumber.from(decoded.inputs[2].toString(10));
+  if (decoded.method === 'transfer') {
+    const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
 
-      return {
-        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
-        amountWei: amount.toString(),
-        decimals,
-      };
-    } else {
-      logger.debug(`fetchTokenAmount unsupported decoded method: ${decoded.method}`);
-      return {
-        amountWei: '0',
-        amount: 0,
-        decimals: 18,
-      };
-    }
-  } catch (e) {
-    logger.error(e);
+    return {
+      amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+      amountWei: amount.toString(),
+      decimals,
+    };
+  } else if (decoded.method === 'transferFrom') {
+    const amount = ethers.BigNumber.from(decoded.inputs[2].toString(10));
+
+    return {
+      amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+      amountWei: amount.toString(),
+      decimals,
+    };
+  } else {
+    logger.debug(`fetchTokenAmount unsupported decoded method: ${decoded.method}`);
     return {
       amountWei: '0',
       amount: 0,
@@ -355,6 +377,11 @@ async function fetchABI(contractAddress: string): Promise<any> {
 
 async function fetchTokenName(contractAddress: string, chainId = 1): Promise<string> {
   const fallbackName = '_';
+  const cacheKey = `tokenName:${contractAddress}:${chainId}`;
+
+  if (lru.has(cacheKey)) {
+    return lru.get(cacheKey) as string;
+  }
 
   try {
     const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
@@ -363,24 +390,28 @@ async function fetchTokenName(contractAddress: string, chainId = 1): Promise<str
 
     const [name] = await contract.functions.symbol();
 
+    lru.set(cacheKey, name);
+
     return name;
   } catch (e) {
     logger.error(e);
   }
 
   try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`,
-    ).then((response) => response.json());
+    const res = await fetchCoingeckoAssetData(contractAddress);
 
-    return res.symbol || fallbackName;
+    const name = res.symbol || fallbackName;
+
+    lru.set(cacheKey, name);
+
+    return name;
   } catch (e) {
     logger.error(e);
     return fallbackName;
   }
 }
 
-async function fetchAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
+async function fetchConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
   try {
     if (!transaction.conditionAsset && !transaction.conditionAmount) {
       return {
@@ -398,12 +429,8 @@ async function fetchAssetMetadata(transaction: IScheduled): Promise<IAssetMetada
       };
     }
 
-    const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(transaction.chainId));
-
-    const contract = new ethers.Contract(transaction.conditionAsset, ERC20, provider);
-
-    const [name] = await contract.functions.symbol();
-    const [decimals] = await contract.functions.decimals();
+    const name = await fetchTokenName(transaction.conditionAsset, transaction.chainId);
+    const decimals = await fetchTokenDecimals(transaction.conditionAsset, transaction.chainId);
 
     return {
       name,
@@ -418,4 +445,39 @@ async function fetchAssetMetadata(transaction: IScheduled): Promise<IAssetMetada
   }
 }
 
-export { getSenderNextNonce, fetchTransactionMetadata, fetchAssetMetadata };
+async function fetchTokenDecimals(contractAddress: string, chainId: number): Promise<number> {
+  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
+  const cacheKey = `decimals:${contractAddress}:${chainId}`;
+
+  if (lru.has(cacheKey)) {
+    return lru.get(cacheKey) as number;
+  }
+
+  const contract = new ethers.Contract(contractAddress, ERC20, provider);
+
+  const [decimals] = await contract.functions.decimals();
+
+  lru.set(cacheKey, decimals);
+
+  return decimals;
+}
+
+async function fetchCoingeckoAssetData(contractAddress: string): Promise<any> {
+  const cacheKey = `assetData:${contractAddress}`;
+
+  if (lru.has(cacheKey)) {
+    return lru.get(cacheKey) as string;
+  }
+
+  const json = await fetch(
+    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`,
+  ).then((response) => response.json());
+
+  lru.set(cacheKey, json);
+
+  return json;
+}
+
+export { getSenderNextNonce, fetchTransactionMetadata, fetchConditionAssetMetadata };
+
+scrapeTokenMetadata('0xfbaa00dd79f147c5d1c37113dfea2eb56aa168173a6851524a6f8b334a987af6').then(console.log);

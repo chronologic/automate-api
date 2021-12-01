@@ -5,7 +5,7 @@ import { IScheduleService } from '../schedule';
 import sendMail from '../mail';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
-import { getPriceStats } from './utils';
+import { fetchPriceStats } from './utils';
 import tgBot from '../telegram';
 import webhookService from '../webhook';
 
@@ -83,7 +83,7 @@ export class Processor {
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
 
-      const priceStats = await getPriceStats(ethers.utils.parseTransaction(scheduled.signedTransaction));
+      const priceStats = await fetchPriceStats(ethers.utils.parseTransaction(scheduled.signedTransaction));
       const gasPaid = priceStats.gasPaid || scheduled.gasSaved;
       const gasSaved = scheduled.gasSaved > priceStats.gasSaved ? scheduled.gasSaved : priceStats.gasSaved;
 
