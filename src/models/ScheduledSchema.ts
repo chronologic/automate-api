@@ -247,7 +247,8 @@ async function preSave(next: () => {}) {
       this.nonce = parsed.nonce;
       this.chainId = parsed.chainId;
       this.transactionHash = parsed.hash;
-      this.gasPrice = parsed.gasPrice;
+      // TODO: handle this better
+      this.gasPrice = parsed.gasPrice || parsed.maxFeePerGas.add(parsed.maxPriorityFeePerGas);
 
       if (this.conditionAsset && this.conditionAsset !== 'eth') {
         try {

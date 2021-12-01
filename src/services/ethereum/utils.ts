@@ -76,7 +76,8 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
   let gasSaved = 0;
 
   try {
-    const { gasPrice: gasPriceWei, gasLimit, chainId } = tx;
+    const { gasPrice: _gasPriceWei, gasLimit, chainId, maxFeePerGas, maxPriorityFeePerGas } = tx;
+    const gasPriceWei = _gasPriceWei || maxFeePerGas.add(maxPriorityFeePerGas);
 
     const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
 
