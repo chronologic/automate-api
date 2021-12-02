@@ -120,6 +120,17 @@ export class ScheduleService implements IScheduleService {
     }
     transaction.paymentAddress = freeTx ? '' : PaymentService.getNextPaymentAddress();
 
+    // extra check for duplicate in db
+    // if same tx didn't exist when the process started
+    // this should still be the case
+    // otherwise we have a problem
+    if (!transactionExists) {
+      let duplicate = await this.findBySignedTransaction(request.signedTransaction);
+      if (duplicate) {
+        throw new Error(`Duplicate transaction ${request.signedTransaction}`);
+      }
+    }
+
     const scheduled = await transaction.save();
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
