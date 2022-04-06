@@ -5,17 +5,24 @@ import send from './mail';
 import { mapToScheduledForUser } from '../utils';
 
 export interface ITransactionService {
-  list(apiKey: string): Promise<IScheduledForUser[]>;
   cancel(id: string);
+  list(apiKey: string): Promise<IScheduledForUser[]>;
 }
 
 export class TransactionService implements ITransactionService {
   public async cancel(id: string) {
     const res = await Scheduled.updateOne({ _id: id }, { status: Status.Cancelled }).exec();
-
+    /*
+      The updateOne() method accepts a filter document and an update document Return a document that contains some fields
+        _id, the method throws an exception. If your update document contains a value that violates unique index rules
+        .exec() is to make Mongo queries Promise. 
+    */
     const scheduled = await Scheduled.findById(id).exec();
-    send(scheduled, 'cancelled');
-
+    /*
+      findById(id) method accepts id returns find a document by its id
+      returns {_id: ..., data1: ..., data2: ....}
+    */
+    send(scheduled, 'cancelled'); // sends email
     return res;
   }
 

@@ -1,0 +1,465 @@
+ongun@ongun:~/Codes/automate-api$ npm run dev
+
+> sentinel-api@1.2.0 dev
+> ts-node ./src/server.ts
+
+LOG LEVEL debug
+API key does not start with "SG.".
+node-telegram-bot-api deprecated Automatic enabling of cancellation of promises is deprecated.
+In the future, you will have to enable it yourself.
+See https://github.com/yagop/node-telegram-bot-api/issues/319. node:internal/modules/cjs/loader:1103:14
+2022-04-05T14:27:58.172Z info [server] Polkadot support is disabled 
+2022-04-05T14:27:58.174Z info [server] Payments are disabled 
+2022-04-05T14:27:58.179Z info [server] Express server listening on port 3001 
+(node:35038) DeprecationWarning: collection.ensureIndex is deprecated. Use createIndexes instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+2022-04-05T14:27:59.458Z info [ethereum] Filled missing asset type in 0 rows 
+2022-04-05T14:28:00.838Z info [ethereum] Processing block 14526468... 
+2022-04-05T14:28:01.097Z debug [ethereum] Found 52 pending transactions in 19 groups 
+2022-04-05T14:28:01.098Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.098Z debug [ethereum] id: 5c5cb9b0a6a6ad0004678da4 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.099Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.099Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.100Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.101Z debug [ethereum] id: 5c5cb9b0a6a6ad0004678da4 , provider: [object Object], scheduled.chainId: 42 
+2022-04-05T14:28:01.101Z debug [ethereum] 5c5cb9b0a6a6ad0004678da4 Checking execute conditions... 
+2022-04-05T14:28:01.101Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.101Z debug [ethereum] scheduled.conditionBlock: 7190223, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.102Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.102Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.102Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.102Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.102Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.103Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.104Z debug [ethereum] id: 5d5f5a5544e58d0004782537 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.104Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.104Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.105Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.105Z debug [ethereum] id: 5d5f5a5544e58d0004782537 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.105Z debug [ethereum] 5d5f5a5544e58d0004782537 Checking execute conditions... 
+2022-04-05T14:28:01.105Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.105Z debug [ethereum] scheduled.conditionBlock: 8404057, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.105Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.106Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.106Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.106Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.106Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.106Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.106Z debug [ethereum] id: 5d9ca4deb931200004ff2f77 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.106Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.107Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.107Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.107Z debug [ethereum] id: 5d9ca4deb931200004ff2f77 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.107Z debug [ethereum] 5d9ca4deb931200004ff2f77 Checking execute conditions... 
+2022-04-05T14:28:01.107Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.108Z debug [ethereum] scheduled.conditionBlock: 8701982, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.108Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.108Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.108Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.108Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.108Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.109Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.109Z debug [ethereum] id: 5d9dc7e1b6929d0004950813 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.109Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.109Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.109Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.110Z debug [ethereum] id: 5d9dc7e1b6929d0004950813 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.110Z debug [ethereum] 5d9dc7e1b6929d0004950813 Checking execute conditions... 
+2022-04-05T14:28:01.110Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.110Z debug [ethereum] scheduled.conditionBlock: 8707477, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.110Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.110Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.110Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.110Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.110Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.111Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.111Z debug [ethereum] id: 5db723c5e8456e00048a363a , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.111Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.111Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.111Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.112Z debug [ethereum] id: 5db723c5e8456e00048a363a , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.112Z debug [ethereum] 5db723c5e8456e00048a363a Checking execute conditions... 
+2022-04-05T14:28:01.112Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.112Z debug [ethereum] scheduled.conditionBlock: 8829120, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.112Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.112Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.112Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.112Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.112Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.113Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.113Z debug [ethereum] id: 5cee8d3b4aaab200045d9256 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.113Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.113Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.113Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.113Z debug [ethereum] id: 5cee8d3b4aaab200045d9256 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.113Z debug [ethereum] 5cee8d3b4aaab200045d9256 Checking execute conditions... 
+2022-04-05T14:28:01.113Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.114Z debug [ethereum] scheduled.conditionBlock: 7854857, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.114Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.114Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.114Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.114Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.114Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.114Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.114Z debug [ethereum] id: 5e21d4dd44a4ff000490ea28 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.115Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.115Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.115Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.115Z debug [ethereum] id: 5e21d4dd44a4ff000490ea28 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.115Z debug [ethereum] 5e21d4dd44a4ff000490ea28 Checking execute conditions... 
+2022-04-05T14:28:01.115Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.115Z debug [ethereum] scheduled.conditionBlock: 9299605, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.116Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.116Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.116Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.116Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.116Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.116Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.116Z debug [ethereum] id: 5d95c6b1c4bfbf0004f4c891 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.116Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.117Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.117Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.117Z debug [ethereum] id: 5d95c6b1c4bfbf0004f4c891 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.117Z debug [ethereum] 5d95c6b1c4bfbf0004f4c891 Checking execute conditions... 
+2022-04-05T14:28:01.117Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.117Z debug [ethereum] scheduled.conditionBlock: 8668593, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.117Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.117Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.118Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.118Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.118Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.118Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.118Z debug [ethereum] id: 5d7125b072572900045b836e , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.118Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.118Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.119Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.120Z debug [ethereum] id: 5d7125b072572900045b836e , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.120Z debug [ethereum] 5d7125b072572900045b836e Checking execute conditions... 
+2022-04-05T14:28:01.120Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.121Z debug [ethereum] scheduled.conditionBlock: 8490799, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.121Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.121Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.121Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.122Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.122Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.122Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.123Z debug [ethereum] id: 5dddc30648726245e59faa5a , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.123Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.123Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.124Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.124Z debug [ethereum] id: 5dddc30648726245e59faa5a , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.124Z debug [ethereum] 5dddc30648726245e59faa5a Checking execute conditions... 
+2022-04-05T14:28:01.127Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.127Z debug [ethereum] scheduled.conditionBlock: 9007021, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.127Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.128Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.128Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.128Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.129Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.130Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.130Z debug [ethereum] id: 5cee8b044aaab200045d9254 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.131Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.131Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.131Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.131Z debug [ethereum] id: 5cee8b044aaab200045d9254 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.131Z debug [ethereum] 5cee8b044aaab200045d9254 Checking execute conditions... 
+2022-04-05T14:28:01.131Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.131Z debug [ethereum] scheduled.conditionBlock: 7854815, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.132Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.132Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.132Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.132Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.132Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.132Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.132Z debug [ethereum] id: 5e1d9beee6c63a0acebf5a92 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.132Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.132Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.132Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.133Z debug [ethereum] id: 5e1d9beee6c63a0acebf5a92 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.133Z debug [ethereum] 5e1d9beee6c63a0acebf5a92 Checking execute conditions... 
+2022-04-05T14:28:01.133Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.133Z debug [ethereum] scheduled.conditionBlock: 9278851, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.133Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.133Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.133Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.133Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.133Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.134Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.135Z debug [ethereum] id: 5ce3be43261db8000446a28c , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.135Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.135Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.135Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.136Z debug [ethereum] id: 5ce3be43261db8000446a28c , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.136Z debug [ethereum] 5ce3be43261db8000446a28c Checking execute conditions... 
+2022-04-05T14:28:01.136Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.136Z debug [ethereum] scheduled.conditionBlock: 7802321, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.136Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.136Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.136Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.136Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.137Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.137Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.137Z debug [ethereum] id: 5f8ecaf17991d900042b0668 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.137Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.137Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.138Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.138Z debug [ethereum] id: 5f8ecaf17991d900042b0668 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.138Z debug [ethereum] 5f8ecaf17991d900042b0668 Checking execute conditions... 
+2022-04-05T14:28:01.138Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.139Z debug [ethereum] scheduled.conditionBlock: 11092755, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.139Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.139Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.139Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.139Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.139Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.140Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.140Z debug [ethereum] id: 5f853ea100aafb0004462026 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.140Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.140Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.140Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.141Z debug [ethereum] id: 5f853ea100aafb0004462026 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.141Z debug [ethereum] 5f853ea100aafb0004462026 Checking execute conditions... 
+2022-04-05T14:28:01.141Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.141Z debug [ethereum] scheduled.conditionBlock: 11045469, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.141Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.141Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.141Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.141Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.141Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.142Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.142Z debug [ethereum] id: 5ff44b0b3311da0004405c03 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.142Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.142Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.143Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.143Z debug [ethereum] id: 5ff44b0b3311da0004405c03 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.143Z debug [ethereum] 5ff44b0b3311da0004405c03 Checking execute conditions... 
+2022-04-05T14:28:01.143Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.143Z debug [ethereum] scheduled.conditionBlock: 11594190, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.143Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.143Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.143Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.144Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.144Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.144Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.144Z debug [ethereum] id: 606c60c54f802c0004731852 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.144Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.144Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.145Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.145Z debug [ethereum] id: 606c60c54f802c0004731852 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.145Z debug [ethereum] 606c60c54f802c0004731852 Checking execute conditions... 
+2022-04-05T14:28:01.145Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.145Z debug [ethereum] scheduled.conditionBlock: 12193450, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.145Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.145Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.145Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.145Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.146Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.146Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.146Z debug [ethereum] id: 606d64daf8445800040801c6 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.146Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.147Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.148Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.149Z debug [ethereum] id: 606d64daf8445800040801c6 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.149Z debug [ethereum] 606d64daf8445800040801c6 Checking execute conditions... 
+2022-04-05T14:28:01.149Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.149Z debug [ethereum] scheduled.conditionBlock: 13619535, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.150Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.150Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.150Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.151Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.151Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.152Z debug [ethereum]  async execute IExecuteStatus 
+2022-04-05T14:28:01.152Z debug [ethereum] id: 60991a0fe342ae0004e6bef9 , queue: [object Object]  ,TransactionExecutor: [object Set], has id: false 
+2022-04-05T14:28:01.152Z debug [ethereum] executeTransaction 
+2022-04-05T14:28:01.152Z debug [ethereum] getProvider 
+2022-04-05T14:28:01.153Z debug [ethereum] ethers.getDefaultProvider(network): [object Object] 
+2022-04-05T14:28:01.153Z debug [ethereum] id: 60991a0fe342ae0004e6bef9 , provider: [object Object], scheduled.chainId: 1 
+2022-04-05T14:28:01.153Z debug [ethereum] 60991a0fe342ae0004e6bef9 Checking execute conditions... 
+2022-04-05T14:28:01.154Z debug [ethereum] isWaitingForConfirmations 
+2022-04-05T14:28:01.154Z debug [ethereum] scheduled.conditionBlock: 12587358, CONFIRMATIONS: 3, blocknum: 14526468 
+2022-04-05T14:28:01.154Z debug [ethereum] isWaitingForConfirmations false 
+2022-04-05T14:28:01.155Z debug [ethereum] isWaitingForConfirmations [object Object] , res: false 
+2022-04-05T14:28:01.155Z debug [ethereum] isisWaitingForConfirmations status : undefined 
+2022-04-05T14:28:01.155Z debug [ethereum] hasCorrectNonce 
+2022-04-05T14:28:01.156Z debug [ethereum] getSenderNextNonce function 
+2022-04-05T14:28:01.156Z debug [ethereum] inProgress:: [object Promise] 
+========= NOTICE =========
+Request-Rate Exceeded  (this message will not be repeated)
+
+The default API keys for each service are provided as a highly-throttled,
+community resource for low-traffic projects and early prototyping.
+
+While your application will continue to function, we highly recommended
+signing up for your own API keys to improve performance, increase your
+request rate/limit and enable other perks, such as metrics and advanced APIs.
+
+For more details: https://docs.ethers.io/api-keys/
+==========================
+2022-04-05T14:28:02.258Z debug [ethereum] 5e21d4dd44a4ff000490ea28 Sender nonce 0 transaction nonce 0 
+2022-04-05T14:28:02.259Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:02.259Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:02.404Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:02.410Z debug [ethereum] 5c5cb9b0a6a6ad0004678da4 Sender nonce 5 transaction nonce 39 
+2022-04-05T14:28:02.410Z debug [ethereum] 5c5cb9b0a6a6ad0004678da4 Nonce does not match 
+2022-04-05T14:28:02.410Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:02.410Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:02.411Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:02.411Z debug [ethereum] Processing 5c5cb9b0a6a6ad0004678da4 true with res false 
+2022-04-05T14:28:02.411Z debug [ethereum] res false is false  
+2022-04-05T14:28:02.413Z debug [ethereum] 5d95c6b1c4bfbf0004f4c891 Sender nonce 1 transaction nonce 1 
+2022-04-05T14:28:02.413Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:02.413Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:02.433Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:02.582Z debug [ethereum] 5d7125b072572900045b836e Sender nonce 0 transaction nonce 0 
+2022-04-05T14:28:02.583Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:02.583Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:02.597Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:02.607Z debug [ethereum] 606d64daf8445800040801c6 Sender nonce 11 transaction nonce 11 
+2022-04-05T14:28:02.607Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:02.607Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:02.630Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:02.634Z debug [ethereum] 5d9dc7e1b6929d0004950813 Sender nonce 0 transaction nonce 1 
+2022-04-05T14:28:02.634Z debug [ethereum] 5d9dc7e1b6929d0004950813 Nonce does not match 
+2022-04-05T14:28:02.637Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:02.637Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:02.638Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:02.638Z debug [ethereum] Processing 5d9dc7e1b6929d0004950813 true with res false 
+2022-04-05T14:28:02.638Z debug [ethereum] res false is false  
+2022-04-05T14:28:02.695Z debug [ethereum] 5d9ca4deb931200004ff2f77 Sender nonce 0 transaction nonce 4 
+2022-04-05T14:28:02.695Z debug [ethereum] 5d9ca4deb931200004ff2f77 Nonce does not match 
+2022-04-05T14:28:02.696Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:02.696Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:02.696Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:02.696Z debug [ethereum] Processing 5d9ca4deb931200004ff2f77 true with res false 
+2022-04-05T14:28:02.696Z debug [ethereum] res false is false  
+2022-04-05T14:28:02.873Z debug [ethereum] 5cee8d3b4aaab200045d9256 Sender nonce 9 transaction nonce 30 
+2022-04-05T14:28:02.873Z debug [ethereum] 5cee8d3b4aaab200045d9256 Nonce does not match 
+2022-04-05T14:28:02.873Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:02.874Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:02.874Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:02.874Z debug [ethereum] Processing 5cee8d3b4aaab200045d9256 true with res false 
+2022-04-05T14:28:02.874Z debug [ethereum] res false is false  
+2022-04-05T14:28:02.989Z debug [ethereum] 5f8ecaf17991d900042b0668 Sender nonce 0 transaction nonce 0 
+2022-04-05T14:28:02.989Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:02.989Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:03.001Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:03.007Z debug [ethereum] 5f853ea100aafb0004462026 Sender nonce 0 transaction nonce 0 
+2022-04-05T14:28:03.008Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:03.009Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:03.018Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:03.107Z debug [ethereum] 5dddc30648726245e59faa5a Sender nonce 17 transaction nonce 175 
+2022-04-05T14:28:03.107Z debug [ethereum] 5dddc30648726245e59faa5a Nonce does not match 
+2022-04-05T14:28:03.107Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:03.107Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:03.108Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:03.108Z debug [ethereum] Processing 5dddc30648726245e59faa5a true with res false 
+2022-04-05T14:28:03.108Z debug [ethereum] res false is false  
+2022-04-05T14:28:03.153Z debug [ethereum] 5db723c5e8456e00048a363a Sender nonce 0 transaction nonce 0 
+2022-04-05T14:28:03.153Z debug [ethereum] hasCorrectNonce : [object Object] res: true 
+2022-04-05T14:28:03.153Z debug [ethereum] hasCorrectNonce status: undefined 
+2022-04-05T14:28:03.165Z debug [ethereum] transaction: [object Object] 
+2022-04-05T14:28:03.882Z debug [ethereum] 606c60c54f802c0004731852 Sender nonce 163 transaction nonce 164 
+2022-04-05T14:28:03.882Z debug [ethereum] 606c60c54f802c0004731852 Nonce does not match 
+2022-04-05T14:28:03.882Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:03.883Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:03.883Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:03.883Z debug [ethereum] Processing 606c60c54f802c0004731852 true with res false 
+2022-04-05T14:28:03.883Z debug [ethereum] res false is false  
+2022-04-05T14:28:03.989Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:03.990Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:03.990Z debug [ethereum] 5f853ea100aafb0004462026  amount=88235000000000000000000 
+2022-04-05T14:28:04.006Z debug [ethereum] 5ff44b0b3311da0004405c03 Sender nonce 3 transaction nonce 999 
+2022-04-05T14:28:04.006Z debug [ethereum] 5ff44b0b3311da0004405c03 Nonce does not match 
+2022-04-05T14:28:04.006Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.007Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:04.007Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.007Z debug [ethereum] Processing 5ff44b0b3311da0004405c03 true with res false 
+2022-04-05T14:28:04.007Z debug [ethereum] res false is false  
+2022-04-05T14:28:04.033Z debug [ethereum] 5ce3be43261db8000446a28c Sender nonce 0 transaction nonce 1 
+2022-04-05T14:28:04.033Z debug [ethereum] 5ce3be43261db8000446a28c Nonce does not match 
+2022-04-05T14:28:04.033Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.034Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:04.034Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.034Z debug [ethereum] Processing 5ce3be43261db8000446a28c true with res false 
+2022-04-05T14:28:04.034Z debug [ethereum] res false is false  
+2022-04-05T14:28:04.102Z debug [ethereum] 5e1d9beee6c63a0acebf5a92 Sender nonce 2 transaction nonce 8 
+2022-04-05T14:28:04.102Z debug [ethereum] 5e1d9beee6c63a0acebf5a92 Nonce does not match 
+2022-04-05T14:28:04.102Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.102Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:04.102Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.102Z debug [ethereum] Processing 5e1d9beee6c63a0acebf5a92 true with res false 
+2022-04-05T14:28:04.102Z debug [ethereum] res false is false  
+2022-04-05T14:28:04.167Z debug [ethereum] 60991a0fe342ae0004e6bef9 Sender nonce 11 transaction nonce 101 
+2022-04-05T14:28:04.167Z debug [ethereum] 60991a0fe342ae0004e6bef9 Nonce does not match 
+2022-04-05T14:28:04.167Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.167Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:04.168Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.168Z debug [ethereum] Processing 60991a0fe342ae0004e6bef9 true with res false 
+2022-04-05T14:28:04.168Z debug [ethereum] res false is false  
+2022-04-05T14:28:04.187Z debug [ethereum] 5d5f5a5544e58d0004782537 Sender nonce 0 transaction nonce 1174 
+2022-04-05T14:28:04.187Z debug [ethereum] 5d5f5a5544e58d0004782537 Nonce does not match 
+2022-04-05T14:28:04.187Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.188Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:04.188Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.188Z debug [ethereum] Processing 5d5f5a5544e58d0004782537 true with res false 
+2022-04-05T14:28:04.188Z debug [ethereum] res false is false  
+2022-04-05T14:28:04.496Z debug [ethereum] token: [object Object] 
+2022-04-05T14:28:04.496Z debug [ethereum] currentConditionAmount: 0 
+2022-04-05T14:28:04.497Z debug [ethereum] 5f853ea100aafb0004462026 Condition=88235000000000000000000 Current=0 isStateConditionMet: false 
+2022-04-05T14:28:04.497Z debug [ethereum] 5f853ea100aafb0004462026 Time condition=1970-01-01T00:00:00.000Z Current=2022-04-05T14:28:04.497Z 
+2022-04-05T14:28:04.497Z debug [ethereum] isConditionMet: false, sch.gaspriceaware: undefined, sch.conditionBlock: 11045469 
+2022-04-05T14:28:04.497Z debug [ethereum] 5f853ea100aafb0004462026 Condition not met 
+2022-04-05T14:28:04.497Z debug [ethereum] gas price cond met. 
+2022-04-05T14:28:04.497Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.497Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.497Z debug [ethereum] Processing 5f853ea100aafb0004462026 true with res false 
+2022-04-05T14:28:04.497Z debug [ethereum] res false is false  
+2022-04-05T14:28:04.988Z debug [ethereum] 5cee8b044aaab200045d9254 Sender nonce 45 transaction nonce 50 
+2022-04-05T14:28:04.988Z debug [ethereum] 5cee8b044aaab200045d9254 Nonce does not match 
+2022-04-05T14:28:04.989Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:04.989Z debug [ethereum] hasCorrectNonce : [object Object] res: false 
+2022-04-05T14:28:04.989Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:04.989Z debug [ethereum] Processing 5cee8b044aaab200045d9254 true with res false 
+2022-04-05T14:28:04.989Z debug [ethereum] res false is false  
+2022-04-05T14:28:05.202Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:05.202Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:05.202Z debug [ethereum] 5f8ecaf17991d900042b0668  amount=1000000000000000000 
+2022-04-05T14:28:05.534Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:05.534Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:05.534Z debug [ethereum] 5d95c6b1c4bfbf0004f4c891  amount=1000000000000000000 
+2022-04-05T14:28:05.550Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:05.550Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:05.550Z debug [ethereum] 5e21d4dd44a4ff000490ea28  amount=5000000000000000000 
+2022-04-05T14:28:05.924Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:05.924Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:05.924Z debug [ethereum] 606d64daf8445800040801c6  amount=1500000000000000000000000 
+2022-04-05T14:28:06.083Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:06.083Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:06.083Z debug [ethereum] 5db723c5e8456e00048a363a  amount=1000000000000000000 
+2022-04-05T14:28:06.333Z debug [ethereum] networkTransaction: null 
+2022-04-05T14:28:06.333Z debug [ethereum] isConditionMet 
+2022-04-05T14:28:06.333Z debug [ethereum] 5d7125b072572900045b836e  amount=1000000000000000000 
+2022-04-05T14:28:06.445Z debug [ethereum] token: [object Object] 
+2022-04-05T14:28:06.445Z debug [ethereum] currentConditionAmount: 0 
+2022-04-05T14:28:06.446Z debug [ethereum] 606d64daf8445800040801c6 Condition=1500000000000000000000000 Current=0 isStateConditionMet: false 
+2022-04-05T14:28:06.446Z debug [ethereum] 606d64daf8445800040801c6 Time condition=2021-11-08T05:00:00.000Z Current=2022-04-05T14:28:06.446Z 
+2022-04-05T14:28:06.446Z debug [ethereum] isConditionMet: false, sch.gaspriceaware: true, sch.conditionBlock: 13619535 
+2022-04-05T14:28:06.446Z debug [ethereum] 606d64daf8445800040801c6 Condition not met 
+2022-04-05T14:28:06.446Z debug [ethereum] gas price cond met. 
+2022-04-05T14:28:06.446Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:06.447Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:06.447Z debug [ethereum] Processing 606d64daf8445800040801c6 true with res false 
+2022-04-05T14:28:06.447Z debug [ethereum] res false is false  
+2022-04-05T14:28:06.521Z debug [ethereum] e: Error: call revert exception (method="balanceOf(address)", errorArgs=null, errorName=null, errorSignature=null, reason=null, code=CALL_EXCEPTION, version=abi/5.4.0) 
+2022-04-05T14:28:06.521Z debug [ethereum] currentConditionAmount: 0 
+2022-04-05T14:28:06.521Z debug [ethereum] 5d95c6b1c4bfbf0004f4c891 Condition=1000000000000000000 Current=0 isStateConditionMet: false 
+2022-04-05T14:28:06.521Z debug [ethereum] 5d95c6b1c4bfbf0004f4c891 Time condition=2019-10-03T12:00:00.000Z Current=2022-04-05T14:28:06.521Z 
+2022-04-05T14:28:06.521Z debug [ethereum] isConditionMet: false, sch.gaspriceaware: undefined, sch.conditionBlock: 8668593 
+2022-04-05T14:28:06.521Z debug [ethereum] 5d95c6b1c4bfbf0004f4c891 Condition not met 
+2022-04-05T14:28:06.521Z debug [ethereum] gas price cond met. 
+2022-04-05T14:28:06.521Z debug [ethereum] pending function... 0 
+2022-04-05T14:28:06.522Z debug [ethereum] TransactionExecutor queue after delete, [object Set] 
+2022-04-05T14:28:06.522Z debug [ethereum] Processing 5d95c6b1c4bfbf0004f4c891 true with res false 
+2022-04-05T14:28:06.522Z debug [ethereum] res false is false  
+^C
+ongun@ongun:~/Codes/automate-api$ 

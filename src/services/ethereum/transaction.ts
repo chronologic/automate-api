@@ -1,6 +1,5 @@
 import BigNumber from 'bignumber.js';
 import { ethers } from 'ethers';
-
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
 import logger from './logger';
@@ -28,7 +27,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   private static queue: Set<string> = new Set<string>();
 
   public async execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
-    const id = scheduled._id.toString();
+    const id: string = scheduled._id.toString();
 
     if (TransactionExecutor.queue.has(id)) {
       logger.debug(`${id} Processing...`);
@@ -44,31 +43,31 @@ export class TransactionExecutor implements ITransactionExecutor {
   }
 
   private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
-    const id = scheduled._id.toString();
-    const provider = this.getProvider(scheduled.chainId);
+    const id: string = scheduled._id.toString();
+    const network = ethers.providers.getNetwork(scheduled.chainId);
+    const provider = ethers.getDefaultProvider(network);
 
     logger.debug(`${id} Checking execute conditions...`);
-
+    // WaitingforConfirmations will run true shortly till the tx confirms then it ll be false
     const isWaitingForConfirmations = this.isWaitingForConfirmations(scheduled, blockNum);
-    if (isWaitingForConfirmations.res) {
-      return isWaitingForConfirmations.status!;
-    }
-
+    if (isWaitingForConfirmations.res) return isWaitingForConfirmations.status!;
+    // the tx nonce and sender nonce must be same for the transaction to happen
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
-    if (!hasCorrectNonce.res) {
-      return hasCorrectNonce.status!;
-    }
-
+    if (!hasCorrectNonce.res) return hasCorrectNonce.status!;
+    // parseTransaction Parse the serialized transaction, to,nonce,gasprice,gaslimit,data,value,chainid,r,s,v from and hash
     const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
-
-    const networkTransaction = await provider.getTransaction(transaction.hash!);
+    const networkTransaction = await provider.getTransaction(transaction.hash!); // returns null means no such tx posted
+    // logger.debug(`transaction: ${JSON.stringify(transaction)} networkTransaction: ${networkTransaction}`);
     if (networkTransaction && networkTransaction.hash) {
       logger.debug(`${id} Already posted ${networkTransaction.hash}`);
       return this.pending;
     }
 
-    const isConditionMet = await this.isConditionMet(scheduled, transaction, provider);
+    const isConditionMet = await this.isConditionMet(scheduled, transaction, provider); // false
     let isGasPriceConditionMet = true;
+    logger.debug(
+      `scheduled.garPriceAware: ${scheduled.gasPriceAware}, scheduled.conditionBLock: ${scheduled.conditionBlock}`,
+    );
     if (isConditionMet && scheduled.gasPriceAware) {
       logger.debug(`${id} checking gas price...`);
       isGasPriceConditionMet = await this.isGasPriceConditionMet(scheduled, transaction);
@@ -130,14 +129,8 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
   }
 
-  private getProvider(chainId: number) {
-    const network = ethers.providers.getNetwork(chainId);
-    return ethers.getDefaultProvider(network);
-  }
-
   private isWaitingForConfirmations(scheduled: IScheduled, blockNum: number): IValidationResult {
     const isWaitingForConfirmations = scheduled.conditionBlock && scheduled.conditionBlock + CONFIRMATIONS > blockNum;
-
     if (isWaitingForConfirmations) {
       logger.debug(
         `${scheduled._id.toString()} Waiting for ${CONFIRMATIONS} confirmations. Condition met at ${
@@ -149,7 +142,6 @@ export class TransactionExecutor implements ITransactionExecutor {
         status: this.pending,
       };
     }
-
     return { res: false };
   }
 
@@ -160,7 +152,6 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     if (senderNonce > scheduled.nonce) {
       logger.debug(`${scheduled._id} Transaction nonce already spent`);
-
       let status = Status.StaleNonce;
 
       // check if status in db has changed in the meantime
@@ -185,7 +176,6 @@ export class TransactionExecutor implements ITransactionExecutor {
 
       return { res: false, status: { status } };
     }
-
     if (senderNonce !== scheduled.nonce) {
       logger.debug(`${scheduled._id} Nonce does not match`);
       return { res: false, status: this.pending };
@@ -206,29 +196,32 @@ export class TransactionExecutor implements ITransactionExecutor {
     logger.debug(`${scheduled._id} Condition: asset=${scheduled.conditionAsset} amount=${scheduled.conditionAmount}`);
 
     let currentConditionAmount;
-
     try {
       const token = new ethers.Contract(transaction.to, abi, provider);
-      currentConditionAmount = (await token.balanceOf(transaction.from)) as BigNumber;
+      logger.debug(` transaction.from: ${transaction.from} sched: ${scheduled._id}  `);
+      currentConditionAmount = (await token.balanceOf(transaction.from)) as BigNumber; // always zero
+      logger.debug(`currentConditionAmount1: ${currentConditionAmount}`);
     } catch (e) {
-      currentConditionAmount = await provider.getBalance(transaction.from!);
+      provider.getBalance(transaction.from).then((balance) => {
+        currentConditionAmount = ethers.utils.formatEther(balance);
+        logger.debug(`BAlance: ${currentConditionAmount}, e: ${e}`);
+      });
     }
-
+    logger.debug(`currentConditionAmount: ${currentConditionAmount}`); // always zero
     const condition = ethers.BigNumber.from(scheduled.conditionAmount);
-    const isStateConditionMet = ethers.BigNumber.from(currentConditionAmount).gte(condition);
-
+    const isStateConditionMet = ethers.BigNumber.from(currentConditionAmount).gte(condition); // false (gte - greater than or equal to)
+    logger.debug(`isStateConditionMet: ${isStateConditionMet}`); // false
     logger.debug(`${scheduled._id} Condition=${condition.toString()} Current=${currentConditionAmount.toString()}`);
-
     const currentTime = new Date().getTime();
     const timeCondition = scheduled.timeCondition || 0;
-    const isTimeConditionMet = currentTime > timeCondition;
-
+    const isTimeConditionMet = currentTime > timeCondition; // true
+    /*
     logger.debug(
       `${scheduled._id} Time condition=${new Date(timeCondition).toISOString()} Current=${new Date(
         currentTime,
-      ).toISOString()}`,
+      ).toISOString()} isTimeConditionMet: ${isTimeConditionMet}`,
     );
-
+    */
     return isStateConditionMet && isTimeConditionMet;
   }
 
