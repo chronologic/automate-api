@@ -278,7 +278,7 @@ async function fetchAssetPrice(contract: string, symbol: string, timestamp: stri
 
   try {
     logger.debug(`fetchAssetPrice fetching assetId...`);
-    const assetId = await fetchCoinGeckoAssetId(contract);
+    const assetId = await fetchCoinGeckoAssetId(_contract);
     logger.debug(`fetchAssetPrice fetched assetId: ${assetId}`);
 
     let price = 0;

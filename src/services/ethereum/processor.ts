@@ -50,7 +50,12 @@ export class Processor {
   }
 
   private async processTransactions(scheduled: IScheduled[], blockNum: number) {
-    const sorted = scheduled.sort((a, b) => a.nonce - b.nonce);
+    const sorted = scheduled.sort((a, b) => {
+      // to prevent possible nan and inf values
+      if (!isFinite(a.nonce) && !isFinite(b.nonce)) {
+        return a.nonce - b.nonce;
+      }
+    });
 
     for (const transaction of sorted) {
       let res = false;

@@ -53,12 +53,12 @@ export class TransactionExecutor implements ITransactionExecutor {
     if (isWaitingForConfirmations.res) {
       return isWaitingForConfirmations.status!;
     }
-
+    /*
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
     if (!hasCorrectNonce.res) {
       return hasCorrectNonce.status!;
     }
-
+    */
     const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
     const networkTransaction = await provider.getTransaction(transaction.hash!);
@@ -234,33 +234,41 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private async isGasPriceConditionMet(scheduled: IScheduled, transaction: ethers.Transaction) {
     let isGasPriceConditionMet = true;
-    if (scheduled.gasPriceAware) {
-      const networkGasPrice = await gasService.getCurrentSafeLowGasPrice(scheduled.chainId);
-      const txGasPrice = transaction.gasPrice;
+    try {
+      if (scheduled.gasPriceAware) {
+        const networkGasPrice = await gasService.getCurrentSafeLowGasPrice(scheduled.chainId);
+        const txGasPrice = transaction.gasPrice;
 
-      if (networkGasPrice.gt(txGasPrice)) {
-        isGasPriceConditionMet = false;
-        logger.debug(`${scheduled._id} 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
+        if (networkGasPrice.gt(txGasPrice)) {
+          // true if networkGasPrice>txGasPrice
+          isGasPriceConditionMet = false;
+          logger.debug(
+            `${scheduled._id} 👎❌ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
+          );
 
-        const now = new Date().getTime();
-        const minTimeDiffBetweenEmails = 1000 * 60 * 15; // 15 min
-        const lastExecutionAttempt = new Date(scheduled.lastExecutionAttempt || 0).getTime();
-        const shouldNotify = now - lastExecutionAttempt > minTimeDiffBetweenEmails;
-
-        if (shouldNotify) {
-          sendMail(
-            // tslint:disable-next-line: no-object-literal-type-assertion
-            {
-              ...scheduled.toJSON(),
-              networkGasPrice,
-              txGasPrice,
-            } as IScheduled,
-            'delayed_gasPrice',
+          const now: number = new Date().getTime();
+          const minTimeDiffBetweenEmails: number = 1000 * 60 * 15; // 15 min
+          const lastExecutionAttempt: number = new Date(scheduled.lastExecutionAttempt || 0).getTime();
+          const shouldNotify: boolean = now - lastExecutionAttempt > minTimeDiffBetweenEmails;
+          if (shouldNotify) {
+            sendMail(
+              // tslint:disable-next-line: no-object-literal-type-assertion
+              {
+                ...scheduled.toJSON(),
+                networkGasPrice,
+                txGasPrice,
+              } as IScheduled,
+              'delayed_gasPrice',
+            );
+          }
+        } else {
+          logger.debug(
+            `${scheduled._id} 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`,
           );
         }
-      } else {
-        logger.debug(`${scheduled._id} 👍✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
       }
+    } catch (e) {
+      logger.debug(`e: ${e}`);
     }
 
     return isGasPriceConditionMet;
