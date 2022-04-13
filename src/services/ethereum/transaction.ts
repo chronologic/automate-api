@@ -3,10 +3,11 @@ import { ethers } from 'ethers';
 
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
+import { SKIP_TX_BROADCAST, ARBITRUM_URI, ARBITRUM_RINKEBY_URI } from '../../env';
+import { ChainId } from '../../constants';
+import sendMail from '../mail';
 import logger from './logger';
 import { fetchTransactionMetadata, getSenderNextNonce } from './utils';
-import sendMail from '../mail';
-import { SKIP_TX_BROADCAST } from '../../env';
 import { gasService } from './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -46,8 +47,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const provider = this.getProvider(scheduled.chainId);
-
-    logger.debug(`${id} Checking execute conditions...`);
+    logger.debug(`${id} Checking execute conditions... id: ${scheduled.chainId}`);
 
     const isWaitingForConfirmations = this.isWaitingForConfirmations(scheduled, blockNum);
     if (isWaitingForConfirmations.res) {
@@ -130,9 +130,22 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
   }
 
-  private getProvider(chainId: number) {
-    const network = ethers.providers.getNetwork(chainId);
-    return ethers.getDefaultProvider(network);
+  private getProvider(chainId: number): ethers.providers.BaseProvider {
+    let provider: ethers.providers.BaseProvider;
+    provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
+    switch (chainId) {
+      case ChainId.Arbitrum:
+        provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
+        break;
+      case ChainId.Arbitrum_Rinkeby:
+        provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
+        break;
+      default:
+        const network = ethers.providers.getNetwork(chainId);
+        provider = ethers.getDefaultProvider(network);
+        break;
+    }
+    return provider;
   }
 
   private isWaitingForConfirmations(scheduled: IScheduled, blockNum: number): IValidationResult {
@@ -171,7 +184,19 @@ export class TransactionExecutor implements ITransactionExecutor {
       } else {
         // tx might've been just confirmed on chain so let's check that as well
         try {
-          const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(scheduled.chainId));
+          let provider: ethers.providers.BaseProvider;
+          provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
+          switch (scheduled.chainId) {
+            case ChainId.Arbitrum:
+              provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
+              break;
+            case ChainId.Arbitrum_Rinkeby:
+              provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
+              break;
+            default:
+              provider = ethers.getDefaultProvider(ethers.providers.getNetwork(scheduled.chainId));
+              break;
+          }
           const txReceipt = await provider.getTransactionReceipt(scheduled.transactionHash);
           if (txReceipt.status === 1) {
             status = Status.Completed;

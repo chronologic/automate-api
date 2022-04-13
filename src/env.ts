@@ -10,6 +10,9 @@ export const PORT = Number(process.env.PORT) || 1337;
 
 export const DB_URI = process.env.DB_URI as string;
 
+export const ARBITRUM_URI = process.env.ARBITRUM_URI;
+export const ARBITRUM_RINKEBY_URI = process.env.ARBITRUM_RINKEBY_URI;
+
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
 export const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID as string;
 
