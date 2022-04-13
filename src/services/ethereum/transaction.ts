@@ -47,7 +47,8 @@ export class TransactionExecutor implements ITransactionExecutor {
   private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const provider = this.getProvider(scheduled.chainId);
-    logger.debug(`${id} Checking execute conditions... id: ${scheduled.chainId}`);
+
+    logger.debug(`${id} Checking execute conditions...`);
 
     const isWaitingForConfirmations = this.isWaitingForConfirmations(scheduled, blockNum);
     if (isWaitingForConfirmations.res) {
@@ -132,7 +133,6 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private getProvider(chainId: number): ethers.providers.BaseProvider {
     let provider: ethers.providers.BaseProvider;
-    provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
     switch (chainId) {
       case ChainId.Arbitrum:
         provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
@@ -185,7 +185,6 @@ export class TransactionExecutor implements ITransactionExecutor {
         // tx might've been just confirmed on chain so let's check that as well
         try {
           let provider: ethers.providers.BaseProvider;
-          provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
           switch (scheduled.chainId) {
             case ChainId.Arbitrum:
               provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
