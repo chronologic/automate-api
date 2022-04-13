@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
-import { SKIP_TX_BROADCAST, ARBITRUM_URI, ARBITRUM_RINKEBY_URI } from '../../env';
+import { SKIP_TX_BROADCAST, ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI } from '../../env';
 import { ChainId } from '../../constants';
 import sendMail from '../mail';
 import logger from './logger';
@@ -141,10 +141,10 @@ export class TransactionExecutor implements ITransactionExecutor {
         provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
         break;
       default:
-        const network = ethers.providers.getNetwork(chainId);
-        provider = ethers.getDefaultProvider(network);
+        provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
         break;
     }
+
     return provider;
   }
 
@@ -184,18 +184,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       } else {
         // tx might've been just confirmed on chain so let's check that as well
         try {
-          let provider: ethers.providers.BaseProvider;
-          switch (scheduled.chainId) {
-            case ChainId.Arbitrum:
-              provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
-              break;
-            case ChainId.Arbitrum_Rinkeby:
-              provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
-              break;
-            default:
-              provider = ethers.getDefaultProvider(ethers.providers.getNetwork(scheduled.chainId));
-              break;
-          }
+          const provider = this.getProvider(scheduled.chainId);
           const txReceipt = await provider.getTransactionReceipt(scheduled.transactionHash);
           if (txReceipt.status === 1) {
             status = Status.Completed;

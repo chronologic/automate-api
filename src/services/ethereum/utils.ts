@@ -6,6 +6,8 @@ import fetch from 'node-fetch';
 import LRU from 'lru-cache';
 
 import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';
+import { ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI } from '../../env';
+import { ChainId } from '../../constants';
 import logger from './logger';
 import ERC20 from '../../abi/erc20';
 import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
@@ -41,7 +43,18 @@ export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigN
 }
 
 async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
-  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(transaction.chainId));
+  let provider: ethers.providers.BaseProvider;
+  switch (transaction.chainId) {
+    case ChainId.Arbitrum:
+      provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
+      break;
+    case ChainId.Arbitrum_Rinkeby:
+      provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
+      break;
+    default:
+      provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
+      break;
+  }
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
   const method = parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
 
