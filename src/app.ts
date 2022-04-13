@@ -12,7 +12,7 @@ import { Manager } from './services/manager';
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (process.env.UI_URL.match(origin) || origin.includes(/https?:\/\/localhost/i)) {
+    if (!origin || process.env.UI_URL.match(origin) || /https?:\/\/localhost/i.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
