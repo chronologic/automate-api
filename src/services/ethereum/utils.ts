@@ -6,6 +6,8 @@ import fetch from 'node-fetch';
 import LRU from 'lru-cache';
 
 import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';
+import { ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI, ROPSTEN_URI } from '../../env';
+import { ChainId } from '../../constants';
 import logger from './logger';
 import ERC20 from '../../abi/erc20';
 import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
@@ -29,19 +31,37 @@ const fallbackAssetName = '_';
 let coinGeckoCoins: ICoinGeckoCoin[] = [];
 
 function getSenderNextNonce({ chainId, from }): Promise<number> {
-  const network = ethers.providers.getNetwork(chainId);
+  const provider = getProvider(chainId);
+  return provider.getTransactionCount(from);
+}
 
-  return ethers.getDefaultProvider(network).getTransactionCount(from);
+export function getProvider(chainId: number): ethers.providers.BaseProvider {
+  let provider: ethers.providers.BaseProvider;
+  switch (chainId) {
+    case ChainId.Arbitrum:
+      provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
+      break;
+    case ChainId.Arbitrum_Rinkeby:
+      provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
+      break;
+    case ChainId.Ropsten:
+      provider = new ethers.providers.JsonRpcProvider(ROPSTEN_URI);
+      break;
+    default:
+      provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
+      break;
+  }
+  return provider;
 }
 
 export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigNumber> {
-  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
+  const provider = getProvider(chainId);
 
   return provider.getGasPrice();
 }
 
 async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
-  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(transaction.chainId));
+  const provider = getProvider(transaction.chainId);
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
   const method = parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
 
@@ -79,7 +99,7 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
     const { gasPrice: _gasPriceWei, gasLimit, chainId, maxFeePerGas, maxPriorityFeePerGas } = tx;
     const gasPriceWei = _gasPriceWei || maxFeePerGas.add(maxPriorityFeePerGas);
 
-    const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
+    const provider = getProvider(chainId);
 
     ethPrice = await fetchEthPrice();
 
@@ -385,7 +405,7 @@ async function fetchTokenName(contractAddress: string, chainId = 1): Promise<str
   }
 
   try {
-    const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
+    const provider = getProvider(chainId);
 
     const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
@@ -447,7 +467,7 @@ async function fetchConditionAssetMetadata(transaction: IScheduled): Promise<IAs
 }
 
 async function fetchTokenDecimals(contractAddress: string, chainId: number): Promise<number> {
-  const provider = ethers.getDefaultProvider(ethers.providers.getNetwork(chainId));
+  const provider = getProvider(chainId);
   const cacheKey = `decimals:${contractAddress}:${chainId}`;
 
   if (lru.has(cacheKey)) {
