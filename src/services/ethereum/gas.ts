@@ -7,6 +7,7 @@ import { CURRENT_GAS_PRICE_FEED_URL, GAS_PRICE_FEED_URL } from '../../env';
 import { bnToNumber, createTimedCache } from '../../utils';
 import { BadRequestError } from '../../errors';
 import { createLogger } from '../../logger';
+import { getProvider } from './utils';
 
 type IHistoricalGasPrice = [number, number];
 type GasPriceTimeRange = '1d' | '3d' | '5d' | '7d';
@@ -100,8 +101,7 @@ async function estimateGasSavings(): Promise<IGasSavingsResponse> {
 async function fetchEstimatedGasSavings(): Promise<IGasSavingsResponse> {
   const { gwei: minGasPrice } = await estimateGas('7d');
 
-  const network = ethers.providers.getNetwork(1);
-  const provider = ethers.getDefaultProvider(network);
+  const provider = getProvider(1);
 
   const currentGasPriceBn = await provider.getGasPrice();
   const currentGasPrice = bnToNumber(currentGasPriceBn, GWEI_DECIMALS, 0);
@@ -179,8 +179,7 @@ async function fetchCurrentSafeLowGasPrice(chainId: number): Promise<BigNumber> 
   } catch (e) {
     logger.error(e);
     // fallback - 85% of network price
-    const network = ethers.providers.getNetwork(1);
-    const provider = ethers.getDefaultProvider(network);
+    const provider = getProvider(1);
     const gasPrice = await provider.getGasPrice();
 
     return gasPrice.mul(BigNumber.from('85')).div(BigNumber.from('100'));

@@ -3,11 +3,10 @@ import { ethers } from 'ethers';
 
 import { IExecuteStatus, IScheduled, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
-import { SKIP_TX_BROADCAST, ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI } from '../../env';
-import { ChainId } from '../../constants';
+import { SKIP_TX_BROADCAST } from '../../env';
 import sendMail from '../mail';
 import logger from './logger';
-import { fetchTransactionMetadata, getSenderNextNonce } from './utils';
+import { fetchTransactionMetadata, getSenderNextNonce, getProvider } from './utils';
 import { gasService } from './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -46,7 +45,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
-    const provider = this.getProvider(scheduled.chainId);
+    const provider = getProvider(scheduled.chainId);
 
     logger.debug(`${id} Checking execute conditions...`);
 
@@ -131,23 +130,6 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
   }
 
-  private getProvider(chainId: number): ethers.providers.BaseProvider {
-    let provider: ethers.providers.BaseProvider;
-    switch (chainId) {
-      case ChainId.Arbitrum:
-        provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
-        break;
-      case ChainId.Arbitrum_Rinkeby:
-        provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
-        break;
-      default:
-        provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
-        break;
-    }
-
-    return provider;
-  }
-
   private isWaitingForConfirmations(scheduled: IScheduled, blockNum: number): IValidationResult {
     const isWaitingForConfirmations = scheduled.conditionBlock && scheduled.conditionBlock + CONFIRMATIONS > blockNum;
 
@@ -184,7 +166,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       } else {
         // tx might've been just confirmed on chain so let's check that as well
         try {
-          const provider = this.getProvider(scheduled.chainId);
+          const provider = getProvider(scheduled.chainId);
           const txReceipt = await provider.getTransactionReceipt(scheduled.transactionHash);
           if (txReceipt.status === 1) {
             status = Status.Completed;
