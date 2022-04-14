@@ -353,33 +353,40 @@ async function fetchTokenAmount({
   amount: number;
   decimals: number;
 }> {
-  const decoder = new InputDataDecoder(ERC20);
-  const decoded = decoder.decodeData(txData);
-  const decimals = await fetchTokenDecimals(contractAddress, chainId);
+  const defaultValue = {
+    amountWei: '0',
+    amount: 0,
+    decimals: 18,
+  };
 
-  if (decoded.method === 'transfer') {
-    const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
+  try {
+    const decoder = new InputDataDecoder(ERC20);
+    const decoded = decoder.decodeData(txData);
+    const decimals = await fetchTokenDecimals(contractAddress, chainId);
 
-    return {
-      amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
-      amountWei: amount.toString(),
-      decimals,
-    };
-  } else if (decoded.method === 'transferFrom') {
-    const amount = ethers.BigNumber.from(decoded.inputs[2].toString(10));
+    if (decoded.method === 'transfer') {
+      const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
 
-    return {
-      amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
-      amountWei: amount.toString(),
-      decimals,
-    };
-  } else {
-    logger.debug(`fetchTokenAmount unsupported decoded method: ${decoded.method}`);
-    return {
-      amountWei: '0',
-      amount: 0,
-      decimals: 18,
-    };
+      return {
+        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+        amountWei: amount.toString(),
+        decimals,
+      };
+    } else if (decoded.method === 'transferFrom') {
+      const amount = ethers.BigNumber.from(decoded.inputs[2].toString(10));
+
+      return {
+        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+        amountWei: amount.toString(),
+        decimals,
+      };
+    } else {
+      logger.debug(`fetchTokenAmount unsupported decoded method: ${decoded.method}`);
+      return defaultValue;
+    }
+  } catch (e) {
+    logger.error(e);
+    return defaultValue;
   }
 }
 
