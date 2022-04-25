@@ -38,6 +38,9 @@ export class Processor {
 
     scheduled.forEach((s) => {
       const key = makeKey(s.from, s.chainId);
+      if (s.priority === undefined) {
+        s.priority = Math.floor(Math.random() * 10);
+      }
 
       if (!groups.has(key)) {
         groups.set(key, []);
@@ -48,14 +51,19 @@ export class Processor {
 
     return groups;
   }
+  private groupByPriority(scheduled: IScheduled[]) {
+    const sortedByPriority = scheduled.sort((a, b) => a.nonce - b.nonce || a.priority - b.priority);
+
+    return sortedByPriority;
+  }
 
   private async processTransactions(scheduled: IScheduled[], blockNum: number) {
-    const sorted = scheduled.sort((a, b) => a.nonce - b.nonce);
+    const sortedByPriority = this.groupByPriority(scheduled);
 
-    for (const transaction of sorted) {
+    for (const transaction of sortedByPriority) {
       let res = false;
       try {
-        res = await this.processTransaction(transaction, blockNum);
+        res = await this.processTransaction(transaction, blockNum, sortedByPriority);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
         // tslint:disable-next-line: no-console
@@ -67,7 +75,11 @@ export class Processor {
     }
   }
 
-  private async processTransaction(scheduled: IScheduled, blockNum: number): Promise<boolean> {
+  private async processTransaction(
+    scheduled: IScheduled,
+    blockNum: number,
+    transactonList: IScheduled[],
+  ): Promise<boolean> {
     const {
       transactionHash,
       status,
@@ -78,8 +90,7 @@ export class Processor {
       assetValue,
       executionAttempts,
       lastExecutionAttempt,
-    } = await this.transactionExecutor.execute(scheduled, blockNum);
-
+    } = await this.transactionExecutor.execute(scheduled, blockNum, transactonList);
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
 
@@ -121,7 +132,7 @@ export class Processor {
       tgBot.executed({ value: assetValue, savings: gasSaved });
 
       webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
-
+      await this.markLowerPriorityTransactions(scheduled, transactonList);
       return true;
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
@@ -131,5 +142,17 @@ export class Processor {
     }
 
     return false;
+  }
+
+  private async markLowerPriorityTransactions(scheduled: IScheduled, transactonList: IScheduled[]) {
+    for (const transaction of transactonList) {
+      if (
+        transaction._id !== scheduled._id &&
+        transaction.nonce === scheduled.nonce &&
+        transaction.priority > scheduled.priority
+      ) {
+        transaction.status = Status.StaleNonce;
+      }
+    }
   }
 }

@@ -18,7 +18,7 @@ interface IValidationResult {
 }
 
 export interface ITransactionExecutor {
-  execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus>;
+  execute(scheduled: IScheduled, blockNum: number, transactonList: IScheduled[]): Promise<IExecuteStatus>;
 }
 export class TransactionExecutor implements ITransactionExecutor {
   public static async getSenderNextNonce({ chainId, from }): Promise<number> {
@@ -27,9 +27,8 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private static queue: Set<string> = new Set<string>();
 
-  public async execute(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
+  public async execute(scheduled: IScheduled, blockNum: number, transactonList: IScheduled[]): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
-
     if (TransactionExecutor.queue.has(id)) {
       logger.debug(`${id} Processing...`);
       return { status: Status.Pending };
@@ -37,13 +36,17 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     TransactionExecutor.queue.add(id);
     try {
-      return await this.executeTransaction(scheduled, blockNum);
+      return await this.executeTransaction(scheduled, blockNum, transactonList);
     } finally {
       TransactionExecutor.queue.delete(id);
     }
   }
 
-  private async executeTransaction(scheduled: IScheduled, blockNum: number): Promise<IExecuteStatus> {
+  private async executeTransaction(
+    scheduled: IScheduled,
+    blockNum: number,
+    transactonList: IScheduled[],
+  ): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const provider = getProvider(scheduled.chainId);
 
@@ -56,6 +59,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
     if (!hasCorrectNonce.res) {
+      await this.markAllTransactions(scheduled, transactonList);
       return hasCorrectNonce.status!;
     }
 
@@ -187,6 +191,14 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     return { res: true };
+  }
+
+  private async markAllTransactions(scheduled: IScheduled, transactonList: IScheduled[]) {
+    for (const transaction of transactonList) {
+      if (transaction._id !== scheduled._id && transaction.nonce === scheduled.nonce) {
+        transaction.status = Status.StaleNonce;
+      }
+    }
   }
 
   private get pending() {
