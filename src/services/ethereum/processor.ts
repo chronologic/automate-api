@@ -39,7 +39,7 @@ export class Processor {
     scheduled.forEach((s) => {
       const key = makeKey(s.from, s.chainId);
       if (s.priority === undefined) {
-        s.priority = Math.floor(Math.random() * 10);
+        s.priority = 1;
       }
 
       if (!groups.has(key)) {
