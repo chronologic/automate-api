@@ -6,7 +6,7 @@ import { IStrategyPrep, StrategyPrepStatus } from './Models';
 const logger = createLogger('StrategyPrepSchema');
 
 const StrategyPrepSchema = new Schema({
-  strategyId: {
+  prepId: {
     type: String,
     required: true,
   },
@@ -37,8 +37,16 @@ const StrategyPrepSchema = new Schema({
     type: Number,
     required: true,
   },
+  data: {
+    type: String,
+    required: true,
+  },
   status: {
     type: StrategyPrepStatus,
+    required: true,
+  },
+  expiresAt: {
+    type: String,
     required: true,
   },
   createdAt: {

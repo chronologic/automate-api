@@ -221,25 +221,28 @@ export enum StrategyPrepStatus {
   Cancelled = 'cancelled',
 }
 
-export interface IStrategyPrep extends Document {
-  strategyId: string;
-  userId: string;
-  scheduledId?: string;
+export interface IStrategyPrepTx {
   assetType: AssetType;
   chainId: number;
   from: string;
   to: string;
   nonce: number;
+  data: string;
+}
+
+export interface IStrategyPrep extends IStrategyPrepTx, Document {
+  prepId: string;
+  userId: string;
+  scheduledId?: string;
   status: StrategyPrepStatus;
+  expiresAt: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface IStrategyPrepRequest {
-  id?: string;
-}
+export interface IStrategyPrepRequest extends IStrategyPrepTx {}
 
-export interface IStrategyPrepResponse extends IStrategyPrepRequest {
-  id: string;
-  cratedAt: string;
+export interface IStrategyPrepResponse {
+  prepId: string;
+  expiresAt: string;
 }

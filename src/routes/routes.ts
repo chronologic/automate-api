@@ -46,7 +46,7 @@ export class Routes {
     app.route('/ethereum/estimateGasSavings').get(gasController.estimateGasSavings);
     app.route('/ethereum/estimateGas').get(gasController.estimateGas);
 
-    //////////////////////////////////////
+    ///////// user specific
 
     app.route('/auth').post(requestMiddleware(this.userController.loginOrSignup.bind(this.userController)));
     app.route('/auth/login').post(requestMiddleware(this.userController.login.bind(this.userController)));
@@ -61,5 +61,10 @@ export class Routes {
       .get(authMiddleware, this.transactionController.list.bind(this.transactionController))
       .post(authMiddleware, this.transactionController.edit.bind(this.transactionController))
       .delete(authMiddleware, this.transactionController.cancel.bind(this.transactionController));
+
+    ///////// strategies
+
+    app.route('/strategies/prep').post(authMiddleware, strategyController.prep);
+    app.route('/strategies/prep/:id').delete(authMiddleware, strategyController.cancelPrep);
   }
 }
