@@ -12,12 +12,10 @@ import webhookService from '../webhook';
 export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
-
   constructor(scheduleService: IScheduleService, transactionExecutor: ITransactionExecutor) {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
   }
-
   public async process(blockNum: number) {
     logger.info(`Processing block ${blockNum}...`);
 
@@ -132,8 +130,8 @@ export class Processor {
       tgBot.executed({ value: assetValue, savings: gasSaved });
 
       webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
-      await this.markLowerPriorityTransactions(scheduled, transactonList);
-      return true;
+      let markedLowerPriorityTxnStale = await this.markLowerPriorityTransactionsStale(scheduled, transactonList);
+      return markedLowerPriorityTxnStale;
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -144,15 +142,14 @@ export class Processor {
     return false;
   }
 
-  private async markLowerPriorityTransactions(scheduled: IScheduled, transactonList: IScheduled[]) {
+  private async markLowerPriorityTransactionsStale(executed: IScheduled, transactonList: IScheduled[]) {
     for (const transaction of transactonList) {
-      if (
-        transaction._id !== scheduled._id &&
-        transaction.nonce === scheduled.nonce &&
-        transaction.priority > scheduled.priority
-      ) {
+      const isLowerPriority: boolean = transaction.priority > executed.priority;
+      if (transaction._id !== executed._id && transaction.nonce === executed.nonce && isLowerPriority) {
         transaction.status = Status.StaleNonce;
+        transaction.update({ status: Status.StaleNonce }).exec();
       }
     }
+    return true;
   }
 }
