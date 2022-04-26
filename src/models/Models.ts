@@ -214,3 +214,32 @@ export interface IUserCredits {
   user: number;
   community: number;
 }
+
+export enum StrategyPrepStatus {
+  Pending = 'pending',
+  Matched = 'matched',
+  Cancelled = 'cancelled',
+}
+
+export interface IStrategyPrep extends Document {
+  strategyId: string;
+  userId: string;
+  scheduledId?: string;
+  assetType: AssetType;
+  chainId: number;
+  from: string;
+  to: string;
+  nonce: number;
+  status: StrategyPrepStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IStrategyPrepRequest {
+  id?: string;
+}
+
+export interface IStrategyPrepResponse extends IStrategyPrepRequest {
+  id: string;
+  cratedAt: string;
+}
