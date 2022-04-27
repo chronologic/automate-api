@@ -49,14 +49,14 @@ export class Processor {
 
     return groups;
   }
-  private groupByPriority(scheduled: IScheduled[]) {
+  private sortByPriority(scheduled: IScheduled[]) {
     const sortedByPriority = scheduled.sort((a, b) => a.nonce - b.nonce || a.priority - b.priority);
 
     return sortedByPriority;
   }
 
   private async processTransactions(scheduled: IScheduled[], blockNum: number) {
-    const sortedByPriority = this.groupByPriority(scheduled);
+    const sortedByPriority = this.sortByPriority(scheduled);
 
     for (const transaction of sortedByPriority) {
       let res = false;
@@ -130,8 +130,8 @@ export class Processor {
       tgBot.executed({ value: assetValue, savings: gasSaved });
 
       webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
-      let markedLowerPriorityTxnStale = await this.markLowerPriorityTransactionsStale(scheduled, transactonList);
-      return markedLowerPriorityTxnStale;
+      await this.markLowerPriorityTransactionsStale(scheduled, transactonList);
+      return true;
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -150,6 +150,5 @@ export class Processor {
         transaction.update({ status: Status.StaleNonce }).exec();
       }
     }
-    return true;
   }
 }

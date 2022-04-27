@@ -57,11 +57,15 @@ export class TransactionExecutor implements ITransactionExecutor {
       return isWaitingForConfirmations.status!;
     }
 
-    const hasCorrectNonce = await this.hasCorrectNonce(scheduled, transactonList);
+    const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
     if (!hasCorrectNonce.res) {
       return hasCorrectNonce.status!;
     }
-
+    const isSenderNonceGreaterThanScheduled = await this.isSenderNonceGreaterThanScheduled(scheduled);
+    if (isSenderNonceGreaterThanScheduled) {
+      await this.markTransactionsStale(scheduled, transactonList);
+      return isSenderNonceGreaterThanScheduled.status;
+    }
     const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
     const networkTransaction = await provider.getTransaction(transaction.hash!);
@@ -151,7 +155,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { res: false };
   }
 
-  private async hasCorrectNonce(scheduled: IScheduled, transactonList: IScheduled[]): Promise<IValidationResult> {
+  private async hasCorrectNonce(scheduled: IScheduled): Promise<IValidationResult> {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
 
     logger.debug(`${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
@@ -180,7 +184,6 @@ export class TransactionExecutor implements ITransactionExecutor {
           logger.error(e);
         }
       }
-      await this.markTransactionsStale(scheduled, transactonList);
       return { res: false, status: { status } };
     }
 
@@ -190,6 +193,14 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     return { res: true };
+  }
+  private async isSenderNonceGreaterThanScheduled(scheduled: IScheduled): Promise<IValidationResult> {
+    const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
+    let status = Status.StaleNonce;
+    if (senderNonce > scheduled.nonce) {
+      return { res: true, status: { status } };
+    }
+    return { res: false };
   }
 
   private async markTransactionsStale(scheduled: IScheduled, transactonList: IScheduled[]) {
