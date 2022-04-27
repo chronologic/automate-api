@@ -383,6 +383,8 @@ async function matchStrategyPrep(
     return defaultResult;
   }
 
+  // TODO: uncomment when priority is ready
+  // transaction.priority = strategyPrep.priority;
   transaction.conditionAsset = strategyPrep.conditionAsset;
   transaction.conditionAmount = strategyPrep.conditionAmount;
   transaction.timeCondition = strategyPrep.timeCondition;

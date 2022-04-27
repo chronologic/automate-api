@@ -223,13 +223,17 @@ export interface IStrategyPrepTx {
   to: string;
   nonce: number;
   data: string;
+}
+
+export interface IStrategyPrepTxWithConditions extends IStrategyPrepTx {
+  priority: number;
   conditionAsset?: string;
   conditionAmount?: string;
   timeCondition?: number;
   timeConditionTZ?: string;
 }
 
-export interface IStrategyPrep extends IStrategyPrepTx, Document {
+export interface IStrategyPrep extends IStrategyPrepTxWithConditions, Document {
   instanceId: string;
   userId: string;
   scheduledId?: string;

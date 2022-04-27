@@ -1,7 +1,7 @@
 import ShortUniqueId from 'short-unique-id';
 
 import { HOUR_MILLIS } from '../constants';
-import { IStrategyPrep, IStrategyPrepResponse, IStrategyPrepTx } from '../models/Models';
+import { IStrategyPrep, IStrategyPrepResponse, IStrategyPrepTx, IStrategyPrepTxWithConditions } from '../models/Models';
 import StrategyPrep from '../models/StrategyPrepSchema';
 
 const STRATEGY_PREP_TTL = 2 * HOUR_MILLIS;
@@ -16,7 +16,7 @@ export const strategyService = {
   matchPrep,
 };
 
-async function prep(userId: string, txs: IStrategyPrepTx[]): Promise<IStrategyPrepResponse> {
+async function prep(userId: string, txs: IStrategyPrepTxWithConditions[]): Promise<IStrategyPrepResponse> {
   await deleteAllPrepsForUser(userId); // only allow one prep at a time for a given user
 
   const instanceId = generateInstanceId();

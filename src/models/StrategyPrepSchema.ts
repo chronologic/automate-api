@@ -41,6 +41,10 @@ const StrategyPrepSchema = new Schema({
     type: String,
     required: true,
   },
+  priority: {
+    type: Number,
+    required: true,
+  },
   conditionAsset: {
     type: String,
   },
