@@ -65,7 +65,7 @@ export class Routes {
 
     ///////// strategies
 
-    app.route('/strategies/prep').post(authMiddleware, strategyController.prep);
-    app.route('/strategies/prep/:id').delete(authMiddleware, strategyController.cancelPrep);
+    app.route('/strategy/prep').post(authMiddleware, strategyController.prep);
+    app.route('/strategy/prep/:id').delete(authMiddleware, strategyController.deletePrepInstance);
   }
 }

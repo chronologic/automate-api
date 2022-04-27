@@ -10,12 +10,14 @@ const generateInstanceId = new ShortUniqueId({ length: 8 });
 
 export const strategyService = {
   prep,
-  cancelPrep,
+  deletePrepTx,
+  deletePrepInstance,
+  hasAnyPrep,
   matchPrep,
 };
 
 async function prep(userId: string, txs: IStrategyPrepTx[]): Promise<IStrategyPrepResponse> {
-  await cancelPrepForUser(userId); // only allow one prep at a time for a given user
+  await deleteAllPrepsForUser(userId); // only allow one prep at a time for a given user
 
   const instanceId = generateInstanceId();
   const expiresAt = new Date(new Date().getTime() + STRATEGY_PREP_TTL).toISOString();
@@ -34,25 +36,43 @@ async function prep(userId: string, txs: IStrategyPrepTx[]): Promise<IStrategyPr
   };
 }
 
-async function cancelPrep(userId: string, instanceId: string): Promise<void> {
+async function deletePrepTx(userId: string, instanceId: string, tx: IStrategyPrepTx): Promise<void> {
+  await StrategyPrep.deleteOne({
+    userId,
+    instanceId,
+    ...tx,
+  });
+}
+
+async function deletePrepInstance(userId: string, instanceId: string): Promise<void> {
   await StrategyPrep.deleteMany({
     userId,
     instanceId,
   });
 }
 
-async function cancelPrepForUser(userId: string): Promise<void> {
+async function deleteAllPrepsForUser(userId: string): Promise<void> {
   await StrategyPrep.deleteMany({
     userId,
   });
 }
 
+async function hasAnyPrep(userId: string): Promise<boolean> {
+  const res = await StrategyPrep.find({ userId, ...makeNotExpiredCondition() });
+
+  return res.length > 0;
+}
+
 async function matchPrep(userId: string, prepTx: IStrategyPrepTx): Promise<IStrategyPrep> {
-  const res = await StrategyPrep.find({ userId, ...prepTx });
+  const res = await StrategyPrep.find({ userId, ...prepTx, ...makeNotExpiredCondition() });
 
   if (res.length > 1) {
     throw new Error('Found more than 1 match!');
   }
 
   return res[0];
+}
+
+function makeNotExpiredCondition(): any {
+  return { expiresAt: { $gte: new Date() } };
 }

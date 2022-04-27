@@ -125,7 +125,7 @@ export class ScheduleService implements IScheduleService {
     // this should still be the case
     // otherwise we have a problem
     if (!transactionExists) {
-      let duplicate = await this.findBySignedTransaction(request.signedTransaction);
+      const duplicate = await this.findBySignedTransaction(request.signedTransaction);
       if (duplicate) {
         throw new Error(`Duplicate transaction ${request.signedTransaction}`);
       }

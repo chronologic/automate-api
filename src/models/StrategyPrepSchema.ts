@@ -47,11 +47,9 @@ const StrategyPrepSchema = new Schema({
   },
   createdAt: {
     type: String,
-    required: true,
   },
   updatedAt: {
     type: String,
-    required: true,
   },
 });
 

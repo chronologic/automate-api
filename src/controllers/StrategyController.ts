@@ -5,7 +5,7 @@ import { strategyService } from '../services/strategy';
 
 export const strategyController = {
   prep,
-  cancelPrep,
+  deletePrepInstance,
 };
 
 async function prep(req: RequestWithAuth, res: Response) {
@@ -14,8 +14,8 @@ async function prep(req: RequestWithAuth, res: Response) {
   res.json(result);
 }
 
-async function cancelPrep(req: RequestWithAuth, res: Response) {
-  await strategyService.cancelPrep(req.user.id, req.params.id);
+async function deletePrepInstance(req: RequestWithAuth, res: Response) {
+  await strategyService.deletePrepInstance(req.user.id, req.params.id);
 
   res.status(204).send();
 }

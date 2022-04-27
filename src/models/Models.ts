@@ -234,8 +234,6 @@ export interface IStrategyPrep extends IStrategyPrepTx, Document {
   updatedAt: string;
 }
 
-export interface IStrategyPrepRequest extends IStrategyPrepTx {}
-
 export interface IStrategyPrepResponse {
   instanceId: string;
   expiresAt: string;
