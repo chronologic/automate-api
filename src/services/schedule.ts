@@ -67,7 +67,7 @@ export class ScheduleService implements IScheduleService {
       transaction.userId = user.id;
     }
 
-    const { isStrategyPrepTx, strategyPrepId } = await checkStrategyPrep(transaction);
+    const { isStrategyTx, strategyPrepId } = await checkStrategyPrep(transaction);
 
     transaction = await populateTransactionMetadata({
       transaction,
@@ -92,6 +92,7 @@ export class ScheduleService implements IScheduleService {
       isFreeTx,
       isDraft: params.draft,
       isProxyRequest,
+      isStrategyTx,
     });
 
     transaction.paymentAddress = isFreeTx ? '' : PaymentService.getNextPaymentAddress();
@@ -101,7 +102,7 @@ export class ScheduleService implements IScheduleService {
     // this should still be the case
     // otherwise we have a problem
     if (!transactionExists) {
-      const duplicate = await this.findBySignedTransaction(request.signedTransaction);
+      const duplicate = await findBySignedTransaction(request.signedTransaction);
       if (duplicate) {
         throw new Error(`Duplicate transaction ${request.signedTransaction}`);
       }
@@ -109,7 +110,7 @@ export class ScheduleService implements IScheduleService {
 
     const scheduled = await transaction.save();
 
-    if (isStrategyPrepTx) {
+    if (isStrategyTx) {
       await strategyService.deletePrepTx(transaction.userId!, strategyPrepId!);
     }
 
@@ -207,10 +208,6 @@ export class ScheduleService implements IScheduleService {
     }
   }
 
-  private findBySignedTransaction(signedTransaction: string) {
-    return Scheduled.findOne({ signedTransaction }).exec();
-  }
-
   private isDevTx(email: string): boolean {
     return DEV_PAYMENT_EMAILS.includes(email.toLowerCase());
   }
@@ -223,7 +220,7 @@ export class ScheduleService implements IScheduleService {
 async function findOrCreateTransaction(
   request: IScheduleRequest,
 ): Promise<{ transaction: IScheduled; transactionExists: boolean }> {
-  let transaction = await this.findBySignedTransaction(request.signedTransaction);
+  let transaction = await findBySignedTransaction(request.signedTransaction);
   let transactionExists = false;
 
   if (transaction) {
@@ -247,31 +244,65 @@ async function findOrCreateTransaction(
   };
 }
 
+async function findBySignedTransaction(signedTransaction: string) {
+  return Scheduled.findOne({ signedTransaction }).exec();
+}
+
 function calculateNewStatus({
   currentStatus,
   isFreeTx,
   isDraft,
   isProxyRequest,
+  isStrategyTx,
 }: {
   currentStatus: Status;
   isFreeTx: boolean;
   isDraft: boolean;
   isProxyRequest: boolean;
+  isStrategyTx: boolean;
 }): Status {
-  if (!isProxyRequest) {
+  return isProxyRequest
+    ? calculateNewStatusForProxyRequest({
+        currentStatus,
+        isDraft,
+        isStrategyTx,
+      })
+    : calculateNewStatusForDirectRequest({
+        currentStatus,
+        isFreeTx,
+      });
+}
+
+function calculateNewStatusForProxyRequest({
+  currentStatus,
+  isDraft,
+  isStrategyTx,
+}: {
+  currentStatus: Status;
+  isDraft: boolean;
+  isStrategyTx: boolean;
+}): Status {
+  if (isDraft && !isStrategyTx) {
+    return currentStatus || Status.Draft;
+  }
+
+  return currentStatus || Status.Pending;
+}
+
+function calculateNewStatusForDirectRequest({
+  currentStatus,
+  isFreeTx,
+}: {
+  currentStatus: Status;
+  isFreeTx: boolean;
+}): Status {
+  currentStatus = currentStatus || Status.Draft;
+
+  if (currentStatus === Status.Draft) {
     return isFreeTx ? Status.Pending : Status.PendingPayment;
   }
 
-  let newStatus = currentStatus;
-
-  if (isDraft) {
-    newStatus = newStatus || Status.Draft;
-  } else {
-    newStatus = newStatus === Status.Draft ? Status.Pending : newStatus;
-  }
-  newStatus = newStatus || Status.Pending;
-
-  return newStatus;
+  return currentStatus;
 }
 
 async function populateTransactionMetadata({
@@ -345,10 +376,8 @@ function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
   }
 }
 
-async function checkStrategyPrep(
-  transaction: IScheduled,
-): Promise<{ isStrategyPrepTx: boolean; strategyPrepId?: string }> {
-  const defaultResult = { isStrategyPrepTx: false };
+async function checkStrategyPrep(transaction: IScheduled): Promise<{ isStrategyTx: boolean; strategyPrepId?: string }> {
+  const defaultResult = { isStrategyTx: false };
 
   if (!transaction.userId) {
     return defaultResult;
@@ -363,15 +392,15 @@ async function checkStrategyPrep(
 
   const prepTx = decodeTxForStrategyPrep(transaction);
   const strategyPrep = await strategyService.matchPrep(userId, prepTx);
-  const isStrategyPrepTx = !!strategyPrep;
+  const isStrategyTx = !!strategyPrep;
 
-  if (hasAnyPrep && !isStrategyPrepTx) {
+  if (hasAnyPrep && !isStrategyTx) {
     throw new Error('User is already executing another strategy');
   }
 
-  if (!isStrategyPrepTx) {
+  if (!isStrategyTx) {
     return defaultResult;
   }
 
-  return { isStrategyPrepTx, strategyPrepId: strategyPrep.id };
+  return { isStrategyTx, strategyPrepId: strategyPrep.id };
 }
