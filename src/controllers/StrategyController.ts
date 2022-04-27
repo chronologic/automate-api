@@ -8,10 +8,14 @@ export const strategyController = {
   cancelPrep,
 };
 
-async function prep(req: Request, res: Response) {
-  res.json();
+async function prep(req: RequestWithAuth, res: Response) {
+  const result = await strategyService.prep(req.user.id, req.body);
+
+  res.json(result);
 }
 
-async function cancelPrep(req: Request, res: Response) {
-  res.json();
+async function cancelPrep(req: RequestWithAuth, res: Response) {
+  await strategyService.cancelPrep(req.user.id, req.params.id);
+
+  res.status(204).send();
 }

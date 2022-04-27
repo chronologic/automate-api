@@ -69,6 +69,7 @@ export interface IScheduled extends Document {
   paymentAddress: string;
   paymentTx: string;
   userId?: string;
+  strategyInstanceId?: string;
   notes?: string;
   scheduledEthPrice?: number;
   scheduledGasPrice?: number;
@@ -215,12 +216,6 @@ export interface IUserCredits {
   community: number;
 }
 
-export enum StrategyPrepStatus {
-  Pending = 'pending',
-  Matched = 'matched',
-  Cancelled = 'cancelled',
-}
-
 export interface IStrategyPrepTx {
   assetType: AssetType;
   chainId: number;
@@ -231,10 +226,9 @@ export interface IStrategyPrepTx {
 }
 
 export interface IStrategyPrep extends IStrategyPrepTx, Document {
-  prepId: string;
+  instanceId: string;
   userId: string;
   scheduledId?: string;
-  status: StrategyPrepStatus;
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
@@ -243,6 +237,6 @@ export interface IStrategyPrep extends IStrategyPrepTx, Document {
 export interface IStrategyPrepRequest extends IStrategyPrepTx {}
 
 export interface IStrategyPrepResponse {
-  prepId: string;
+  instanceId: string;
   expiresAt: string;
 }

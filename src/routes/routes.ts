@@ -12,6 +12,7 @@ import { authMiddleware, requestMiddleware } from '../middleware';
 import { TransactionController } from '../controllers/TransactionController';
 import { TransactionService } from '../services/transaction';
 import { gasController } from '../controllers/GasController';
+import { strategyController } from '../controllers/StrategyController';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(new ScheduleService());

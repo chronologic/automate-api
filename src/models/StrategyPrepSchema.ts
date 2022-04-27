@@ -1,12 +1,12 @@
 import { model, Schema } from 'mongoose';
 
 import { createLogger } from '../logger';
-import { IStrategyPrep, StrategyPrepStatus } from './Models';
+import { IStrategyPrep } from './Models';
 
 const logger = createLogger('StrategyPrepSchema');
 
 const StrategyPrepSchema = new Schema({
-  prepId: {
+  instanceId: {
     type: String,
     required: true,
   },
@@ -39,10 +39,6 @@ const StrategyPrepSchema = new Schema({
   },
   data: {
     type: String,
-    required: true,
-  },
-  status: {
-    type: StrategyPrepStatus,
     required: true,
   },
   expiresAt: {
