@@ -223,6 +223,10 @@ export interface IStrategyPrepTx {
   to: string;
   nonce: number;
   data: string;
+  conditionAsset?: string;
+  conditionAmount?: string;
+  timeCondition?: number;
+  timeConditionTZ?: string;
 }
 
 export interface IStrategyPrep extends IStrategyPrepTx, Document {

@@ -41,6 +41,18 @@ const StrategyPrepSchema = new Schema({
     type: String,
     required: true,
   },
+  conditionAsset: {
+    type: String,
+  },
+  conditionAmount: {
+    type: String,
+  },
+  timeCondition: {
+    type: Number,
+  },
+  timeConditionTZ: {
+    type: String,
+  },
   expiresAt: {
     type: String,
     required: true,

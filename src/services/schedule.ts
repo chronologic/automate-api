@@ -67,7 +67,8 @@ export class ScheduleService implements IScheduleService {
       transaction.userId = user.id;
     }
 
-    const { isStrategyTx, strategyPrepId } = await checkStrategyPrep(transaction);
+    const { isStrategyTx, strategyPrepId, transaction: matchedTransaction } = await matchStrategyPrep(transaction);
+    transaction = matchedTransaction;
 
     transaction = await populateTransactionMetadata({
       transaction,
@@ -354,30 +355,10 @@ async function getTransactionMetadata(transaction: IScheduled): Promise<ITransac
   }
 }
 
-function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
-  switch (transaction.assetType) {
-    case AssetType.Ethereum:
-    case undefined: {
-      const parsed = ethers.utils.parseTransaction(transaction.signedTransaction);
-
-      return {
-        assetType: AssetType.Ethereum,
-        chainId: parsed.chainId,
-        from: parsed.from,
-        to: parsed.to,
-        nonce: parsed.nonce,
-        data: parsed.data,
-      };
-    }
-    case AssetType.Polkadot:
-    default: {
-      throw new Error('Implementme!');
-    }
-  }
-}
-
-async function checkStrategyPrep(transaction: IScheduled): Promise<{ isStrategyTx: boolean; strategyPrepId?: string }> {
-  const defaultResult = { isStrategyTx: false };
+async function matchStrategyPrep(
+  transaction: IScheduled,
+): Promise<{ transaction: IScheduled; isStrategyTx: boolean; strategyPrepId?: string }> {
+  const defaultResult = { transaction, isStrategyTx: false };
 
   if (!transaction.userId) {
     return defaultResult;
@@ -402,5 +383,32 @@ async function checkStrategyPrep(transaction: IScheduled): Promise<{ isStrategyT
     return defaultResult;
   }
 
-  return { isStrategyTx, strategyPrepId: strategyPrep.id };
+  transaction.conditionAsset = strategyPrep.conditionAsset;
+  transaction.conditionAmount = strategyPrep.conditionAmount;
+  transaction.timeCondition = strategyPrep.timeCondition;
+  transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
+
+  return { transaction, isStrategyTx, strategyPrepId: strategyPrep.id };
+}
+
+function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
+  switch (transaction.assetType) {
+    case AssetType.Ethereum:
+    case undefined: {
+      const parsed = ethers.utils.parseTransaction(transaction.signedTransaction);
+
+      return {
+        assetType: AssetType.Ethereum,
+        chainId: parsed.chainId,
+        from: parsed.from,
+        to: parsed.to,
+        nonce: parsed.nonce,
+        data: parsed.data,
+      };
+    }
+    case AssetType.Polkadot:
+    default: {
+      throw new Error('Implementme!');
+    }
+  }
 }
