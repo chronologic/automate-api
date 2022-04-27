@@ -1,3 +1,5 @@
+import { ethers } from 'ethers';
+
 import {
   AssetType,
   IAssetMetadata,
@@ -5,6 +7,7 @@ import {
   IScheduledForUser,
   IScheduleParams,
   IScheduleRequest,
+  IStrategyPrepTx,
   ITransactionMetadata,
   Status,
 } from '../models/Models';
@@ -15,10 +18,11 @@ import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 import { UserService } from './user';
 import tgBot from './telegram';
-import { createTimedCache, mapToScheduledForUser } from '../utils';
+import { createTimedCache, isTruthy, mapToScheduledForUser } from '../utils';
 import { CREDITS } from '../env';
 import webhookService from './webhook';
 import { MINUTE_MILLIS } from '../constants';
+import { strategyService } from './strategy';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -27,7 +31,7 @@ const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) => str.toLowe
 const txCache = createTimedCache(5 * MINUTE_MILLIS);
 
 export interface IScheduleService {
-  schedule(request: IScheduleRequest, params?: IScheduleParams): Promise<IScheduled>;
+  schedule(request: IScheduleRequest, params: IScheduleParams): Promise<IScheduled>;
   find(id: string): Promise<IScheduled>;
   cancel(id: string);
   getPending(assetType: AssetType): Promise<IScheduled[]>;
@@ -37,8 +41,9 @@ export interface IScheduleService {
 }
 
 export class ScheduleService implements IScheduleService {
-  public async schedule(request: IScheduleRequest, params?: IScheduleParams) {
-    if (params?.source === 'proxy') {
+  public async schedule(request: IScheduleRequest, params: IScheduleParams) {
+    const isProxyRequest = params.source === 'proxy';
+    if (isProxyRequest) {
       if (txCache.get(request.signedTransaction)) {
         throw new Error('Duplicate request');
       }
@@ -48,25 +53,11 @@ export class ScheduleService implements IScheduleService {
 
     await new Scheduled(request).validate();
 
-    let transaction = await this.findBySignedTransaction(request.signedTransaction);
-    let transactionExists = false;
+    const findOrCreateResult = await findOrCreateTransaction(request);
+    let { transaction } = findOrCreateResult;
+    const { transactionExists } = findOrCreateResult;
 
-    if (transaction) {
-      transactionExists = true;
-      transaction.conditionAmount = request.conditionAmount;
-      transaction.conditionAsset = request.conditionAsset;
-      transaction.gasPriceAware = request.gasPriceAware;
-      transaction.signedTransaction = request.signedTransaction;
-      transaction.timeCondition = request.timeCondition;
-      transaction.timeConditionTZ = request.timeConditionTZ;
-      transaction.paymentEmail = request.paymentEmail || transaction.paymentEmail;
-      transaction.paymentRefundAddress = request.paymentRefundAddress || transaction.paymentRefundAddress;
-    } else {
-      transaction = new Scheduled(request);
-    }
-    transaction.notes = request.notes;
-
-    if (params?.apiKey) {
+    if (isProxyRequest) {
       const user = await UserService.validateApiKey(params.apiKey);
 
       if (CREDITS && !transactionExists) {
@@ -76,26 +67,14 @@ export class ScheduleService implements IScheduleService {
       transaction.userId = user.id;
     }
 
-    const metadata = await this.getTransactionMetadata(transaction);
-    transaction.assetName = metadata.assetName;
-    transaction.assetAmount = metadata.assetAmount;
-    transaction.assetAmountWei = metadata.assetAmountWei;
-    transaction.assetDecimals = metadata.assetDecimals;
-    transaction.assetValue = metadata.assetValue;
-    transaction.assetContract = metadata.assetContract;
-    transaction.gasPriceAware = request.gasPriceAware === true || (request.gasPriceAware as any) === 'true';
+    const { isStrategyPrepTx, strategyPrepId } = await checkStrategyPrep(transaction);
 
-    transaction.scheduledEthPrice = metadata.ethPrice;
-    transaction.scheduledGasPrice = metadata.gasPrice;
-    transaction.gasPaid = metadata.gasPaid;
-    transaction.gasSaved = metadata.gasSaved;
-
-    // if newly creating a tx, autopopulate condition to match the asset being transferred
-    if (!transactionExists && params?.apiKey) {
-      transaction.conditionAsset = metadata.assetContract;
-      transaction.conditionAmount = metadata.assetAmountWei;
-      transaction.conditionAssetDecimals = metadata.assetDecimals;
-    }
+    transaction = await populateTransactionMetadata({
+      transaction,
+      isGasPriceAware: isTruthy(request.gasPriceAware),
+      isProxyRequest,
+      transactionExists,
+    });
 
     const conditionAssetMetadata = await this.getConditionAssetMetadata(transaction);
     transaction.conditionAssetName = conditionAssetMetadata.name;
@@ -104,21 +83,18 @@ export class ScheduleService implements IScheduleService {
     const isDevTx = this.isDevTx(request.paymentEmail);
     const isValidCouponCode = this.isValidCouponCode(request.paymentRefundAddress);
 
-    const freeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
+    const isFreeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
     const prevStatus = transaction.status;
 
-    if (params?.apiKey) {
-      if (params?.draft === true || (params?.draft as any) === 'true') {
-        transaction.status = transaction.status || Status.Draft;
-      } else {
-        transaction.status = transaction.status === Status.Draft ? Status.Pending : transaction.status;
-      }
-      transaction.status = transaction.status || Status.Pending;
-    } else {
-      transaction.status = freeTx ? Status.Pending : Status.PendingPayment;
-    }
-    transaction.paymentAddress = freeTx ? '' : PaymentService.getNextPaymentAddress();
+    transaction.status = calculateNewStatus({
+      currentStatus: transaction.status,
+      isFreeTx,
+      isDraft: params.draft,
+      isProxyRequest,
+    });
+
+    transaction.paymentAddress = isFreeTx ? '' : PaymentService.getNextPaymentAddress();
 
     // extra check for duplicate in db
     // if same tx didn't exist when the process started
@@ -132,6 +108,10 @@ export class ScheduleService implements IScheduleService {
     }
 
     const scheduled = await transaction.save();
+
+    if (isStrategyPrepTx) {
+      await strategyService.deletePrepTx(transaction.userId!, strategyPrepId!);
+    }
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
       send(scheduled, 'scheduled');
@@ -227,20 +207,6 @@ export class ScheduleService implements IScheduleService {
     }
   }
 
-  // optimize this function - takes too much time
-  private async getTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
-    switch (transaction.assetType) {
-      case AssetType.Ethereum:
-      case undefined: {
-        return ethUtils.fetchTransactionMetadata(transaction);
-      }
-      case AssetType.Polkadot: {
-        const api = await getApi(transaction.chainId);
-        return api.fetchTransactionMetadata(transaction);
-      }
-    }
-  }
-
   private findBySignedTransaction(signedTransaction: string) {
     return Scheduled.findOne({ signedTransaction }).exec();
   }
@@ -252,4 +218,160 @@ export class ScheduleService implements IScheduleService {
   private isValidCouponCode(paymentRefundAddress: string): boolean {
     return COUPON_CODES.includes(paymentRefundAddress.toLowerCase());
   }
+}
+
+async function findOrCreateTransaction(
+  request: IScheduleRequest,
+): Promise<{ transaction: IScheduled; transactionExists: boolean }> {
+  let transaction = await this.findBySignedTransaction(request.signedTransaction);
+  let transactionExists = false;
+
+  if (transaction) {
+    transactionExists = true;
+    transaction.conditionAmount = request.conditionAmount;
+    transaction.conditionAsset = request.conditionAsset;
+    transaction.gasPriceAware = request.gasPriceAware;
+    transaction.signedTransaction = request.signedTransaction;
+    transaction.timeCondition = request.timeCondition;
+    transaction.timeConditionTZ = request.timeConditionTZ;
+    transaction.paymentEmail = request.paymentEmail || transaction.paymentEmail;
+    transaction.paymentRefundAddress = request.paymentRefundAddress || transaction.paymentRefundAddress;
+  } else {
+    transaction = new Scheduled(request);
+  }
+  transaction.notes = request.notes;
+
+  return {
+    transaction,
+    transactionExists,
+  };
+}
+
+function calculateNewStatus({
+  currentStatus,
+  isFreeTx,
+  isDraft,
+  isProxyRequest,
+}: {
+  currentStatus: Status;
+  isFreeTx: boolean;
+  isDraft: boolean;
+  isProxyRequest: boolean;
+}): Status {
+  if (!isProxyRequest) {
+    return isFreeTx ? Status.Pending : Status.PendingPayment;
+  }
+
+  let newStatus = currentStatus;
+
+  if (isDraft) {
+    newStatus = newStatus || Status.Draft;
+  } else {
+    newStatus = newStatus === Status.Draft ? Status.Pending : newStatus;
+  }
+  newStatus = newStatus || Status.Pending;
+
+  return newStatus;
+}
+
+async function populateTransactionMetadata({
+  transaction,
+  isGasPriceAware,
+  transactionExists,
+  isProxyRequest,
+}: {
+  transaction: IScheduled;
+  isGasPriceAware: boolean;
+  transactionExists: boolean;
+  isProxyRequest: boolean;
+}): Promise<IScheduled> {
+  const metadata = await getTransactionMetadata(transaction);
+  transaction.assetName = metadata.assetName;
+  transaction.assetAmount = metadata.assetAmount;
+  transaction.assetAmountWei = metadata.assetAmountWei;
+  transaction.assetDecimals = metadata.assetDecimals;
+  transaction.assetValue = metadata.assetValue;
+  transaction.assetContract = metadata.assetContract;
+  transaction.gasPriceAware = isGasPriceAware;
+
+  transaction.scheduledEthPrice = metadata.ethPrice;
+  transaction.scheduledGasPrice = metadata.gasPrice;
+  transaction.gasPaid = metadata.gasPaid;
+  transaction.gasSaved = metadata.gasSaved;
+
+  // if newly creating a tx, autopopulate condition to match the asset being transferred
+  if (!transactionExists && isProxyRequest) {
+    transaction.conditionAsset = metadata.assetContract;
+    transaction.conditionAmount = metadata.assetAmountWei;
+    transaction.conditionAssetDecimals = metadata.assetDecimals;
+  }
+
+  return transaction;
+}
+
+// TODO: optimize this function - takes too much time
+async function getTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
+  switch (transaction.assetType) {
+    case AssetType.Ethereum:
+    case undefined: {
+      return ethUtils.fetchTransactionMetadata(transaction);
+    }
+    case AssetType.Polkadot: {
+      const api = await getApi(transaction.chainId);
+      return api.fetchTransactionMetadata(transaction);
+    }
+  }
+}
+
+function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
+  switch (transaction.assetType) {
+    case AssetType.Ethereum:
+    case undefined: {
+      const parsed = ethers.utils.parseTransaction(transaction.signedTransaction);
+
+      return {
+        assetType: AssetType.Ethereum,
+        chainId: parsed.chainId,
+        from: parsed.from,
+        to: parsed.to,
+        nonce: parsed.nonce,
+        data: parsed.data,
+      };
+    }
+    case AssetType.Polkadot:
+    default: {
+      throw new Error('Implementme!');
+    }
+  }
+}
+
+async function checkStrategyPrep(
+  transaction: IScheduled,
+): Promise<{ isStrategyPrepTx: boolean; strategyPrepId?: string }> {
+  const defaultResult = { isStrategyPrepTx: false };
+
+  if (!transaction.userId) {
+    return defaultResult;
+  }
+
+  const userId = transaction.userId!;
+  const hasAnyPrep = await strategyService.hasAnyPrep(userId);
+
+  if (!hasAnyPrep) {
+    return defaultResult;
+  }
+
+  const prepTx = decodeTxForStrategyPrep(transaction);
+  const strategyPrep = await strategyService.matchPrep(userId, prepTx);
+  const isStrategyPrepTx = !!strategyPrep;
+
+  if (hasAnyPrep && !isStrategyPrepTx) {
+    throw new Error('User is already executing another strategy');
+  }
+
+  if (!isStrategyPrepTx) {
+    return defaultResult;
+  }
+
+  return { isStrategyPrepTx, strategyPrepId: strategyPrep.id };
 }

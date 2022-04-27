@@ -36,11 +36,10 @@ async function prep(userId: string, txs: IStrategyPrepTx[]): Promise<IStrategyPr
   };
 }
 
-async function deletePrepTx(userId: string, instanceId: string, tx: IStrategyPrepTx): Promise<void> {
+async function deletePrepTx(userId: string, strategyPrepId: string): Promise<void> {
   await StrategyPrep.deleteOne({
     userId,
-    instanceId,
-    ...tx,
+    _id: strategyPrepId,
   });
 }
 

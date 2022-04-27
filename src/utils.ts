@@ -90,3 +90,7 @@ export function mapToScheduledForUser(scheduled: IScheduled): IScheduledForUser 
     gasSaved: scheduled.gasSaved,
   };
 }
+
+export function isTruthy(value: any): boolean {
+  return value === 'true' || value === true;
+}
