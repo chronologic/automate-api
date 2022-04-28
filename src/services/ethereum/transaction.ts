@@ -57,15 +57,11 @@ export class TransactionExecutor implements ITransactionExecutor {
       return isWaitingForConfirmations.status!;
     }
 
-    const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
+    const hasCorrectNonce = await this.hasCorrectNonce(scheduled, transactonList);
     if (!hasCorrectNonce.res) {
       return hasCorrectNonce.status!;
     }
-    const isSenderNonceGreaterThanScheduled = await this.isSenderNonceGreaterThanScheduled(scheduled);
-    if (isSenderNonceGreaterThanScheduled) {
-      await this.markTransactionsStale(scheduled, transactonList);
-      return isSenderNonceGreaterThanScheduled.status;
-    }
+
     const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
     const networkTransaction = await provider.getTransaction(transaction.hash!);
@@ -155,7 +151,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { res: false };
   }
 
-  private async hasCorrectNonce(scheduled: IScheduled): Promise<IValidationResult> {
+  private async hasCorrectNonce(scheduled: IScheduled, transactonList: IScheduled[]): Promise<IValidationResult> {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
 
     logger.debug(`${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
@@ -164,6 +160,8 @@ export class TransactionExecutor implements ITransactionExecutor {
       logger.debug(`${scheduled._id} Transaction nonce already spent`);
 
       let status = Status.StaleNonce;
+
+      await this.markTransactionsStale(scheduled, transactonList);
 
       // check if status in db has changed in the meantime
       // e.g. we just got tx confirmation
@@ -184,6 +182,7 @@ export class TransactionExecutor implements ITransactionExecutor {
           logger.error(e);
         }
       }
+
       return { res: false, status: { status } };
     }
 
@@ -194,15 +193,6 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     return { res: true };
   }
-  private async isSenderNonceGreaterThanScheduled(scheduled: IScheduled): Promise<IValidationResult> {
-    const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
-    let status = Status.StaleNonce;
-    if (senderNonce > scheduled.nonce) {
-      return { res: true, status: { status } };
-    }
-    return { res: false };
-  }
-
   private async markTransactionsStale(scheduled: IScheduled, transactonList: IScheduled[]) {
     for (const transaction of transactonList) {
       if (transaction._id !== scheduled._id && transaction.nonce === scheduled.nonce) {
