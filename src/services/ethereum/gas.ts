@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers';
 
-import { DAY_MILLIS, GWEI_DECIMALS, MINUTE_MILLIS, SECOND_MILLIS } from '../../constants';
+import { ChainId, DAY_MILLIS, GWEI_DECIMALS, MINUTE_MILLIS, SECOND_MILLIS } from '../../constants';
 import { CURRENT_GAS_PRICE_FEED_URL, GAS_PRICE_FEED_URL } from '../../env';
 import { bnToNumber, createTimedCache } from '../../utils';
 import { BadRequestError } from '../../errors';
@@ -101,7 +101,7 @@ async function estimateGasSavings(): Promise<IGasSavingsResponse> {
 async function fetchEstimatedGasSavings(): Promise<IGasSavingsResponse> {
   const { gwei: minGasPrice } = await estimateGas('7d');
 
-  const provider = getProvider(1);
+  const provider = getProvider(ChainId.Ethereum);
 
   const currentGasPriceBn = await provider.getGasPrice();
   const currentGasPrice = bnToNumber(currentGasPriceBn, GWEI_DECIMALS, 0);
@@ -179,7 +179,7 @@ async function fetchCurrentSafeLowGasPrice(chainId: number): Promise<BigNumber> 
   } catch (e) {
     logger.error(e);
     // fallback - 85% of network price
-    const provider = getProvider(1);
+    const provider = getProvider(ChainId.Ethereum);
     const gasPrice = await provider.getGasPrice();
 
     return gasPrice.mul(BigNumber.from('85')).div(BigNumber.from('100'));
