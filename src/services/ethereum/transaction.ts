@@ -15,6 +15,7 @@ const CONFIRMATIONS = 3;
 interface IValidationResult {
   res: boolean;
   status?: IExecuteStatus;
+  senderNonceHigher?: boolean;
 }
 
 export interface ITransactionExecutor {
@@ -57,7 +58,10 @@ export class TransactionExecutor implements ITransactionExecutor {
       return isWaitingForConfirmations.status!;
     }
 
-    const hasCorrectNonce = await this.hasCorrectNonce(scheduled, transactonList);
+    const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
+    if (hasCorrectNonce.senderNonceHigher) {
+      await this.markTransactionsStale(scheduled, transactonList);
+    }
     if (!hasCorrectNonce.res) {
       return hasCorrectNonce.status!;
     }
@@ -151,7 +155,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { res: false };
   }
 
-  private async hasCorrectNonce(scheduled: IScheduled, transactonList: IScheduled[]): Promise<IValidationResult> {
+  private async hasCorrectNonce(scheduled: IScheduled): Promise<IValidationResult> {
     const senderNonce = await TransactionExecutor.getSenderNextNonce(scheduled);
 
     logger.debug(`${scheduled._id} Sender nonce ${senderNonce} transaction nonce ${scheduled.nonce}`);
@@ -160,8 +164,6 @@ export class TransactionExecutor implements ITransactionExecutor {
       logger.debug(`${scheduled._id} Transaction nonce already spent`);
 
       let status = Status.StaleNonce;
-
-      await this.markTransactionsStale(scheduled, transactonList);
 
       // check if status in db has changed in the meantime
       // e.g. we just got tx confirmation
@@ -183,12 +185,12 @@ export class TransactionExecutor implements ITransactionExecutor {
         }
       }
 
-      return { res: false, status: { status } };
+      return { res: false, status: { status }, senderNonceHigher: true };
     }
 
     if (senderNonce !== scheduled.nonce) {
       logger.debug(`${scheduled._id} Nonce does not match`);
-      return { res: false, status: this.pending };
+      return { res: false, status: this.pending, senderNonceHigher: false };
     }
 
     return { res: true };
