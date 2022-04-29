@@ -67,7 +67,7 @@ export class ScheduleService implements IScheduleService {
       transaction.userId = user.id;
     }
 
-    const { isStrategyTx, strategyPrepId, transaction: matchedTransaction } = await matchStrategyPrep(transaction);
+    const { isStrategyTx, transaction: matchedTransaction } = await matchStrategyPrep(transaction);
     transaction = matchedTransaction;
 
     transaction = await populateTransactionMetadata({
@@ -112,13 +112,18 @@ export class ScheduleService implements IScheduleService {
     const scheduled = await transaction.save();
 
     if (isStrategyTx) {
-      await strategyService.deletePrepTx(transaction.userId!, strategyPrepId!);
+      await strategyService.deletePrepTx(transaction.userId!, transaction.strategyPrepId!);
     }
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
       send(scheduled, 'scheduled');
       tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
       webhookService.notify(scheduled);
+    }
+
+    const isLastPrepForNonce = await strategyService.isLastPrepForNonce(transaction);
+    if (isStrategyTx && !isLastPrepForNonce) {
+      throw new Error('This error is to prevent metamask from increasing the nonce in its internal counter');
     }
 
     return scheduled;
@@ -355,9 +360,7 @@ async function getTransactionMetadata(transaction: IScheduled): Promise<ITransac
   }
 }
 
-async function matchStrategyPrep(
-  transaction: IScheduled,
-): Promise<{ transaction: IScheduled; isStrategyTx: boolean; strategyPrepId?: string }> {
+async function matchStrategyPrep(transaction: IScheduled): Promise<{ transaction: IScheduled; isStrategyTx: boolean }> {
   const defaultResult = { transaction, isStrategyTx: false };
 
   if (!transaction.userId) {
@@ -388,8 +391,10 @@ async function matchStrategyPrep(
   transaction.conditionAmount = strategyPrep.conditionAmount;
   transaction.timeCondition = strategyPrep.timeCondition;
   transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
+  transaction.strategyInstanceId = strategyPrep.instanceId;
+  transaction.strategyPrepId = strategyPrep.id;
 
-  return { transaction, isStrategyTx, strategyPrepId: strategyPrep.id };
+  return { transaction, isStrategyTx };
 }
 
 function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {

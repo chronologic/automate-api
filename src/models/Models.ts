@@ -71,6 +71,7 @@ export interface IScheduled extends Document {
   priority?: number;
   userId?: string;
   strategyInstanceId?: string;
+  strategyPrepId?: string;
   notes?: string;
   scheduledEthPrice?: number;
   scheduledGasPrice?: number;

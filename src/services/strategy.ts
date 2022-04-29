@@ -1,7 +1,13 @@
 import ShortUniqueId from 'short-unique-id';
 
 import { HOUR_MILLIS } from '../constants';
-import { IStrategyPrep, IStrategyPrepResponse, IStrategyPrepTx, IStrategyPrepTxWithConditions } from '../models/Models';
+import {
+  IScheduled,
+  IStrategyPrep,
+  IStrategyPrepResponse,
+  IStrategyPrepTx,
+  IStrategyPrepTxWithConditions,
+} from '../models/Models';
 import StrategyPrep from '../models/StrategyPrepSchema';
 
 const STRATEGY_PREP_TTL = 2 * HOUR_MILLIS;
@@ -14,6 +20,7 @@ export const strategyService = {
   deletePrepInstance,
   hasAnyPrep,
   matchPrep,
+  isLastPrepForNonce,
 };
 
 async function prep(userId: string, txs: IStrategyPrepTxWithConditions[]): Promise<IStrategyPrepResponse> {
@@ -70,6 +77,18 @@ async function matchPrep(userId: string, prepTx: IStrategyPrepTx): Promise<IStra
   }
 
   return res[0];
+}
+
+async function isLastPrepForNonce(transaction: IScheduled): Promise<boolean> {
+  const res = await StrategyPrep.find({
+    userId: transaction.userId,
+    instanceId: transaction.strategyInstanceId,
+    nonce: transaction.nonce,
+  }).sort({ nonce: 1 });
+
+  const prepIndex = res.findIndex((item) => item.id === transaction.strategyPrepId);
+
+  return prepIndex != null && prepIndex === res.length - 1;
 }
 
 function makeNotExpiredCondition(): any {
