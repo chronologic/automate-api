@@ -68,6 +68,7 @@ export interface IScheduled extends Document {
   paymentRefundAddress: string;
   paymentAddress: string;
   paymentTx: string;
+  priority?: number;
   userId?: string;
   strategyInstanceId?: string;
   notes?: string;

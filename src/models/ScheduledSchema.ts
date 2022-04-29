@@ -207,6 +207,9 @@ const ScheduledSchema = new Schema({
   paymentTx: {
     type: String,
   },
+  priority: {
+    type: Number,
+  },
   userId: {
     type: String,
   },
