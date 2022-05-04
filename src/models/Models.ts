@@ -70,6 +70,8 @@ export interface IScheduled extends Document {
   paymentTx: string;
   priority?: number;
   userId?: string;
+  strategyInstanceId?: string;
+  strategyPrepId?: string;
   notes?: string;
   scheduledEthPrice?: number;
   scheduledGasPrice?: number;
@@ -141,7 +143,7 @@ export interface IScheduleRequest {
 export interface IScheduleParams {
   apiKey: string;
   draft?: boolean;
-  source?: string;
+  source?: 'proxy';
 }
 
 export interface ITransactionMetadata extends IGasStats {
@@ -214,4 +216,35 @@ export interface IPlatform extends Document {
 export interface IUserCredits {
   user: number;
   community: number;
+}
+
+export interface IStrategyPrepTx {
+  assetType: AssetType;
+  chainId: number;
+  from: string;
+  to: string;
+  nonce: number;
+  data: string;
+}
+
+export interface IStrategyPrepTxWithConditions extends IStrategyPrepTx {
+  priority: number;
+  conditionAsset?: string;
+  conditionAmount?: string;
+  timeCondition?: number;
+  timeConditionTZ?: string;
+}
+
+export interface IStrategyPrep extends IStrategyPrepTxWithConditions, Document {
+  instanceId: string;
+  userId: string;
+  scheduledId?: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IStrategyPrepResponse {
+  instanceId: string;
+  expiresAt: string;
 }

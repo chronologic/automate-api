@@ -213,6 +213,12 @@ const ScheduledSchema = new Schema({
   userId: {
     type: String,
   },
+  strategyInstanceId: {
+    type: String,
+  },
+  strategyPrepId: {
+    type: String,
+  },
   notes: {
     type: String,
   },

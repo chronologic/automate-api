@@ -12,6 +12,7 @@ import { authMiddleware, requestMiddleware } from '../middleware';
 import { TransactionController } from '../controllers/TransactionController';
 import { TransactionService } from '../services/transaction';
 import { gasController } from '../controllers/GasController';
+import { strategyController } from '../controllers/StrategyController';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(new ScheduleService());
@@ -46,7 +47,7 @@ export class Routes {
     app.route('/ethereum/estimateGasSavings').get(gasController.estimateGasSavings);
     app.route('/ethereum/estimateGas').get(gasController.estimateGas);
 
-    //////////////////////////////////////
+    ///////// user specific
 
     app.route('/auth').post(requestMiddleware(this.userController.loginOrSignup.bind(this.userController)));
     app.route('/auth/login').post(requestMiddleware(this.userController.login.bind(this.userController)));
@@ -61,5 +62,10 @@ export class Routes {
       .get(authMiddleware, this.transactionController.list.bind(this.transactionController))
       .post(authMiddleware, this.transactionController.edit.bind(this.transactionController))
       .delete(authMiddleware, this.transactionController.cancel.bind(this.transactionController));
+
+    ///////// strategies
+
+    app.route('/strategy/prep').post(authMiddleware, strategyController.prep);
+    app.route('/strategy/prep/:id').delete(authMiddleware, strategyController.deletePrepInstance);
   }
 }

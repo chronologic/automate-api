@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 
-import { AssetType, Status } from '../models/Models';
+import { AssetType, IScheduleParams, Status } from '../models/Models';
 import { Key } from '../services/key';
 import { IScheduleService } from '../services/schedule';
+import { isTruthy } from '../utils';
 
 export class ScheduleController {
   private scheduleService: IScheduleService;
@@ -13,10 +14,7 @@ export class ScheduleController {
 
   public async schedule(req: Request, res: Response) {
     try {
-      const stored = await this.scheduleService.schedule(
-        req.body,
-        req.query as any,
-      );
+      const stored = await this.scheduleService.schedule(req.body, normalizeScheduleRequestParams(req.query));
       res.json({
         id: stored._id,
         key: Key.generate(stored._id),
@@ -25,9 +23,7 @@ export class ScheduleController {
         transactionHash: stored.transactionHash,
       });
     } catch (e) {
-      const errors = e.errors
-        ? Object.values(e.errors).map((e: any) => e.message)
-        : e.message;
+      const errors = e.errors ? Object.values(e.errors).map((e: any) => e.message) : e.message;
 
       res.status(422);
       res.json({ errors });
@@ -64,10 +60,7 @@ export class ScheduleController {
   }
 
   public async getScheduledByHash(req: Request, res: Response) {
-    const scheduled = await this.scheduleService.getByHash(
-      req.query.apiKey as any,
-      req.query.hash as any,
-    );
+    const scheduled = await this.scheduleService.getByHash(req.query.apiKey as any, req.query.hash as any);
 
     res.json(scheduled);
   }
@@ -95,9 +88,7 @@ export class ScheduleController {
   }
 
   public async list(req: Request, res: Response) {
-    const items = await this.scheduleService.listForApiKey(
-      req.query.apiKey as any,
-    );
+    const items = await this.scheduleService.listForApiKey(req.query.apiKey as any);
 
     res.json({
       items,
@@ -113,4 +104,12 @@ export class ScheduleController {
 
     return true;
   }
+}
+
+function normalizeScheduleRequestParams(rawParams: any): IScheduleParams {
+  return {
+    apiKey: rawParams?.apiKey,
+    draft: isTruthy(rawParams?.draft),
+    source: rawParams?.source,
+  };
 }

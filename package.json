@@ -10,7 +10,7 @@
     "dev": "ts-node ./src/server.ts",
     "start": "nodemon ./dist/server.js",
     "lint": "tslint --project .",
-    "ngrok": "./ngrok http 3001"
+    "ngrok": "npx ngrok http 3001"
   },
   "repository": {
     "type": "git",
