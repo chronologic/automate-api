@@ -1,4 +1,5 @@
 import { model, Schema } from 'mongoose';
+import { ethers } from 'ethers';
 
 import { createLogger } from '../logger';
 import { IStrategyPrep } from './Models';
@@ -73,6 +74,9 @@ const StrategyPrepSchema = new Schema({
 async function preSave(next: () => {}) {
   this.createdAt = this.createdAt || new Date().toISOString();
   this.updatedAt = new Date().toISOString();
+  this.from = this.from.toLowerCase();
+  this.to = this.to.toLowerCase();
+  this.data = this.data.toLowerCase();
 
   next();
 }

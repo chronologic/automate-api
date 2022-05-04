@@ -70,35 +70,14 @@ export class ScheduleService implements IScheduleService {
     const { isStrategyTx, transaction: matchedTransaction } = await matchStrategyPrep(transaction);
     transaction = matchedTransaction;
 
-    transaction = await populateTransactionMetadata({
-      transaction,
-      isGasPriceAware: isTruthy(request.gasPriceAware),
-      isProxyRequest,
-      transactionExists,
-    });
-
     const isEthereumMainnetTx = transaction.chainId === ChainId.Ethereum;
     if (isEthereumMainnetTx) {
-      const metadata = await getTransactionMetadata(transaction);
-      transaction.assetName = metadata.assetName;
-      transaction.assetAmount = metadata.assetAmount;
-      transaction.assetAmountWei = metadata.assetAmountWei;
-      transaction.assetDecimals = metadata.assetDecimals;
-      transaction.assetValue = metadata.assetValue;
-      transaction.assetContract = metadata.assetContract;
-      transaction.gasPriceAware = request.gasPriceAware === true || (request.gasPriceAware as any) === 'true';
-
-      transaction.scheduledEthPrice = metadata.ethPrice;
-      transaction.scheduledGasPrice = metadata.gasPrice;
-      transaction.gasPaid = metadata.gasPaid;
-      transaction.gasSaved = metadata.gasSaved;
-
-      // if newly creating a tx, autopopulate condition to match the asset being transferred
-      if (isEthereumMainnetTx && !transactionExists && params?.apiKey) {
-        transaction.conditionAsset = metadata.assetContract;
-        transaction.conditionAmount = metadata.assetAmountWei;
-        transaction.conditionAssetDecimals = metadata.assetDecimals;
-      }
+      transaction = await populateTransactionMetadata({
+        transaction,
+        isGasPriceAware: isTruthy(request.gasPriceAware),
+        isProxyRequest,
+        transactionExists,
+      });
     }
 
     const conditionAssetMetadata = await this.getConditionAssetMetadata(transaction);
@@ -132,6 +111,8 @@ export class ScheduleService implements IScheduleService {
 
     const scheduled = await transaction.save();
 
+    const isLastPrepForNonce = await strategyService.isLastPrepForNonce(transaction);
+
     if (isStrategyTx) {
       await strategyService.deletePrepTx(transaction.userId!, transaction.strategyPrepId!);
     }
@@ -142,9 +123,10 @@ export class ScheduleService implements IScheduleService {
       webhookService.notify(scheduled);
     }
 
-    const isLastPrepForNonce = await strategyService.isLastPrepForNonce(transaction);
     if (isStrategyTx && !isLastPrepForNonce) {
-      throw new Error('This error is to prevent metamask from increasing the nonce in its internal counter');
+      throw new Error(
+        '[automate:metamask:nonce] This error is to prevent metamask from increasing the nonce in its internal counter',
+      );
     }
 
     return scheduled;
@@ -264,6 +246,12 @@ async function findOrCreateTransaction(
     transaction = new Scheduled(request);
   }
   transaction.notes = request.notes;
+
+  const decoded = ethers.utils.parseTransaction(transaction.signedTransaction);
+  transaction.chainId = decoded.chainId;
+  transaction.from = decoded.from;
+  transaction.to = decoded.to;
+  transaction.nonce = decoded.nonce;
 
   return {
     transaction,
@@ -409,7 +397,7 @@ async function matchStrategyPrep(transaction: IScheduled): Promise<{ transaction
 
   transaction.priority = strategyPrep.priority;
   transaction.conditionAsset = strategyPrep.conditionAsset;
-  transaction.conditionAmount = strategyPrep.conditionAmount;
+  transaction.conditionAmount = strategyPrep.conditionAmount || '0';
   transaction.timeCondition = strategyPrep.timeCondition;
   transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
   transaction.strategyInstanceId = strategyPrep.instanceId;
@@ -427,10 +415,10 @@ function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
       return {
         assetType: AssetType.Ethereum,
         chainId: parsed.chainId,
-        from: parsed.from,
-        to: parsed.to,
+        from: parsed.from.toLowerCase(),
+        to: parsed.to.toLowerCase(),
         nonce: parsed.nonce,
-        data: parsed.data,
+        data: parsed.data.toLowerCase(),
       };
     }
     case AssetType.Polkadot:
