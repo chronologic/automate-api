@@ -103,10 +103,7 @@ export class ScheduleService implements IScheduleService {
     // this should still be the case
     // otherwise we have a problem
     if (!transactionExists) {
-      const duplicate = await findBySignedTransaction(request.signedTransaction);
-      if (duplicate) {
-        throw new Error(`Duplicate transaction ${request.signedTransaction}`);
-      }
+      await checkForDuplicateTx(request.signedTransaction);
     }
 
     const scheduled = await transaction.save();
@@ -416,5 +413,12 @@ function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
     default: {
       throw new Error('Implementme!');
     }
+  }
+}
+
+async function checkForDuplicateTx(signedTransaction: string): Promise<void> {
+  const duplicate = await findBySignedTransaction(signedTransaction);
+  if (duplicate) {
+    throw new Error(`Duplicate transaction ${signedTransaction}`);
   }
 }
