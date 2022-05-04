@@ -20,8 +20,8 @@ import { UserService } from './user';
 import tgBot from './telegram';
 import { createTimedCache, isTruthy, mapToScheduledForUser } from '../utils';
 import { CREDITS } from '../env';
+import { ChainId, MINUTE_MILLIS } from '../constants';
 import webhookService from './webhook';
-import { MINUTE_MILLIS } from '../constants';
 import { strategyService } from './strategy';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
@@ -76,6 +76,30 @@ export class ScheduleService implements IScheduleService {
       isProxyRequest,
       transactionExists,
     });
+
+    const isEthereumMainnetTx = transaction.chainId === ChainId.Ethereum;
+    if (isEthereumMainnetTx) {
+      const metadata = await getTransactionMetadata(transaction);
+      transaction.assetName = metadata.assetName;
+      transaction.assetAmount = metadata.assetAmount;
+      transaction.assetAmountWei = metadata.assetAmountWei;
+      transaction.assetDecimals = metadata.assetDecimals;
+      transaction.assetValue = metadata.assetValue;
+      transaction.assetContract = metadata.assetContract;
+      transaction.gasPriceAware = request.gasPriceAware === true || (request.gasPriceAware as any) === 'true';
+
+      transaction.scheduledEthPrice = metadata.ethPrice;
+      transaction.scheduledGasPrice = metadata.gasPrice;
+      transaction.gasPaid = metadata.gasPaid;
+      transaction.gasSaved = metadata.gasSaved;
+
+      // if newly creating a tx, autopopulate condition to match the asset being transferred
+      if (isEthereumMainnetTx && !transactionExists && params?.apiKey) {
+        transaction.conditionAsset = metadata.assetContract;
+        transaction.conditionAmount = metadata.assetAmountWei;
+        transaction.conditionAssetDecimals = metadata.assetDecimals;
+      }
+    }
 
     const conditionAssetMetadata = await this.getConditionAssetMetadata(transaction);
     transaction.conditionAssetName = conditionAssetMetadata.name;
