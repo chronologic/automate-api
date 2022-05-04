@@ -18,7 +18,7 @@ import tgBot from './telegram';
 import { createTimedCache, mapToScheduledForUser } from '../utils';
 import { CREDITS } from '../env';
 import webhookService from './webhook';
-import { MINUTE_MILLIS } from '../constants';
+import { ChainId, MINUTE_MILLIS } from '../constants';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -75,26 +75,28 @@ export class ScheduleService implements IScheduleService {
 
       transaction.userId = user.id;
     }
+    let isEthereumMainnetTx = transaction.chainId === ChainId.Ethereum;
+    if (isEthereumMainnetTx) {
+      const metadata = await this.getTransactionMetadata(transaction);
+      transaction.assetName = metadata.assetName;
+      transaction.assetAmount = metadata.assetAmount;
+      transaction.assetAmountWei = metadata.assetAmountWei;
+      transaction.assetDecimals = metadata.assetDecimals;
+      transaction.assetValue = metadata.assetValue;
+      transaction.assetContract = metadata.assetContract;
+      transaction.gasPriceAware = request.gasPriceAware === true || (request.gasPriceAware as any) === 'true';
 
-    const metadata = await this.getTransactionMetadata(transaction);
-    transaction.assetName = metadata.assetName;
-    transaction.assetAmount = metadata.assetAmount;
-    transaction.assetAmountWei = metadata.assetAmountWei;
-    transaction.assetDecimals = metadata.assetDecimals;
-    transaction.assetValue = metadata.assetValue;
-    transaction.assetContract = metadata.assetContract;
-    transaction.gasPriceAware = request.gasPriceAware === true || (request.gasPriceAware as any) === 'true';
+      transaction.scheduledEthPrice = metadata.ethPrice;
+      transaction.scheduledGasPrice = metadata.gasPrice;
+      transaction.gasPaid = metadata.gasPaid;
+      transaction.gasSaved = metadata.gasSaved;
 
-    transaction.scheduledEthPrice = metadata.ethPrice;
-    transaction.scheduledGasPrice = metadata.gasPrice;
-    transaction.gasPaid = metadata.gasPaid;
-    transaction.gasSaved = metadata.gasSaved;
-
-    // if newly creating a tx, autopopulate condition to match the asset being transferred
-    if (!transactionExists && params?.apiKey) {
-      transaction.conditionAsset = metadata.assetContract;
-      transaction.conditionAmount = metadata.assetAmountWei;
-      transaction.conditionAssetDecimals = metadata.assetDecimals;
+      // if newly creating a tx, autopopulate condition to match the asset being transferred
+      if (isEthereumMainnetTx && !transactionExists && params?.apiKey) {
+        transaction.conditionAsset = metadata.assetContract;
+        transaction.conditionAmount = metadata.assetAmountWei;
+        transaction.conditionAssetDecimals = metadata.assetDecimals;
+      }
     }
 
     const conditionAssetMetadata = await this.getConditionAssetMetadata(transaction);
