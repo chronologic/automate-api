@@ -9,6 +9,7 @@ import {
   IStrategyPrepTx,
   IStrategyPrepTxWithConditions,
 } from '../models/Models';
+import Scheduled from '../models/ScheduledSchema';
 import StrategyPrep from '../models/StrategyPrepSchema';
 
 const logger = createLogger('strategy');
@@ -64,6 +65,10 @@ async function deletePrepInstance(userId: string, instanceId: string): Promise<v
   await StrategyPrep.deleteMany({
     userId,
     instanceId,
+  });
+  await Scheduled.deleteMany({
+    userId,
+    strategyInstanceId: instanceId,
   });
 }
 
