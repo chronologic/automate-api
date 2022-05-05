@@ -76,7 +76,7 @@ export class Processor {
   private async processTransaction(
     scheduled: IScheduled,
     blockNum: number,
-    transactonList: IScheduled[],
+    transactionList: IScheduled[],
   ): Promise<boolean> {
     const {
       transactionHash,
@@ -88,7 +88,7 @@ export class Processor {
       assetValue,
       executionAttempts,
       lastExecutionAttempt,
-    } = await this.transactionExecutor.execute(scheduled, blockNum, transactonList);
+    } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
 
@@ -130,7 +130,7 @@ export class Processor {
       tgBot.executed({ value: assetValue, savings: gasSaved });
 
       webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
-      await this.markLowerPriorityTransactionsStale(scheduled, transactonList);
+      await this.markLowerPriorityTransactionsStale(scheduled, transactionList);
       return true;
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
@@ -142,8 +142,8 @@ export class Processor {
     return false;
   }
 
-  private async markLowerPriorityTransactionsStale(executed: IScheduled, transactonList: IScheduled[]) {
-    for (const transaction of transactonList) {
+  private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
+    for (const transaction of transactionList) {
       const isLowerPriority: boolean = transaction.priority > executed.priority;
       if (transaction._id !== executed._id && transaction.nonce === executed.nonce && isLowerPriority) {
         transaction.status = Status.StaleNonce;
