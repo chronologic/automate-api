@@ -19,7 +19,7 @@ interface IValidationResult {
 }
 
 export interface ITransactionExecutor {
-  execute(scheduled: IScheduled, blockNum: number, transactonList: IScheduled[]): Promise<IExecuteStatus>;
+  execute(scheduled: IScheduled, blockNum: number, transactionList?: IScheduled[]): Promise<IExecuteStatus>;
 }
 export class TransactionExecutor implements ITransactionExecutor {
   public static async getSenderNextNonce({ chainId, from }): Promise<number> {
@@ -28,7 +28,11 @@ export class TransactionExecutor implements ITransactionExecutor {
 
   private static queue: Set<string> = new Set<string>();
 
-  public async execute(scheduled: IScheduled, blockNum: number, transactonList: IScheduled[]): Promise<IExecuteStatus> {
+  public async execute(
+    scheduled: IScheduled,
+    blockNum: number,
+    transactionList: IScheduled[],
+  ): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     if (TransactionExecutor.queue.has(id)) {
       logger.debug(`${id} Processing...`);
@@ -37,7 +41,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     TransactionExecutor.queue.add(id);
     try {
-      return await this.executeTransaction(scheduled, blockNum, transactonList);
+      return await this.executeTransaction(scheduled, blockNum, transactionList);
     } finally {
       TransactionExecutor.queue.delete(id);
     }
@@ -46,7 +50,7 @@ export class TransactionExecutor implements ITransactionExecutor {
   private async executeTransaction(
     scheduled: IScheduled,
     blockNum: number,
-    transactonList: IScheduled[],
+    transactionList: IScheduled[],
   ): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     const provider = getProvider(scheduled.chainId);
@@ -60,7 +64,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
     if (hasCorrectNonce.senderNonceHigher) {
-      await this.markTransactionsStale(scheduled, transactonList);
+      await this.markTransactionsStale(scheduled, transactionList);
     }
     if (!hasCorrectNonce.res) {
       return hasCorrectNonce.status!;
@@ -195,8 +199,8 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     return { res: true };
   }
-  private async markTransactionsStale(scheduled: IScheduled, transactonList: IScheduled[]) {
-    for (const transaction of transactonList) {
+  private async markTransactionsStale(scheduled: IScheduled, transactionList: IScheduled[]) {
+    for (const transaction of transactionList) {
       if (transaction._id !== scheduled._id && transaction.nonce === scheduled.nonce) {
         transaction.status = Status.StaleNonce;
         transaction.update({ status: Status.StaleNonce }).exec();
