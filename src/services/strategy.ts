@@ -104,7 +104,7 @@ async function isLastPrepForNonce(transaction: IScheduled): Promise<boolean> {
   const isLastPrep = prepIndex != null && prepIndex === res.length - 1;
 
   logger.debug(
-    `Tx ${transaction._id} is ${isLastPrep ? '' : 'NOT'} last prep for nonce ${transaction.nonce} for user ${
+    `Tx ${transaction._id} is${isLastPrep ? ' ' : ' NOT '}last prep for nonce ${transaction.nonce} for user ${
       transaction.userId
     }`,
   );
