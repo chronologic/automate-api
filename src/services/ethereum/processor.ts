@@ -19,10 +19,10 @@ export class Processor {
   public async process() {
     logger.info(`START processing...`);
 
-    const scheduled = await this.scheduleService.getPending(AssetType.Ethereum);
-    const groups = this.groupBySenderAndChain(scheduled);
+    const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
+    const groups = this.groupBySenderAndChain(scheduleds);
 
-    logger.debug(`Found ${scheduled.length} pending transactions in ${groups.size} groups`);
+    logger.debug(`Found ${scheduleds.length} pending transactions in ${groups.size} groups`);
 
     const inProgress = [];
     groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions)));
@@ -57,13 +57,14 @@ export class Processor {
     return sortedByPriority;
   }
 
-  private async processTransactions(scheduled: IScheduled[]) {
-    const sortedByPriority = this.sortByPriority(scheduled);
+  private async processTransactions(scheduleds: IScheduled[]) {
+    const sortedByPriority = this.sortByPriority(scheduleds);
+    const blockNum = await getBlockNumber(scheduleds[0].chainId);
 
     for (const transaction of sortedByPriority) {
       let res = false;
       try {
-        res = await this.processTransaction(transaction, sortedByPriority);
+        res = await this.processTransaction(transaction, sortedByPriority, blockNum);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
       }
@@ -73,9 +74,11 @@ export class Processor {
     }
   }
 
-  private async processTransaction(scheduled: IScheduled, transactionList: IScheduled[]): Promise<boolean> {
-    const blockNum = await getBlockNumber(scheduled.chainId);
-
+  private async processTransaction(
+    scheduled: IScheduled,
+    transactionList: IScheduled[],
+    blockNum: number,
+  ): Promise<boolean> {
     const {
       transactionHash,
       status,
