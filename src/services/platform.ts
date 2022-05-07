@@ -3,6 +3,7 @@ import { utils } from 'ethers';
 import { IPlatform } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import { createLogger } from '../logger';
+import { ChainId } from '../constants';
 
 const logger = createLogger('platformService');
 
@@ -12,13 +13,18 @@ async function matchTxToPlatform(tx: string): Promise<IPlatform> {
     const to = parsed.to.toLowerCase();
     const data = parsed.data.toLowerCase();
     const platforms = await Platform.find();
-
     for (const platform of platforms) {
-      for (const contract of platform.whitelist) {
-        const contractLower = contract.toLowerCase();
-        const contractNoPrefix = contractLower.substr(2);
-        if (to === contractLower || data.includes(contractNoPrefix)) {
-          return platform;
+      const platformArbitrum = platform.whitelist.ethereum[ChainId.Arbitrum];
+      const wildcard = '*';
+      if (platformArbitrum === wildcard) {
+        return platform;
+      } else {
+        for (const contract of platformArbitrum) {
+          const contractLower = contract.toLowerCase();
+          const contractNoPrefix = contractLower.substr(2);
+          if (to === contractLower || data.includes(contractNoPrefix)) {
+            return platform;
+          }
         }
       }
     }

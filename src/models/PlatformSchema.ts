@@ -14,7 +14,13 @@ const PlatformSchema = new Schema({
   credits: {
     type: Number,
   },
-  whitelist: [String],
+  whitelist: {
+    networkName: {
+      chainId: {
+        type: [[String], String],
+      },
+    },
+  },
   webhook: {
     type: String,
   },
