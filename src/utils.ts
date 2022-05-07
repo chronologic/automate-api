@@ -94,3 +94,7 @@ export function mapToScheduledForUser(scheduled: IScheduled): IScheduledForUser 
 export function isTruthy(value: any): boolean {
   return value === 'true' || value === true;
 }
+
+export async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve, reject) => setTimeout(resolve, ms));
+}

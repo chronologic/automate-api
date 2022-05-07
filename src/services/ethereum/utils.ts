@@ -35,6 +35,11 @@ function getSenderNextNonce({ chainId, from }): Promise<number> {
   return provider.getTransactionCount(from);
 }
 
+export async function getBlockNumber(chainId: number): Promise<number> {
+  const provider = getProvider(chainId);
+  return provider.getBlockNumber();
+}
+
 export function getProvider(chainId: number): ethers.providers.BaseProvider {
   let provider: ethers.providers.BaseProvider;
   switch (chainId) {

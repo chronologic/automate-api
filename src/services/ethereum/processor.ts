@@ -5,7 +5,7 @@ import { IScheduleService } from '../schedule';
 import sendMail from '../mail';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
-import { fetchPriceStats } from './utils';
+import { fetchPriceStats, getBlockNumber } from './utils';
 import tgBot from '../telegram';
 import webhookService from '../webhook';
 
@@ -16,8 +16,8 @@ export class Processor {
     this.scheduleService = scheduleService;
     this.transactionExecutor = transactionExecutor;
   }
-  public async process(blockNum: number) {
-    logger.info(`Processing block ${blockNum}...`);
+  public async process() {
+    logger.info(`START processing...`);
 
     const scheduled = await this.scheduleService.getPending(AssetType.Ethereum);
     const groups = this.groupBySenderAndChain(scheduled);
@@ -25,9 +25,11 @@ export class Processor {
     logger.debug(`Found ${scheduled.length} pending transactions in ${groups.size} groups`);
 
     const inProgress = [];
-    groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions, blockNum)));
+    groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions)));
 
-    return Promise.all(inProgress);
+    await Promise.all(inProgress);
+
+    logger.info(`END processed`);
   }
 
   private groupBySenderAndChain(scheduled: IScheduled[]) {
@@ -55,17 +57,15 @@ export class Processor {
     return sortedByPriority;
   }
 
-  private async processTransactions(scheduled: IScheduled[], blockNum: number) {
+  private async processTransactions(scheduled: IScheduled[]) {
     const sortedByPriority = this.sortByPriority(scheduled);
 
     for (const transaction of sortedByPriority) {
       let res = false;
       try {
-        res = await this.processTransaction(transaction, blockNum, sortedByPriority);
+        res = await this.processTransaction(transaction, sortedByPriority);
       } catch (e) {
         logger.error(`Processing ${transaction._id} failed with ${e}`);
-        // tslint:disable-next-line: no-console
-        // console.log(e);
       }
       if (!res) {
         break;
@@ -73,11 +73,9 @@ export class Processor {
     }
   }
 
-  private async processTransaction(
-    scheduled: IScheduled,
-    blockNum: number,
-    transactionList: IScheduled[],
-  ): Promise<boolean> {
+  private async processTransaction(scheduled: IScheduled, transactionList: IScheduled[]): Promise<boolean> {
+    const blockNum = await getBlockNumber(scheduled.chainId);
+
     const {
       transactionHash,
       status,
@@ -128,8 +126,8 @@ export class Processor {
       );
 
       tgBot.executed({ value: assetValue, savings: gasSaved });
-
       webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
+
       await this.markLowerPriorityTransactionsStale(scheduled, transactionList);
       return true;
     } else if (scheduled.conditionBlock === 0) {
@@ -146,7 +144,6 @@ export class Processor {
     for (const transaction of transactionList) {
       const isLowerPriority: boolean = transaction.priority > executed.priority;
       if (transaction._id !== executed._id && transaction.nonce === executed.nonce && isLowerPriority) {
-        transaction.status = Status.StaleNonce;
         transaction.update({ status: Status.StaleNonce }).exec();
       }
     }
