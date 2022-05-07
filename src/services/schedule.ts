@@ -145,13 +145,20 @@ export class ScheduleService implements IScheduleService {
     return res;
   }
 
-  public getPending(assetType: AssetType): Promise<IScheduled[]> {
+  public async getPending(assetType: AssetType): Promise<IScheduled[]> {
     let assetTypeCondition: AssetType | AssetType[] = assetType;
 
     if ([undefined, AssetType.Ethereum].includes(assetType)) {
       assetTypeCondition = [undefined, assetType];
     }
-    return Scheduled.where('status', Status.Pending).where('assetType', assetTypeCondition).exec();
+    const pending: IScheduled[] = await Scheduled.where('status', Status.Pending)
+      .where('assetType', assetTypeCondition)
+      .exec();
+
+    return pending.map((item) => {
+      item.priority = item.priority || 1;
+      return item;
+    });
   }
 
   public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {

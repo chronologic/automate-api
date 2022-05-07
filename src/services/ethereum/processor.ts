@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { groupBy } from 'lodash';
 
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
@@ -20,46 +21,61 @@ export class Processor {
     logger.info(`START processing...`);
 
     const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
-    const groups = this.groupBySenderAndChain(scheduleds);
 
-    logger.debug(`Found ${scheduleds.length} pending transactions in ${groups.size} groups`);
+    logger.info(`Found ${scheduleds.length} pending transactions`);
 
-    const inProgress = [];
-    groups.forEach((transactions) => inProgress.push(this.processTransactions(transactions)));
-
-    await Promise.all(inProgress);
+    await this.processTransactions(scheduleds);
 
     logger.info(`END processed`);
   }
 
-  private groupBySenderAndChain(scheduled: IScheduled[]) {
-    const makeKey = (sender: string, chainId: number) => `${sender}-${chainId.toString()}`;
-    const groups: Map<string, IScheduled[]> = new Map<string, IScheduled[]>();
+  private async processTransactions(scheduleds: IScheduled[]): Promise<void> {
+    const groupedByChain = this.groupByChain(scheduleds);
+    const chainIds = Object.keys(groupedByChain).map(Number);
 
-    scheduled.forEach((s) => {
-      const key = makeKey(s.from, s.chainId);
-      if (s.priority === undefined) {
-        s.priority = 1;
-      }
+    logger.info(`Processing transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
 
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
+    const promisesForChain = chainIds.map((chainId) =>
+      this.processTransactionsForChain(chainId, groupedByChain[chainId]),
+    );
 
-      groups.get(key).push(s);
+    await Promise.all(promisesForChain);
+  }
+
+  private groupByChain(scheduleds: IScheduled[]): { [chainId: number]: IScheduled[] } {
+    const groups = groupBy(scheduleds, 'chainId');
+
+    const res = {};
+
+    Object.keys(groups).forEach((key) => {
+      res[Number(key)] = groups[key];
     });
 
-    return groups;
-  }
-  private sortByPriority(scheduled: IScheduled[]) {
-    const sortedByPriority = scheduled.sort((a, b) => a.nonce - b.nonce || a.priority - b.priority);
-
-    return sortedByPriority;
+    return res;
   }
 
-  private async processTransactions(scheduleds: IScheduled[]) {
-    const sortedByPriority = this.sortByPriority(scheduleds);
+  private async processTransactionsForChain(chainId: number, scheduleds: IScheduled[]): Promise<void> {
     const blockNum = await getBlockNumber(scheduleds[0].chainId);
+    logger.info(`Block number for chain ${chainId} is ${blockNum}`);
+
+    const groupsForSender = this.groupBySender(scheduleds);
+    const senders = Object.keys(groupsForSender);
+
+    logger.info(`Processing ${senders.length} groups for unique senders on chain ${chainId}`);
+
+    const promisesForSender = senders.map((sender) =>
+      this.processTransactionsForChainAndSender(groupsForSender[sender], blockNum),
+    );
+
+    await Promise.all(promisesForSender);
+  }
+
+  private groupBySender(scheduleds: IScheduled[]): { [address: string]: IScheduled[] } {
+    return groupBy(scheduleds, 'from');
+  }
+
+  private async processTransactionsForChainAndSender(scheduleds: IScheduled[], blockNum: number) {
+    const sortedByPriority = this.sortByPriority(scheduleds);
 
     for (const transaction of sortedByPriority) {
       let res = false;
@@ -72,6 +88,12 @@ export class Processor {
         break;
       }
     }
+  }
+
+  private sortByPriority(scheduled: IScheduled[]) {
+    const sortedByPriority = scheduled.sort((a, b) => a.nonce - b.nonce || a.priority - b.priority);
+
+    return sortedByPriority;
   }
 
   private async processTransaction(
