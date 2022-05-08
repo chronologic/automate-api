@@ -1,4 +1,3 @@
-import { ethers } from 'ethers';
 import { ChainId, SECOND_MILLIS } from '../../constants';
 
 import { AssetType, Status } from '../../models/Models';

@@ -98,3 +98,8 @@ export function isTruthy(value: any): boolean {
 export async function sleep(ms: number): Promise<void> {
   return new Promise((resolve, reject) => setTimeout(resolve, ms));
 }
+
+export async function waitUntil(timestamp: number): Promise<void> {
+  const now = Date.now();
+  return sleep(timestamp - now);
+}

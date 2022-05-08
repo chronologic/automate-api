@@ -20,11 +20,15 @@ export class Processor {
   public async process() {
     logger.info(`START processing...`);
 
-    const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
+    try {
+      const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
 
-    logger.debug(`Found ${scheduleds.length} pending transactions`);
+      logger.debug(`Found ${scheduleds.length} pending transactions`);
 
-    await this.processTransactions(scheduleds);
+      await this.processTransactions(scheduleds);
+    } catch (e) {
+      logger.error(e);
+    }
 
     logger.info(`END processed`);
   }
