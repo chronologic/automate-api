@@ -22,7 +22,7 @@ export class Processor {
 
     const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
 
-    logger.info(`Found ${scheduleds.length} pending transactions`);
+    logger.debug(`Found ${scheduleds.length} pending transactions`);
 
     await this.processTransactions(scheduleds);
 
@@ -33,7 +33,7 @@ export class Processor {
     const groupedByChain = this.groupByChain(scheduleds);
     const chainIds = Object.keys(groupedByChain).map(Number);
 
-    logger.info(`Processing transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
+    logger.debug(`Processing transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
 
     const promisesForChain = chainIds.map((chainId) =>
       this.processTransactionsForChain(chainId, groupedByChain[chainId]),
@@ -56,12 +56,12 @@ export class Processor {
 
   private async processTransactionsForChain(chainId: number, scheduleds: IScheduled[]): Promise<void> {
     const blockNum = await getBlockNumber(scheduleds[0].chainId);
-    logger.info(`Block number for chain ${chainId} is ${blockNum}`);
+    logger.debug(`Block number for chain ${chainId} is ${blockNum}`);
 
     const groupsForSender = this.groupBySender(scheduleds);
     const senders = Object.keys(groupsForSender);
 
-    logger.info(`Processing ${senders.length} groups for unique senders on chain ${chainId}`);
+    logger.debug(`Processing ${senders.length} groups for unique senders on chain ${chainId}`);
 
     const promisesForSender = senders.map((sender) =>
       this.processTransactionsForChainAndSender(groupsForSender[sender], blockNum),
