@@ -5,11 +5,7 @@ import { UnauthorizedError } from '../errors';
 import { RequestWithAuth } from '../models/Models';
 import { UserService } from '../services/user';
 
-export const authMiddleware = async (
-  req: RequestWithAuth,
-  res: Response,
-  next: NextFunction,
-) => {
+export const authMiddleware = async (req: RequestWithAuth, res: Response, next: NextFunction) => {
   const token = decodeAuthHeader(req.headers.authorization);
 
   if (!token) {
@@ -17,7 +13,14 @@ export const authMiddleware = async (
     return next(new UnauthorizedError());
   }
 
-  const user = await UserService.validateApiKey(token);
+  let user;
+
+  try {
+    user = await UserService.validateApiKey(token);
+  } catch (e) {
+    logger.error(e);
+    return next(e);
+  }
 
   if (!user) {
     logger.debug('User not found');

@@ -1,0 +1,48 @@
+name: Deploy to Heroku
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: automate-api
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@v3.12.12
+        with:
+          heroku_app_name: cl-sentinel-api
+          heroku_email: ${{secrets.HEROKU_EMAIL}}
+          heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+          buildpack: https://github.com/heroku/heroku-buildpack-nodejs.git
+        env:
+          HD_PORT: ${{secrets.PORT}}
+          HD_SALT: ${{secrets.SALT}}
+          HD_KEEN_PROJECT: ${{secrets.KEEN_PROJECT}}
+          HD_KEEN_WRITE_KEY: ${{secrets.KEEN_WRITE_KEY}}
+          HD_ETHERSCAN_API_KEY: ${{secrets.ETHERSCAN_API_KEY}}
+          HD_ETHEREUM_SUPPORT: ${{secrets.ETHEREUM_SUPPORT}}
+          HD_POLKADOT_SUPPORT: ${{secrets.POLKADOT_SUPPORT}}
+          HD_POLKADOT_URI: ${{secrets.POLKADOT_URI}}
+          HD_UI_URL: ${{secrets.UI_URL}}
+          HD_ARBITRUM_URI: ${{secrets.ARBITRUM_URI}}
+          HD_ARBITRUM_RINKEBY_URI: ${{secrets.ARBITRUM_RINKEBY_URI}}
+          HD_ETHEREUM_URI: ${{secrets.ETHEREUM_URI}}
+          HD_ROPSTEN_URI: ${{secrets.ROPSTEN_URI}}
+          HD_PAYMENT: ${{secrets.PAYMENT}}
+          HD_PAYMENT_ADDRESSES: ${{secrets.PAYMENT_ADDRESSES}}
+          HD_DEV_PAYMENT_EMAIL: ${{secrets.DEV_PAYMENT_EMAIL}}
+          HD_DEV_PAYMENT_REFUND_ADDRESS: ${{secrets.DEV_PAYMENT_REFUND_ADDRESS}}
+          HD_SENDGRID_API_KEY: ${{secrets.SENDGRID_API_KEY}}
+          HD_SUCCESS_EMAILS: ${{secrets.SUCCESS_EMAILS}}
+          HD_FAILURE_EMAILS: ${{secrets.FAILURE_EMAILS}}
+          HD_DELAYED_EMAILS: ${{secrets.DELAYED_EMAILS}}
+          HD_EMAIL_RECIPIENTS: ${{secrets.EMAIL_RECIPIENTS}}
+          HD_EXTERNAL_RECIPIENTS: ${{secrets.EXTERNAL_RECIPIENTS}}
+          HD_COUPON_CODES: ${{secrets.COUPON_CODES}}
+          HD_TELEGRAM_BOT_TOKEN: ${{secrets.TELEGRAM_BOT_TOKEN}}
+          HD_TELEGRAM_CHAT_ID: ${{secrets.TELEGRAM_CHAT_ID}}
+          HD_GAS_PRICE_FEED_URL: ${{secrets.GAS_PRICE_FEED_URL}}
+          HD_CURRENT_GAS_PRICE_FEED_URL: ${{secrets.CURRENT_GAS_PRICE_FEED_URL}}
+          HD_SKIP_TX_BROADCAST: ${{secrets.SKIP_TX_BROADCAST}}
+          HD_DB_URI: ${{secrets.DB_URI}}

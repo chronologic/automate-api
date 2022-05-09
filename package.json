@@ -10,7 +10,8 @@
     "dev": "ts-node ./src/server.ts",
     "start": "nodemon ./dist/server.js",
     "lint": "tslint --project .",
-    "ngrok": "./ngrok http 3001"
+    "ngrok": "npx ngrok http 3001",
+    "buildHerokuDeployYml": "node ./buildHerokuDeployYml.js"
   },
   "repository": {
     "type": "git",
@@ -69,7 +70,8 @@
     "tslint": "^6.1.2",
     "tslint-config-prettier": "^1.18.0",
     "typemoq": "^2.1.0",
-    "typescript": "^3.9.7"
+    "typescript": "^3.9.7",
+    "yaml": "^2.0.1"
   },
   "husky": {
     "hooks": {

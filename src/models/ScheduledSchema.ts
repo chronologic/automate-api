@@ -207,7 +207,16 @@ const ScheduledSchema = new Schema({
   paymentTx: {
     type: String,
   },
+  priority: {
+    type: Number,
+  },
   userId: {
+    type: String,
+  },
+  strategyInstanceId: {
+    type: String,
+  },
+  strategyPrepId: {
     type: String,
   },
   notes: {

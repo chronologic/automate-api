@@ -1,7 +1,8 @@
-import { ethers } from 'ethers';
+import { ChainId, SECOND_MILLIS } from '../../constants';
 
 import { AssetType, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
+import { sleep } from '../../utils';
 import { ScheduleService } from '../schedule';
 import logger from './logger';
 import { Processor } from './processor';
@@ -10,20 +11,30 @@ import { fetchTransactionMetadata } from './utils';
 
 export class Watcher {
   public static async init() {
-    const transactionExecutor = new TransactionExecutor();
     await Watcher.fillMissingMetadata();
     await Watcher.fillMissingAssetType();
 
+    const transactionExecutor = new TransactionExecutor();
     const processor = new Processor(new ScheduleService(), transactionExecutor);
 
-    ethers.getDefaultProvider().on('block', (blockNum: number) => processor.process(blockNum));
+    Watcher.processInLoop(processor);
+  }
+
+  private static async processInLoop(processor: Processor) {
+    try {
+      await Promise.all([sleep(10 * SECOND_MILLIS), processor.process()]);
+    } catch (e) {
+      logger.error(e?.message);
+    } finally {
+      Watcher.processInLoop(processor);
+    }
   }
 
   private static async fillMissingMetadata(): Promise<void> {
     const res = await Scheduled.find({
       assetType: { $in: [AssetType.Ethereum, null, undefined] },
       status: { $in: [Status.Completed, Status.Pending] },
-      chainId: 1,
+      chainId: ChainId.Ethereum,
       $or: [
         { assetName: { $exists: false } },
         { assetAmount: { $exists: false } },

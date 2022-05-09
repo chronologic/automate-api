@@ -90,3 +90,16 @@ export function mapToScheduledForUser(scheduled: IScheduled): IScheduledForUser 
     gasSaved: scheduled.gasSaved,
   };
 }
+
+export function isTruthy(value: any): boolean {
+  return value === 'true' || value === true;
+}
+
+export async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve, reject) => setTimeout(resolve, ms));
+}
+
+export async function waitUntil(timestamp: number): Promise<void> {
+  const now = Date.now();
+  return sleep(timestamp - now);
+}
