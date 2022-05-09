@@ -79,19 +79,57 @@ export class Processor {
   }
 
   private async processTransactionsForChainAndSender(scheduleds: IScheduled[], blockNum: number) {
-    const sortedByPriority = this.sortByPriority(scheduleds);
+    const groupedByNonce = this.groupByNonce(scheduleds);
+    const nonces = Object.keys(groupedByNonce);
 
-    for (const transaction of sortedByPriority) {
-      let res = false;
-      try {
-        res = await this.processTransaction(transaction, sortedByPriority, blockNum);
-      } catch (e) {
-        logger.error(`Processing ${transaction._id} failed with ${e}`);
-      }
-      if (!res) {
-        break;
+    logger.debug(`Processing ${nonces.length} nonces for sender ${scheduleds[0].from}: ${nonces.join(', ')}`);
+
+    for (const nonce of nonces) {
+      const transactionsForNonce = groupedByNonce[nonce];
+      logger.debug(`Processing ${transactionsForNonce.length} txs for sender ${scheduleds[0].from} and nonce ${nonce}`);
+
+      const sortedByPriority = this.sortByPriority(transactionsForNonce);
+
+      for (const transaction of sortedByPriority) {
+        let executed = false;
+        let conditionMet = false;
+        logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
+        try {
+          const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
+          executed = res.executed;
+          conditionMet = res.conditionMet;
+        } catch (e) {
+          logger.error(`${transaction._id} processing failed with ${e}`);
+        }
+        logger.debug(
+          `${transaction._id} nonce: ${transaction.nonce} priority: ${
+            transaction.priority
+          } processed with result ${JSON.stringify({
+            executed,
+            conditionMet,
+          })}`,
+        );
+        if (conditionMet) {
+          logger.debug(
+            `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
+          );
+          await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
+          break;
+        }
       }
     }
+  }
+
+  private groupByNonce(scheduleds: IScheduled[]): { [nonce: number]: IScheduled[] } {
+    const groups = groupBy(scheduleds, 'nonce');
+
+    const res = {};
+
+    Object.keys(groups).forEach((key) => {
+      res[Number(key)] = groups[key];
+    });
+
+    return res;
   }
 
   private sortByPriority(scheduled: IScheduled[]) {
@@ -104,9 +142,10 @@ export class Processor {
     scheduled: IScheduled,
     transactionList: IScheduled[],
     blockNum: number,
-  ): Promise<boolean> {
+  ): Promise<{ executed: boolean; conditionMet: boolean }> {
     const {
       transactionHash,
+      conditionMet,
       status,
       error,
       executedAt,
@@ -116,6 +155,7 @@ export class Processor {
       executionAttempts,
       lastExecutionAttempt,
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
+
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
 
@@ -157,8 +197,7 @@ export class Processor {
       tgBot.executed({ value: assetValue, savings: gasSaved });
       webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
 
-      await this.markLowerPriorityTransactionsStale(scheduled, transactionList);
-      return true;
+      return { executed: true, conditionMet };
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -166,13 +205,25 @@ export class Processor {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
     }
 
-    return false;
+    return { executed: false, conditionMet };
   }
 
   private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
+    logger.debug(`Marking lower priority txs for ${executed._id} as stale`);
     for (const transaction of transactionList) {
       const isLowerPriority: boolean = transaction.priority > executed.priority;
       if (transaction._id !== executed._id && transaction.nonce === executed.nonce && isLowerPriority) {
+        logger.debug(`Marking tx ${transaction._id} as stale`);
+        transaction.update({ status: Status.StaleNonce }).exec();
+      }
+    }
+  }
+
+  private async markOtherPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
+    logger.debug(`Marking lower priority txs for ${executed._id} as stale`);
+    for (const transaction of transactionList) {
+      if (transaction._id !== executed._id && transaction.nonce === executed.nonce) {
+        logger.debug(`Marking tx ${transaction._id} as stale`);
         transaction.update({ status: Status.StaleNonce }).exec();
       }
     }

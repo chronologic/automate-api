@@ -35,8 +35,8 @@ export class TransactionExecutor implements ITransactionExecutor {
   ): Promise<IExecuteStatus> {
     const id = scheduled._id.toString();
     if (TransactionExecutor.queue.has(id)) {
-      logger.debug(`${id} Processing...`);
-      return { status: Status.Pending };
+      logger.debug(`${id} already rocessing...`);
+      return { status: Status.Pending, conditionMet: false };
     }
 
     TransactionExecutor.queue.add(id);
@@ -63,9 +63,9 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
-    if (hasCorrectNonce.senderNonceHigher) {
-      await this.markTransactionsStale(scheduled, transactionList);
-    }
+    // if (hasCorrectNonce.senderNonceHigher) {
+    //   await this.markTransactionsStale(scheduled, transactionList);
+    // }
     if (!hasCorrectNonce.res) {
       return hasCorrectNonce.status!;
     }
@@ -78,14 +78,14 @@ export class TransactionExecutor implements ITransactionExecutor {
       return this.pending;
     }
 
-    const isConditionMet = await this.isConditionMet(scheduled, transaction, provider);
+    const isBalanceAndTimeConditionMet = await this.isBalanceAndTimeConditionMet(scheduled, transaction, provider);
     let isGasPriceConditionMet = true;
-    if (isConditionMet && scheduled.gasPriceAware) {
+    if (isBalanceAndTimeConditionMet && scheduled.gasPriceAware) {
       logger.debug(`${id} checking gas price...`);
       isGasPriceConditionMet = await this.isGasPriceConditionMet(scheduled, transaction);
     }
 
-    if (!(isConditionMet && isGasPriceConditionMet)) {
+    if (!(isBalanceAndTimeConditionMet && isGasPriceConditionMet)) {
       logger.debug(`${id} Condition not met`);
       if (!isGasPriceConditionMet) {
         return {
@@ -98,7 +98,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       }
     } else if (!scheduled.conditionBlock) {
       logger.debug(`${id} Condition met. Waiting for confirmations.`);
-      return this.pending;
+      return { ...this.pending, conditionMet: true };
     }
 
     try {
@@ -125,6 +125,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
       return {
         status: scheduled.status,
+        conditionMet: true,
         transactionHash: scheduled.transactionHash,
         executedAt: scheduled.executedAt,
         assetName,
@@ -152,7 +153,7 @@ export class TransactionExecutor implements ITransactionExecutor {
       );
       return {
         res: true,
-        status: this.pending,
+        status: { ...this.pending, conditionMet: true },
       };
     }
 
@@ -189,6 +190,8 @@ export class TransactionExecutor implements ITransactionExecutor {
         }
       }
 
+      logger.debug(`Nonce check status for tx ${scheduled._id} is ${Status[status]}`);
+
       return { res: false, status: { status }, senderNonceHigher: true };
     }
 
@@ -200,9 +203,10 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { res: true };
   }
   private async markTransactionsStale(scheduled: IScheduled, transactionList: IScheduled[]) {
+    logger.debug(`Marking ${transactionList.length} txs for ${scheduled._id} as stale`);
     for (const transaction of transactionList) {
       if (transaction._id !== scheduled._id && transaction.nonce === scheduled.nonce) {
-        transaction.status = Status.StaleNonce;
+        logger.debug(`Marking tx ${transaction._id} as stale`);
         transaction.update({ status: Status.StaleNonce }).exec();
       }
     }
@@ -212,7 +216,7 @@ export class TransactionExecutor implements ITransactionExecutor {
     return { status: Status.Pending };
   }
 
-  private async isConditionMet(
+  private async isBalanceAndTimeConditionMet(
     scheduled: IScheduled,
     transaction: ethers.Transaction,
     provider: ethers.providers.BaseProvider,

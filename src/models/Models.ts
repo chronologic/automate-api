@@ -118,6 +118,7 @@ export interface IScheduledForUser {
 
 export interface IExecuteStatus {
   status: Status;
+  conditionMet?: boolean;
   transactionHash?: string;
   error?: string;
   executedAt?: string;

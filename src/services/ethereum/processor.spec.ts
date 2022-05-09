@@ -56,6 +56,7 @@ describe('Processor', () => {
       .setup((s) => s.execute(It.isAny(), It.isAnyNumber()))
       .returns(async () => ({
         status: Status.Pending,
+        conditionMet: true,
       }));
 
     const processor = new Processor(scheduleService.object, transactionExecutor.object);
@@ -79,6 +80,7 @@ describe('Processor', () => {
       .setup((s) => s.execute(It.isAny(), It.isAnyNumber()))
       .returns(async () => ({
         status: Status.Pending,
+        conditionMet: true,
       }));
 
     const processor = new Processor(scheduleService.object, transactionExecutor.object);
@@ -110,6 +112,7 @@ describe('Processor', () => {
       .setup((s) => s.execute(It.isAny(), It.isAnyNumber()))
       .returns(async () => ({
         status: Status.Completed,
+        conditionMet: true,
         transactionHash,
       }));
 
@@ -135,6 +138,7 @@ describe('Processor', () => {
       .callback((tx: IScheduled) => executionQueue.push(tx.nonce))
       .returns(async () => ({
         status: Status.Completed,
+        conditionMet: true,
         transactionHash,
       }));
 
@@ -164,6 +168,7 @@ describe('Processor', () => {
       .callback((tx: IScheduled) => executionQueue.push(tx.nonce))
       .returns(async () => ({
         status: Status.Completed,
+        conditionMet: true,
         transactionHash,
       }));
 
@@ -172,6 +177,7 @@ describe('Processor', () => {
       .callback((tx: IScheduled) => executionQueue.push(tx.nonce))
       .returns(async () => ({
         status: Status.Pending,
+        conditionMet: true,
         transactionHash,
       }));
 
