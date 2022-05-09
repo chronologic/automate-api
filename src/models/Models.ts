@@ -205,8 +205,8 @@ export interface IPlatform extends Document {
   name: string;
   credits: number;
   whitelist: {
-    [networkName: string]: {
-      [chainId: string]: string[] | string;
+    [assetType: string]: {
+      [chainId: number]: string[] | string;
     };
   };
   webhook: string;
