@@ -19,7 +19,7 @@ export const authMiddleware = async (req: RequestWithAuth, res: Response, next: 
     user = await UserService.validateApiKey(token);
   } catch (e) {
     logger.error(e);
-    return next(new UnauthorizedError('Invalid API key'));
+    return next(e);
   }
 
   if (!user) {
