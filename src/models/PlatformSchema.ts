@@ -15,9 +15,10 @@ const PlatformSchema = new Schema({
     type: Number,
   },
   whitelist: {
-    assetType: {
-      chainId: {
-        type: [[String], String],
+    ethereum: {
+      42161: {
+        type: [String],
+        String,
       },
     },
   },
