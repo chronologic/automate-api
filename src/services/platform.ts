@@ -34,6 +34,8 @@ async function matchTxToPlatform(tx: string): Promise<IPlatform> {
         }
       }
     }
+    // const empty_platform: IPlatform = ()
+
     logger.debug(`the address is not whitelisted`);
   } catch (e) {
     logger.error(`error: ${e}`);
