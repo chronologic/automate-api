@@ -17,28 +17,19 @@ async function matchTxToPlatform(tx: string): Promise<IPlatform> {
       const whitelistAddresses = platform['whitelist']['ethereum'][parsed.chainId];
       const wildcard = '*';
       const hasWildcard = Object.values(whitelistAddresses).includes(wildcard);
-      logger.debug(`whitelistAddresses: ${whitelistAddresses}, ${typeof whitelistAddresses}, ${typeof wildcard}`);
-      logger.debug(`varmı: ${Object.values(whitelistAddresses).includes('*')}`);
-      logger.debug(`${whitelistAddresses === wildcard}`);
-
       if (hasWildcard) {
         return platform;
       }
       for (const contract of whitelistAddresses) {
-        logger.debug(`contract: ${contract}`);
         const contractLower = contract.toLowerCase();
         const contractNoPrefix = contractLower.substr(2);
-        logger.debug(`to: ${to}, contractLower: ${contractLower}, data: ${data}, conNO: ${contractNoPrefix} `);
         if (to === contractLower || data.includes(contractNoPrefix)) {
           return platform;
         }
       }
     }
-    // const empty_platform: IPlatform = ()
-
-    logger.debug(`the address is not whitelisted`);
   } catch (e) {
-    logger.error(`error: ${e}`);
+    logger.error(e);
   }
 }
 
