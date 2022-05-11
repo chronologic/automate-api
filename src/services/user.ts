@@ -5,7 +5,6 @@ import { BadRequestError } from '../errors';
 import { IPlatform, IUser, IUserCredits, IUserPublic } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
-
 import platformService from './platform';
 
 export interface IUserService {
