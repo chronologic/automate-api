@@ -67,7 +67,7 @@ export class ScheduleService implements IScheduleService {
       transaction.userId = user.id;
     }
 
-    const { isStrategyTx, transaction: matchedTransaction } = await matchStrategyPrep(transaction);
+    const { isStrategyTx, transaction: matchedTransaction, isLastPrepForNonce } = await matchStrategyPrep(transaction);
     transaction = matchedTransaction;
 
     const isEthereumMainnetTx = transaction.chainId === ChainId.Ethereum;
@@ -110,8 +110,6 @@ export class ScheduleService implements IScheduleService {
     }
 
     const scheduled = await transaction.save();
-
-    const isLastPrepForNonce = await strategyService.isLastPrepForNonce(transaction);
 
     if (isStrategyTx) {
       await strategyService.deletePrepTx(transaction.userId!, transaction.strategyPrepId!);
@@ -376,8 +374,10 @@ async function getTransactionMetadata(transaction: IScheduled): Promise<ITransac
   }
 }
 
-async function matchStrategyPrep(transaction: IScheduled): Promise<{ transaction: IScheduled; isStrategyTx: boolean }> {
-  const defaultResult = { transaction, isStrategyTx: false };
+async function matchStrategyPrep(
+  transaction: IScheduled,
+): Promise<{ transaction: IScheduled; isStrategyTx: boolean; isLastPrepForNonce: boolean }> {
+  const defaultResult = { transaction, isStrategyTx: false, isLastPrepForNonce: true };
 
   if (!transaction.userId) {
     return defaultResult;
@@ -391,11 +391,11 @@ async function matchStrategyPrep(transaction: IScheduled): Promise<{ transaction
   }
 
   const prepTx = decodeTxForStrategyPrep(transaction);
-  const strategyPrep = await strategyService.matchPrep(userId, prepTx);
+  const strategyPrep = await strategyService.matchFirstPrep(userId, prepTx);
   const isStrategyTx = !!strategyPrep;
 
   if (hasAnyPrep && !isStrategyTx) {
-    throw new Error('User is already executing another strategy');
+    throw new Error('User is executing a strategy but received tx that is not part of a strategy');
   }
 
   if (!isStrategyTx) {
@@ -410,7 +410,7 @@ async function matchStrategyPrep(transaction: IScheduled): Promise<{ transaction
   transaction.strategyInstanceId = strategyPrep.instanceId;
   transaction.strategyPrepId = strategyPrep.id;
 
-  return { transaction, isStrategyTx };
+  return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };
 }
 
 function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
@@ -424,7 +424,6 @@ function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
         chainId: parsed.chainId,
         from: parsed.from.toLowerCase(),
         to: parsed.to.toLowerCase(),
-        nonce: parsed.nonce,
         data: parsed.data.toLowerCase(),
       };
     }
