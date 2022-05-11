@@ -29,7 +29,7 @@ async function notify(scheduled: IScheduled): Promise<void> {
     return;
   }
 
-  const url = await platformService.matchTxToWebhook(scheduled.signedTransaction);
+  const url = await platformService.matchTxToWebhook(scheduled.signedTransaction, scheduled.assetType);
 
   if (url) {
     const notification: IWebhookNotification = {
