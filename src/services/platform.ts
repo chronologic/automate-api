@@ -6,14 +6,14 @@ import { createLogger } from '../logger';
 
 const logger = createLogger('platformService');
 
-async function matchTxToPlatform(tx: string): Promise<IPlatform> {
+async function matchTxToPlatform(tx: string, assetType?: AssetType): Promise<IPlatform> {
   try {
     const parsed = utils.parseTransaction(tx);
     const to = parsed.to.toLowerCase();
     const data = parsed.data.toLowerCase();
     const platforms = await Platform.find();
     for (const platform of platforms) {
-      const whitelistAddresses = platform['whitelist'][AssetType.Ethereum][parsed.chainId];
+      const whitelistAddresses = platform['whitelist'][assetType][parsed.chainId];
       const wildcard = '*';
       const hasWildcard = Object.values(whitelistAddresses).includes(wildcard);
       if (hasWildcard) {
