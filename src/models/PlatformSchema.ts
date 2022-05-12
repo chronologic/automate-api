@@ -15,11 +15,10 @@ const PlatformSchema = new Schema({
     type: Number,
   },
   whitelist: {
-    ethereum: {
-      42161: {
-        type: [String],
-        String,
-      },
+    type: Map,
+    of: {
+      type: Map,
+      of: [String],
     },
   },
   webhook: {
