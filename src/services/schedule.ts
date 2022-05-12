@@ -61,7 +61,7 @@ export class ScheduleService implements IScheduleService {
       const user = await UserService.validateApiKey(params.apiKey);
 
       if (CREDITS && !transactionExists) {
-        await UserService.deductCredits(user, request.signedTransaction);
+        await UserService.deductCredits(user, request.signedTransaction, transaction.assetType);
       }
 
       transaction.userId = user.id;

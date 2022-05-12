@@ -14,7 +14,13 @@ const PlatformSchema = new Schema({
   credits: {
     type: Number,
   },
-  whitelist: [String],
+  whitelist: {
+    type: Map,
+    of: {
+      type: Map,
+      of: [String],
+    },
+  },
   webhook: {
     type: String,
   },
