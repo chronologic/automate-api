@@ -15,9 +15,6 @@ const StrategyPrepSchema = new Schema({
     type: String,
     required: true,
   },
-  scheduledId: {
-    type: String,
-  },
   assetType: {
     type: String,
     required: true,
@@ -26,16 +23,19 @@ const StrategyPrepSchema = new Schema({
     type: Number,
     required: true,
   },
+  order: {
+    type: Number,
+    required: true,
+  },
+  isLastForNonce: {
+    type: Boolean,
+  },
   from: {
     type: String,
     required: true,
   },
   to: {
     type: String,
-    required: true,
-  },
-  nonce: {
-    type: Number,
     required: true,
   },
   data: {

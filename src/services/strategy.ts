@@ -22,8 +22,7 @@ export const strategyService = {
   deletePrepTx,
   deletePrepInstance,
   hasAnyPrep,
-  matchPrep,
-  isLastPrepForNonce,
+  matchFirstPrep,
 };
 
 async function prep(userId: string, txs: IStrategyPrepTxWithConditions[]): Promise<IStrategyPrepResponse> {
@@ -81,35 +80,30 @@ async function hasAnyPrep(userId: string): Promise<boolean> {
   return res.length > 0;
 }
 
-async function matchPrep(userId: string, prepTx: IStrategyPrepTx): Promise<IStrategyPrep> {
-  const res = await StrategyPrep.find({ userId, ...prepTx, ...makeNotExpiredCondition() });
+async function matchFirstPrep(userId: string, prepTx: IStrategyPrepTx): Promise<IStrategyPrep> {
+  const [firstPrep] = await StrategyPrep.find({ userId, ...makeNotExpiredCondition() }).sort({ order: 'asc' });
 
-  logger.debug(`Found ${res.length} matched preps for user ${userId} and tx ${JSON.stringify(prepTx)}`);
-
-  if (res.length > 1) {
-    throw new Error('Found more than 1 match!');
+  if (!firstPrep) {
+    return;
   }
 
-  return res[0];
+  if (isSimilar(prepTx, firstPrep)) {
+    return firstPrep;
+  }
+
+  throw new Error(
+    `Unexpected tx at order ${firstPrep.order}. Expected: ${JSON.stringify(firstPrep)}, got: ${JSON.stringify(prepTx)}`,
+  );
 }
 
-async function isLastPrepForNonce(transaction: IScheduled): Promise<boolean> {
-  const res = await StrategyPrep.find({
-    userId: transaction.userId,
-    instanceId: transaction.strategyInstanceId,
-    nonce: transaction.nonce,
-  }).sort({ nonce: 1 });
+function isSimilar(source: { [key: string]: any }, target: { [key: string]: any }): boolean {
+  Object.keys(source).forEach((key) => {
+    if (target[key] !== source[key]) {
+      return false;
+    }
+  });
 
-  const prepIndex = res.findIndex((item) => item.id === transaction.strategyPrepId);
-  const isLastPrep = prepIndex != null && prepIndex === res.length - 1;
-
-  logger.debug(
-    `Tx ${transaction._id} is${isLastPrep ? ' ' : ' NOT '}last prep for nonce ${transaction.nonce} for user ${
-      transaction.userId
-    }`,
-  );
-
-  return isLastPrep;
+  return true;
 }
 
 function makeNotExpiredCondition(): any {

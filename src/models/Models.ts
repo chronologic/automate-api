@@ -224,11 +224,12 @@ export interface IStrategyPrepTx {
   chainId: number;
   from: string;
   to: string;
-  nonce: number;
   data: string;
 }
 
 export interface IStrategyPrepTxWithConditions extends IStrategyPrepTx {
+  order: number;
+  isLastForNonce?: boolean;
   priority: number;
   conditionAsset?: string;
   conditionAmount?: string;
@@ -239,7 +240,6 @@ export interface IStrategyPrepTxWithConditions extends IStrategyPrepTx {
 export interface IStrategyPrep extends IStrategyPrepTxWithConditions, Document {
   instanceId: string;
   userId: string;
-  scheduledId?: string;
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
