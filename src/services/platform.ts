@@ -13,7 +13,7 @@ async function matchTxToPlatform(tx: string, assetType: AssetType): Promise<IPla
     const data = parsed.data.toLowerCase();
     const platforms = await Platform.find();
     for (const platform of platforms) {
-      const whitelistAddresses = platform.whitelist.get(AssetType.Ethereum)?.get(parsed.chainId.toString()) || [];
+      const whitelistAddresses = platform.whitelist.get(assetType)?.get(parsed.chainId.toString()) || [];
       const wildcard = '*';
       const hasWildcard = Object.values(whitelistAddresses).includes(wildcard);
       if (hasWildcard) {

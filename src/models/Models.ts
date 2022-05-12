@@ -207,6 +207,7 @@ export interface RequestWithAuth extends Request {
 export interface IPlatform extends Document {
   name: string;
   credits: number;
+  // assetType -> chainId -> address[]
   whitelist: Map<string, Map<string, string[]>>;
   webhook: string;
   createdAt: string;
