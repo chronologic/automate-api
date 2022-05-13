@@ -32,12 +32,12 @@ let coinGeckoCoins: ICoinGeckoCoin[] = [];
 
 function getSenderNextNonce({ chainId, from }): Promise<number> {
   const provider = getProvider(chainId);
-  return provider.getTransactionCount(from);
+  return retryRpcCallOnIntermittentError(() => provider.getTransactionCount(from));
 }
 
 export async function getBlockNumber(chainId: number): Promise<number> {
   const provider = getProvider(chainId);
-  return provider.getBlockNumber();
+  return retryRpcCallOnIntermittentError(() => provider.getBlockNumber());
 }
 
 export function getProvider(chainId: number): ethers.providers.BaseProvider {
@@ -62,7 +62,7 @@ export function getProvider(chainId: number): ethers.providers.BaseProvider {
 export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigNumber> {
   const provider = getProvider(chainId);
 
-  return provider.getGasPrice();
+  return retryRpcCallOnIntermittentError(() => provider.getGasPrice());
 }
 
 async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
@@ -78,7 +78,7 @@ async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITrans
     assetValue,
     assetContract,
     executedAt,
-  } = await method.call(null, transaction, parsedTx, provider);
+  } = await retryRpcCallOnIntermittentError(() => method.call(null, transaction, parsedTx, provider));
 
   const priceStats = await fetchPriceStats(parsedTx);
 
@@ -110,12 +110,12 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
 
     let gasUsed = gasLimit;
     try {
-      const txReceipt = await provider.getTransactionReceipt(tx.hash);
+      const txReceipt = await retryRpcCallOnIntermittentError(() => provider.getTransactionReceipt(tx.hash));
       gasUsed = txReceipt.gasUsed || gasLimit;
     } catch (e) {}
 
     // TODO: cache gas price
-    const networkGasPriceWei = await provider.getGasPrice();
+    const networkGasPriceWei = await retryRpcCallOnIntermittentError(() => provider.getGasPrice());
     gasPrice = weiToGwei(networkGasPriceWei);
 
     const gasPaidWei = ethers.BigNumber.from(gasPriceWei).mul(ethers.BigNumber.from(gasUsed));
@@ -284,8 +284,8 @@ async function fetchEthMetadata(
 
 async function fetchExecutedAt(txHash: string, provider: ethers.providers.BaseProvider): Promise<string> {
   try {
-    const tx = await provider.getTransaction(txHash);
-    const block = await provider.getBlock(tx.blockHash);
+    const tx = await retryRpcCallOnIntermittentError(() => provider.getTransaction(txHash));
+    const block = await retryRpcCallOnIntermittentError(() => provider.getBlock(tx.blockHash));
     return new Date(block.timestamp * 1000).toISOString();
   } catch (e) {
     logger.error(e);
@@ -313,7 +313,7 @@ async function fetchAssetPrice(contract: string, symbol: string, timestamp: stri
       logger.debug(
         `fetchAssetPrice dateParam from ${timestamp}: ${dateParam}; https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
       );
-      let res = await fetch(
+      const res = await fetch(
         `https://api.coingecko.com/api/v3/coins/${assetId}/history?date=${dateParam}`,
       ).then((response) => response.json());
 
@@ -421,7 +421,7 @@ async function fetchTokenName(contractAddress: string, chainId = 1): Promise<str
 
     const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
-    const [name] = await contract.functions.symbol();
+    const [name] = await retryRpcCallOnIntermittentError(() => contract.functions.symbol());
 
     lru.set(cacheKey, name);
 
@@ -488,7 +488,7 @@ async function fetchTokenDecimals(contractAddress: string, chainId: number): Pro
 
   const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
-  const [decimals] = await contract.functions.decimals();
+  const [decimals] = await retryRpcCallOnIntermittentError(() => contract.functions.decimals());
 
   lru.set(cacheKey, decimals);
 
@@ -512,3 +512,27 @@ async function fetchCoingeckoAssetData(contractAddress: string): Promise<any> {
 }
 
 export { getSenderNextNonce, fetchTransactionMetadata, fetchConditionAssetMetadata };
+
+export async function retryRpcCallOnIntermittentError<T>(fn: () => Promise<T>): Promise<T> {
+  return await _retryRpcCallOnIntermittentError(fn);
+}
+
+async function _retryRpcCallOnIntermittentError<T>(fn: () => Promise<T>, retryCounter = 0): Promise<T> {
+  const maxRetries = 20;
+  try {
+    return await fn();
+  } catch (e) {
+    const intermittentRpcError = 'unsupported block number';
+    const errorMessage = e?.message || '';
+    if (errorMessage.includes(intermittentRpcError) && retryCounter < maxRetries) {
+      await sleep(500);
+      return await _retryRpcCallOnIntermittentError(fn, retryCounter++);
+    } else {
+      throw e;
+    }
+  }
+}
+
+export async function sleep(ms: number): Promise<void> {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
