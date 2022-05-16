@@ -6,7 +6,7 @@ import Scheduled from '../../models/ScheduledSchema';
 import { SKIP_TX_BROADCAST } from '../../env';
 import sendMail from '../mail';
 import logger from './logger';
-import { fetchTransactionMetadata, getSenderNextNonce, getProvider } from './utils';
+import { fetchTransactionMetadata, getSenderNextNonce, getProvider, retryRpcCallOnIntermittentError } from './utils';
 import { gasService } from './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -72,7 +72,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     const transaction = ethers.utils.parseTransaction(scheduled.signedTransaction);
 
-    const networkTransaction = await provider.getTransaction(transaction.hash!);
+    const networkTransaction = await retryRpcCallOnIntermittentError(() => provider.getTransaction(transaction.hash!));
     if (networkTransaction && networkTransaction.hash) {
       logger.debug(`${id} Already posted ${networkTransaction.hash}`);
       return this.pending;
@@ -110,7 +110,9 @@ export class TransactionExecutor implements ITransactionExecutor {
         scheduled.executedAt = new Date().toISOString();
       } else {
         logger.debug(`${id} Executing...`);
-        const response = await provider.sendTransaction(scheduled.signedTransaction);
+        const response = await retryRpcCallOnIntermittentError(() =>
+          provider.sendTransaction(scheduled.signedTransaction),
+        );
         logger.debug(`${id} Sent ${response.hash}`);
 
         const receipt = await response.wait(CONFIRMATIONS);
@@ -179,7 +181,9 @@ export class TransactionExecutor implements ITransactionExecutor {
         // tx might've been just confirmed on chain so let's check that as well
         try {
           const provider = getProvider(scheduled.chainId);
-          const txReceipt = await provider.getTransactionReceipt(scheduled.transactionHash);
+          const txReceipt = await retryRpcCallOnIntermittentError(() =>
+            provider.getTransactionReceipt(scheduled.transactionHash),
+          );
           if (txReceipt.status === 1) {
             status = Status.Completed;
           } else if (txReceipt.status) {
@@ -227,9 +231,9 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     try {
       const token = new ethers.Contract(transaction.to, abi, provider);
-      currentConditionAmount = (await token.balanceOf(transaction.from)) as BigNumber;
+      currentConditionAmount = await retryRpcCallOnIntermittentError(() => token.balanceOf(transaction.from));
     } catch (e) {
-      currentConditionAmount = await provider.getBalance(transaction.from!);
+      currentConditionAmount = await retryRpcCallOnIntermittentError(() => provider.getBalance(transaction.from!));
     }
 
     const condition = ethers.BigNumber.from(scheduled.conditionAmount);

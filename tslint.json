@@ -2,6 +2,7 @@
   "extends": ["tslint:latest", "tslint-config-prettier"],
   "rules": {
     "object-literal-sort-keys": false,
-    "trailing-comma": [true, { "multiline": "always", "singleline": "never" }]
+    "trailing-comma": [true, { "multiline": "always", "singleline": "never" }],
+    "no-return-await": false
   }
 }
