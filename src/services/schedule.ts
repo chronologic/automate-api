@@ -116,8 +116,12 @@ export class ScheduleService implements IScheduleService {
     }
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
-      send(scheduled, 'scheduled');
-      tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
+      // Don't send scheduled mails for Strategy Items
+      disableScheduledMailsForStrategyItems(transaction, scheduled);
+      tgBot.scheduled({
+        value: transaction.assetValue,
+        savings: transaction.gasSaved,
+      });
       webhookService.notify(scheduled);
     }
 
@@ -411,6 +415,12 @@ async function matchStrategyPrep(
   transaction.strategyPrepId = strategyPrep.id;
 
   return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };
+}
+
+function disableScheduledMailsForStrategyItems(transaction: IScheduled, scheduled: IScheduled) {
+  if (transaction.strategyPrepId!) {
+    send(scheduled, 'scheduled');
+  }
 }
 
 function decodeTxForStrategyPrep(transaction: IScheduled): IStrategyPrepTx {
