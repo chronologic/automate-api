@@ -23,6 +23,7 @@ import { CREDITS } from '../env';
 import { ChainId, MINUTE_MILLIS } from '../constants';
 import webhookService from './webhook';
 import { strategyService } from './strategy';
+import logger from './logger';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -116,12 +117,9 @@ export class ScheduleService implements IScheduleService {
     }
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
-      // Don't send scheduled mails for Strategy Items
-      disableScheduledMailsForStrategyItems(transaction, scheduled);
-      tgBot.scheduled({
-        value: transaction.assetValue,
-        savings: transaction.gasSaved,
-      });
+      // Don't send scheduled emails for Strategy items.
+      dontSendScheduleEmail(scheduled);
+      tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
       webhookService.notify(scheduled);
     }
 
@@ -417,8 +415,9 @@ async function matchStrategyPrep(
   return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };
 }
 
-function disableScheduledMailsForStrategyItems(transaction: IScheduled, scheduled: IScheduled) {
-  if (transaction.strategyPrepId!) {
+function dontSendScheduleEmail(scheduled: IScheduled) {
+  const isStrategyTx = scheduled.strategyPrepId;
+  if (!isStrategyTx) {
     send(scheduled, 'scheduled');
   }
 }
