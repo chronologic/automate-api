@@ -32,19 +32,21 @@ async function prep(userId: string, txs: IStrategyPrepTxWithConditions[]): Promi
 
   const instanceId = generateInstanceId();
   const expiresAt = new Date(new Date().getTime() + STRATEGY_PREP_TTL).toISOString();
-  const preps: Partial<IStrategyPrep>[] = txs.map((tx) => ({
-    ...tx,
-    from: tx.from.toLowerCase(),
-    to: tx.to.toLowerCase(),
-    data: tx.data.toLowerCase(),
-    instanceId,
-    userId,
-    expiresAt,
-  }));
+  if (txs) {
+    const preps: Partial<IStrategyPrep>[] = txs.map((tx) => ({
+      ...tx,
+      from: tx.from.toLowerCase(),
+      to: tx.to.toLowerCase(),
+      data: tx.data.toLowerCase(),
+      instanceId,
+      userId,
+      expiresAt,
+    }));
 
-  await StrategyPrep.insertMany(preps);
+    await StrategyPrep.insertMany(preps);
 
-  logger.debug(`Created ${preps.length} preps for user ${userId}`);
+    logger.debug(`Created ${preps.length} preps for user ${userId}`);
+  }
 
   return {
     instanceId,
