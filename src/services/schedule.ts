@@ -116,7 +116,6 @@ export class ScheduleService implements IScheduleService {
     }
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
-      // Don't send scheduled emails for Strategy items.
       dontSendScheduleEmail(scheduled);
       tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
       webhookService.notify(scheduled);
