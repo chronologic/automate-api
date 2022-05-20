@@ -78,7 +78,7 @@ export class UserService implements IUserService {
     if (userDb) {
       throw new BadRequestError('Email already taken');
     }
-    const credits = Number(NEW_USER_CREDITS);
+    const credits = NEW_USER_CREDITS;
     const salt = await bcrypt.genSalt(5);
     const passwordHash = await bcrypt.hash(password, salt);
     const apiKey = apiKeygen();
