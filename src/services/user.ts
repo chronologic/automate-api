@@ -1,10 +1,11 @@
 import * as bcrypt from 'bcrypt';
 import ShortUniqueId from 'short-unique-id';
 
-import { BadRequestError } from '../errors';
 import { AssetType, IPlatform, IUser, IUserCredits, IUserPublic } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
+import { BadRequestError } from '../errors';
+import { NEW_USER_CREDITS } from '../env';
 import platformService from './platform';
 
 export interface IUserService {
@@ -77,7 +78,7 @@ export class UserService implements IUserService {
     if (userDb) {
       throw new BadRequestError('Email already taken');
     }
-
+    const credits = NEW_USER_CREDITS;
     const salt = await bcrypt.genSalt(5);
     const passwordHash = await bcrypt.hash(password, salt);
     const apiKey = apiKeygen();
@@ -86,6 +87,7 @@ export class UserService implements IUserService {
     const user = new User({
       login,
       source,
+      credits,
       salt,
       passwordHash,
       apiKey,
