@@ -3,7 +3,7 @@ import { ITxLabel } from '../models/Models';
 import TxLabel from '../models/TxLabelSchema';
 import { createTimedCache } from '../utils';
 
-const labelCache = createTimedCache<ITxLabel[]>(5 * MINUTE_MILLIS);
+const labelCache = createTimedCache<Promise<ITxLabel[]>>(5 * MINUTE_MILLIS);
 
 export async function getLabel({ assetType, chainId, hash }): Promise<string> {
   const txLabels = await getTxLabelsCached();
@@ -20,10 +20,10 @@ async function getTxLabelsCached(): Promise<ITxLabel[]> {
     return cached;
   }
 
-  const fresh = await getTxLabels();
-  labelCache.put(cacheKey, fresh);
+  const freshPromise = getTxLabels();
+  labelCache.put(cacheKey, freshPromise);
 
-  return fresh;
+  return freshPromise;
 }
 
 async function getTxLabels(): Promise<ITxLabel[]> {
