@@ -3,6 +3,8 @@ import { Document } from 'mongoose';
 import { Request } from 'express';
 import { ethers } from 'ethers';
 
+import { ChainId } from '../constants';
+
 export enum Status {
   Pending,
   Cancelled,
@@ -249,4 +251,16 @@ export interface IStrategyPrep extends IStrategyPrepTxWithConditions, Document {
 export interface IStrategyPrepResponse {
   instanceId: string;
   expiresAt: string;
+}
+
+export type TxLabelType = 'address' | 'method';
+
+export interface ITxLabel extends Document {
+  assetType: AssetType;
+  chainId: ChainId;
+  type: TxLabelType;
+  hash: string;
+  label: string;
+  createdAt: string;
+  executedAt: string;
 }
