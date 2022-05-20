@@ -22,6 +22,7 @@ export const GAS_PRICE_FEED_URL = process.env.GAS_PRICE_FEED_URL as string;
 export const CURRENT_GAS_PRICE_FEED_URL = process.env.CURRENT_GAS_PRICE_FEED_URL as string;
 
 export const CREDITS = process.env.CREDITS === 'true';
+export const NEW_USER_CREDITS = process.env.NEW_USER_CREDITS as string;
 
 export const SKIP_TX_BROADCAST = process.env.SKIP_TX_BROADCAST === 'true';
 
