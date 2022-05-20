@@ -46,3 +46,6 @@ jobs:
           HD_CURRENT_GAS_PRICE_FEED_URL: ${{secrets.CURRENT_GAS_PRICE_FEED_URL}}
           HD_SKIP_TX_BROADCAST: ${{secrets.SKIP_TX_BROADCAST}}
           HD_DB_URI: ${{secrets.DB_URI}}
+          HD_CREDITS: ${{secrets.CREDITS}}
+          HD_NEW_USER_CREDITS: ${{secrets.NEW_USER_CREDITS}}
+          HD_DEV_PAYMENT_EMAILS: ${{secrets.DEV_PAYMENT_EMAILS}}
