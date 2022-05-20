@@ -149,6 +149,9 @@ const ScheduledSchema = new Schema({
   to: {
     type: String,
   },
+  method: {
+    type: String,
+  },
   nonce: {
     type: Number,
   },

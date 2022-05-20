@@ -18,11 +18,13 @@ import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 import { UserService } from './user';
 import tgBot from './telegram';
-import { createTimedCache, isTruthy, mapToScheduledForUser } from '../utils';
+import { createTimedCache, decodeMethod, isTruthy } from '../utils';
 import { CREDITS } from '../env';
 import { ChainId, MINUTE_MILLIS } from '../constants';
 import webhookService from './webhook';
 import { strategyService } from './strategy';
+import { transactionService } from './transaction';
+import { mapToScheduledForUser } from './txLabel';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -160,14 +162,7 @@ export class ScheduleService implements IScheduleService {
   }
 
   public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {
-    const user = await UserService.validateApiKey(apiKey);
-
-    const scheduleds = await Scheduled.find({ userId: user.id }).exec();
-
-    return scheduleds
-      .map((s) => mapToScheduledForUser(s))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-      .reverse();
+    return transactionService.list(apiKey);
   }
 
   public async getByHash(apiKey: string, hash: string): Promise<IScheduledForUser> {
@@ -257,6 +252,7 @@ async function findOrCreateTransaction(
   transaction.from = decoded.from;
   transaction.to = decoded.to;
   transaction.nonce = decoded.nonce;
+  transaction.method = decodeMethod(transaction.assetType, transaction.signedTransaction);
 
   return {
     transaction,

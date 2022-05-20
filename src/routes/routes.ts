@@ -10,7 +10,7 @@ import { StatsService } from '../services/stats';
 import { UserService } from '../services/user';
 import { authMiddleware, requestMiddleware } from '../middleware';
 import { TransactionController } from '../controllers/TransactionController';
-import { TransactionService } from '../services/transaction';
+import { transactionService } from '../services/transaction';
 import { gasController } from '../controllers/GasController';
 import { strategyController } from '../controllers/StrategyController';
 
@@ -19,10 +19,7 @@ export class Routes {
   private statsController: StatsController = new StatsController(new StatsService());
   private polkadotController: PolkadotController = new PolkadotController();
   private userController: UserController = new UserController(new UserService());
-  private transactionController: TransactionController = new TransactionController(
-    new TransactionService(),
-    new ScheduleService(),
-  );
+  private transactionController: TransactionController = new TransactionController(new ScheduleService());
 
   public init(app: IRouter): void {
     app

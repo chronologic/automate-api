@@ -2,17 +2,12 @@ import { Request, Response } from 'express';
 import { RequestWithAuth, Status } from '../models/Models';
 
 import { IScheduleService } from '../services/schedule';
-import { ITransactionService } from '../services/transaction';
+import { transactionService } from '../services/transaction';
 
 export class TransactionController {
-  private transactionService: ITransactionService;
   private scheduleService: IScheduleService;
 
-  constructor(
-    transactionService: ITransactionService,
-    scheduleService: IScheduleService,
-  ) {
-    this.transactionService = transactionService;
+  constructor(scheduleService: IScheduleService) {
     this.scheduleService = scheduleService;
   }
 
@@ -26,7 +21,7 @@ export class TransactionController {
   }
 
   public async list(req: RequestWithAuth, res: Response) {
-    const items = await this.transactionService.list(req.user.apiKey);
+    const items = await transactionService.list(req.user.apiKey);
 
     res.json({
       items,
@@ -37,7 +32,7 @@ export class TransactionController {
   public async cancel(req: Request, res: Response) {
     const id: string = req.query.id as string;
 
-    await this.transactionService.cancel(id);
+    await transactionService.cancel(id);
     res.json({ status: Status.Cancelled });
   }
 }

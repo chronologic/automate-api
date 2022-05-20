@@ -49,6 +49,7 @@ export interface IScheduled extends Document {
   error: string;
   from: string;
   to: string;
+  method: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;
@@ -95,7 +96,11 @@ export interface IScheduledForUser {
   transactionHash: string;
   error: string;
   from: string;
+  fromLabel: string;
   to: string;
+  toLabel: string;
+  method: string;
+  methodLabel: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;
@@ -132,6 +137,7 @@ export interface IExecuteStatus {
 }
 
 export interface IScheduleRequest {
+  assetType: AssetType;
   conditionAmount: string;
   conditionAsset: string;
   gasPriceAware: boolean;
