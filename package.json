@@ -7,6 +7,7 @@
     "test": "jest",
     "build": "tsc",
     "postinstall": "npm run build",
+    "predev": "npm run buildHerokuDeployYml",
     "dev": "ts-node ./src/server.ts",
     "start": "nodemon ./dist/server.js",
     "lint": "tslint --project .",
