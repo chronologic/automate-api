@@ -45,6 +45,17 @@ async function preSave(next: () => {}) {
 
 TxLabelSchema.pre('save', preSave);
 
+TxLabelSchema.index(
+  {
+    assetType: 1,
+    chainId: 1,
+    hash: 1,
+  },
+  {
+    unique: true,
+  },
+);
+
 const TxLabel = model<ITxLabel>('TxLabel', TxLabelSchema);
 
 export default TxLabel;
