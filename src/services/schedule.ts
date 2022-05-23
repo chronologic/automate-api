@@ -89,7 +89,7 @@ export class ScheduleService implements IScheduleService {
     const isDevTx = this.isDevTx(request.paymentEmail);
     const isValidCouponCode = this.isValidCouponCode(request.paymentRefundAddress);
 
-    const isFreeTx = findOrCreateResult.transactionExists || isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
+    const isFreeTx = transactionExists || isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
     const prevStatus = transaction.status;
 
