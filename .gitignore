@@ -66,3 +66,4 @@ mongoexport*
 scheduleds*
 txs*
 ngrok
+*.notes

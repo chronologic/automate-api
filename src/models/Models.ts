@@ -3,6 +3,8 @@ import { Document } from 'mongoose';
 import { Request } from 'express';
 import { ethers } from 'ethers';
 
+import { ChainId } from '../constants';
+
 export enum Status {
   Pending,
   Cancelled,
@@ -47,6 +49,7 @@ export interface IScheduled extends Document {
   error: string;
   from: string;
   to: string;
+  method: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;
@@ -93,7 +96,11 @@ export interface IScheduledForUser {
   transactionHash: string;
   error: string;
   from: string;
+  fromLabel: string;
   to: string;
+  toLabel: string;
+  method: string;
+  methodLabel: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;
@@ -130,6 +137,7 @@ export interface IExecuteStatus {
 }
 
 export interface IScheduleRequest {
+  assetType: AssetType;
   conditionAmount: string;
   conditionAsset: string;
   gasPriceAware: boolean;
@@ -249,4 +257,16 @@ export interface IStrategyPrep extends IStrategyPrepTxWithConditions, Document {
 export interface IStrategyPrepResponse {
   instanceId: string;
   expiresAt: string;
+}
+
+export type TxLabelType = 'address' | 'method';
+
+export interface ITxLabel extends Document {
+  assetType: AssetType;
+  chainId: ChainId;
+  type: TxLabelType;
+  hash: string;
+  label: string;
+  createdAt: string;
+  executedAt: string;
 }
