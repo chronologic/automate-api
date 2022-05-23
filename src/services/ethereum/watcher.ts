@@ -20,6 +20,13 @@ export class Watcher {
     Watcher.processInLoop(processor);
   }
 
+  public static async processByIds(ids: string[]) {
+    const transactionExecutor = new TransactionExecutor();
+    const processor = new Processor(new ScheduleService(), transactionExecutor);
+
+    processor.processByIds(ids);
+  }
+
   private static async processInLoop(processor: Processor) {
     try {
       await Promise.all([sleep(10 * SECOND_MILLIS), processor.process()]);

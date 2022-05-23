@@ -1,7 +1,7 @@
 import { Watcher as EthereumWatcher } from './ethereum/watcher';
 import { PaymentService } from './payment';
 import { Watcher as PolkadotWatcher } from './polkadot/watcher';
-
+import { debug } from './debug';
 import logger from './logger';
 
 export class Manager {
@@ -24,5 +24,7 @@ export class Manager {
     } else {
       logger.info('Payments are disabled');
     }
+
+    debug();
   }
 }

@@ -37,6 +37,7 @@ export interface IScheduleService {
   find(id: string): Promise<IScheduled>;
   cancel(id: string);
   getPending(assetType: AssetType): Promise<IScheduled[]>;
+  getByIds(assetType: AssetType, ids: string[]): Promise<IScheduled[]>;
   listForApiKey(apiKey: string): Promise<IScheduledForUser[]>;
   getByHash(apiKey: string, hash: string): Promise<IScheduledForUser>;
   getMaxNonce(apiKey: string, address: string, chainId: number): Promise<number>;
@@ -159,6 +160,12 @@ export class ScheduleService implements IScheduleService {
       item.priority = item.priority || 1;
       return item;
     });
+  }
+
+  public async getByIds(assetType: AssetType, ids: string[]): Promise<IScheduled[]> {
+    const rows: IScheduled[] = await Scheduled.where('assetType', assetType).where('_id', ids).exec();
+
+    return rows;
   }
 
   public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {

@@ -33,6 +33,22 @@ export class Processor {
     logger.info(`END processed`);
   }
 
+  public async processByIds(ids: string[]) {
+    logger.info(`###DEBUG START processing...`);
+
+    try {
+      const scheduleds = await this.scheduleService.getByIds(AssetType.Ethereum, ids);
+
+      logger.debug(`Found ${scheduleds.length} transactions for ids ${ids.join(', ')}`);
+
+      await this.processTransactions(scheduleds);
+    } catch (e) {
+      logger.error(e);
+    }
+
+    logger.info(`###DEBUG END PROCESSED`);
+  }
+
   private async processTransactions(scheduleds: IScheduled[]): Promise<void> {
     const groupedByChain = this.groupByChain(scheduleds);
     const chainIds = Object.keys(groupedByChain).map(Number);
