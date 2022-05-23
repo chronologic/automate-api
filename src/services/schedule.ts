@@ -77,7 +77,6 @@ export class ScheduleService implements IScheduleService {
     if (isEthereumMainnetTx) {
       transaction = await populateTransactionMetadata({
         transaction,
-        isGasPriceAware: isTruthy(request.gasPriceAware),
         isProxyRequest,
         transactionExists,
       });
@@ -330,12 +329,10 @@ function calculateNewStatusForDirectRequest({
 
 async function populateTransactionMetadata({
   transaction,
-  isGasPriceAware,
   transactionExists,
   isProxyRequest,
 }: {
   transaction: IScheduled;
-  isGasPriceAware: boolean;
   transactionExists: boolean;
   isProxyRequest: boolean;
 }): Promise<IScheduled> {
@@ -346,7 +343,6 @@ async function populateTransactionMetadata({
   transaction.assetDecimals = metadata.assetDecimals;
   transaction.assetValue = metadata.assetValue;
   transaction.assetContract = metadata.assetContract;
-  transaction.gasPriceAware = isGasPriceAware;
 
   transaction.scheduledEthPrice = metadata.ethPrice;
   transaction.scheduledGasPrice = metadata.gasPrice;
@@ -412,6 +408,7 @@ async function matchStrategyPrep(
   transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
   transaction.strategyInstanceId = strategyPrep.instanceId;
   transaction.strategyPrepId = strategyPrep.id;
+  transaction.gasPriceAware = true; // ensure no 'gas price too low' error
 
   return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };
 }
