@@ -49,6 +49,9 @@ export class Routes {
     app.route('/auth').post(requestMiddleware(this.userController.loginOrSignup.bind(this.userController)));
     app.route('/auth/login').post(requestMiddleware(this.userController.login.bind(this.userController)));
     app.route('/auth/signup').post(requestMiddleware(this.userController.signup.bind(this.userController)));
+    app
+      .route('/auth/resetPassword')
+      .post(requestMiddleware(this.userController.resetPassword.bind(this.userController)));
 
     app
       .route('/user/credits')

@@ -12,6 +12,7 @@ export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
   signup(email: string, password: string, source?: string): Promise<IUserPublic>;
   loginOrSignup(email: string, password: string): Promise<IUserPublic>;
+  resetPassword(email: string): Promise<IUserPublic>;
   getCredits(user: IUser): Promise<IUserCredits>;
 }
 
@@ -112,6 +113,14 @@ export class UserService implements IUserService {
       return this.login(login, password);
     }
     return this.signup(login, password);
+  }
+
+  public async resetPassword(login: string): Promise<IUserPublic> {
+    const userDb = await User.findOne({ login }).exec();
+    if (userDb) {
+      return userDb._id;
+    }
+    throw new BadRequestError('Email address is not in db.');
   }
 
   private validateEmail(email: string): void {

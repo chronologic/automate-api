@@ -28,6 +28,12 @@ export class UserController {
     res.json(user);
   }
 
+  public async resetPassword(req: Request, res: Response) {
+    const user = await this.userService.resetPassword(req.body.login);
+
+    res.json(user);
+  }
+
   public async credits(req: RequestWithAuth, res: Response) {
     const credits = await this.userService.getCredits(req.user);
 
