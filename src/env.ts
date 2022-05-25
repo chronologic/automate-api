@@ -22,6 +22,8 @@ export const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID as string;
 export const GAS_PRICE_FEED_URL = process.env.GAS_PRICE_FEED_URL as string;
 export const CURRENT_GAS_PRICE_FEED_URL = process.env.CURRENT_GAS_PRICE_FEED_URL as string;
 
+export const JWT_SECRET = process.env.JWT_SECRET as string;
+
 export const CREDITS = process.env.CREDITS === 'true';
 export const NEW_USER_CREDITS = Number(process.env.NEW_USER_CREDITS);
 

@@ -231,7 +231,6 @@ export interface IUserCredits {
 export interface IUserResetPassword {
   login: string;
   link: string;
-  tokenLength: number;
 }
 
 export interface IStrategyPrepTx {

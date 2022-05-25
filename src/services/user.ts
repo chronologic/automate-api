@@ -7,7 +7,7 @@ import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
 import { sendResetPasswordEmail } from './mail';
 import { BadRequestError } from '../errors';
-import { NEW_USER_CREDITS } from '../env';
+import { NEW_USER_CREDITS, JWT_SECRET } from '../env';
 import platformService from './platform';
 
 export interface IUserService {
@@ -122,7 +122,6 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     const userDb = await User.findOne({ login }).exec();
     if (userDb) {
-      const JWT_SECRET = 'some super secret...'; // .env var
       const secret = JWT_SECRET + userDb.passwordHash;
       const paylod = {
         email: login,
@@ -131,18 +130,15 @@ export class UserService implements IUserService {
       const token = jwt.sign(paylod, secret, { expiresIn: '15m' });
       const resetUrl = '?token=' + token + '&email=' + login;
       sendResetPasswordEmail(login, resetUrl);
-      // https://automate.chronologic.network/resetPassword/{{passwordResetUrl}}
-      const resetLink = `${token} `; // `http://localhost:3000/resetPassword/${userDb._id}/${token}`;
+      const resetLink = `${token} `;
       return {
         login,
         link: resetLink,
-        tokenLength: resetLink.length,
       };
     }
     // throw new BadRequestError('Email address is not in db.');
   }
   public async resetPassword(login: string, password: string, token: string): Promise<IUserResetPassword> {
-    const JWT_SECRET = 'some super secret...';
     try {
       this.validatePassword(password);
       const userDb = await User.findOne({ login }).exec();
@@ -154,9 +150,8 @@ export class UserService implements IUserService {
         await User.updateOne({ _id: userDb._id }, { salt: newSalt });
         await User.updateOne({ _id: userDb._id }, { passwordHash: newPasswordHash });
         return {
-          login: password,
+          login,
           link: token,
-          tokenLength: token.length,
         };
       }
 
