@@ -154,8 +154,6 @@ export class UserService implements IUserService {
           link: token,
         };
       }
-
-      //
     } catch (error) {
       throw new BadRequestError('Password reset is unsuccessful please request a new email.');
     }
