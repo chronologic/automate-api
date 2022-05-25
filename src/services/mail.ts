@@ -45,7 +45,7 @@ const mailSubjects = {
   delayed_gasPrice: '[AUTOMATE] ⏳ Delayed due to gas price',
 };
 
-async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void> {
+async function send(scheduledTx: IMailParams, status: MailStatus, resetPasswordEmail?: string): Promise<void> {
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
@@ -127,7 +127,23 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
       });
     }
   } catch (e) {
-    console.error(e);
+    logger.error(e);
+  }
+}
+
+export async function sendResetPasswordEmail(resetPasswordEmail: string, resetLink: string): Promise<void> {
+  try {
+    await client.send({
+      to: resetPasswordEmail,
+      subject: '[AUTOMATE] 🔃 Reset your password in Automate',
+      from: 'team@chronologic.network',
+      templateId: passwordResetId,
+      dynamicTemplateData: {
+        passwordResetUrl: resetLink,
+      },
+    });
+  } catch (e) {
+    logger.error(e);
   }
 }
 

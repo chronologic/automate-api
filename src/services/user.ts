@@ -1,9 +1,11 @@
 import * as bcrypt from 'bcrypt';
 import ShortUniqueId from 'short-unique-id';
+import jwt from 'jsonwebtoken';
 
-import { AssetType, IPlatform, IUser, IUserCredits, IUserPublic } from '../models/Models';
+import { AssetType, IPlatform, IUser, IUserCredits, IUserPublic, IUserResetPassword } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
+import { sendResetPasswordEmail } from './mail';
 import { BadRequestError } from '../errors';
 import { NEW_USER_CREDITS } from '../env';
 import platformService from './platform';
@@ -12,7 +14,8 @@ export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
   signup(email: string, password: string, source?: string): Promise<IUserPublic>;
   loginOrSignup(email: string, password: string): Promise<IUserPublic>;
-  resetPassword(email: string): Promise<IUserPublic>;
+  requestResetPassword(email: string): Promise<IUserResetPassword>;
+  resetPassword(email: string, password: string, token: string);
   getCredits(user: IUser): Promise<IUserCredits>;
 }
 
@@ -62,7 +65,7 @@ export class UserService implements IUserService {
       return {
         login,
         source: userDb.source,
-        // accessKey: userDb.accessKey,
+        // login: userDb.login,
         apiKey: userDb.apiKey,
       };
     }
@@ -115,18 +118,57 @@ export class UserService implements IUserService {
     return this.signup(login, password);
   }
 
-  public async resetPassword(login: string): Promise<IUserPublic> {
+  public async requestResetPassword(login: string): Promise<IUserResetPassword> {
+    this.validateEmail(login);
     const userDb = await User.findOne({ login }).exec();
     if (userDb) {
-      return userDb._id;
+      const JWT_SECRET = 'some super secret...'; // .env var
+      const secret = JWT_SECRET + userDb.passwordHash;
+      const paylod = {
+        email: login,
+        id: userDb._id,
+      };
+      const token = jwt.sign(paylod, secret, { expiresIn: '15m' });
+      const resetUrl = '?token=' + token + '&email=' + login;
+      sendResetPasswordEmail(login, resetUrl);
+      // https://automate.chronologic.network/resetPassword/{{passwordResetUrl}}
+      const resetLink = `${token} `; // `http://localhost:3000/resetPassword/${userDb._id}/${token}`;
+      return {
+        login,
+        link: resetLink,
+        tokenLength: resetLink.length,
+      };
     }
-    throw new BadRequestError('Email address is not in db.');
+    // throw new BadRequestError('Email address is not in db.');
   }
+  public async resetPassword(login: string, password: string, token: string): Promise<IUserResetPassword> {
+    const JWT_SECRET = 'some super secret...';
+    try {
+      this.validatePassword(password);
+      const userDb = await User.findOne({ login }).exec();
+      const secret = JWT_SECRET + userDb.passwordHash;
+      jwt.verify(token, secret);
+      if (userDb) {
+        const newSalt = await bcrypt.genSalt(5);
+        const newPasswordHash = await bcrypt.hash(password, newSalt);
+        await User.updateOne({ _id: userDb._id }, { salt: newSalt });
+        await User.updateOne({ _id: userDb._id }, { passwordHash: newPasswordHash });
+        return {
+          login: password,
+          link: token,
+          tokenLength: token.length,
+        };
+      }
 
+      //
+    } catch (error) {
+      throw new BadRequestError('Password reset is unsuccessful please request a new email.');
+    }
+  }
   private validateEmail(email: string): void {
     const emailRegex = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/i;
     if (!emailRegex.test(email)) {
-      throw new BadRequestError('Invalid email');
+      throw new BadRequestError('Invalid email1');
     }
   }
 

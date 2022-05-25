@@ -228,6 +228,12 @@ export interface IUserCredits {
   community: number;
 }
 
+export interface IUserResetPassword {
+  login: string;
+  link: string;
+  tokenLength: number;
+}
+
 export interface IStrategyPrepTx {
   assetType: AssetType;
   chainId: number;
