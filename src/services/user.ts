@@ -83,8 +83,9 @@ export class UserService implements IUserService {
       throw new BadRequestError('Email already taken');
     }
     const credits = NEW_USER_CREDITS;
-    const salt = await bcrypt.genSalt(5);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const hashedPassword = await this.generateSaltAndHash(password);
+    const salt = hashedPassword.salt;
+    const passwordHash = hashedPassword.hash;
     const apiKey = apiKeygen();
     const accessKey = accessKeygen();
 
@@ -119,6 +120,7 @@ export class UserService implements IUserService {
   }
 
   public async requestResetPassword(login: string): Promise<IUserResetPassword> {
+    login = login.toLowerCase();
     this.validateEmail(login);
     const userDb = await User.findOne({ login }).exec();
     if (userDb) {
@@ -127,7 +129,7 @@ export class UserService implements IUserService {
         email: login,
         id: userDb._id,
       };
-      const token = jwt.sign(paylod, secret, { expiresIn: '15m' });
+      const token = jwt.sign(paylod, secret, { expiresIn: '1h' });
       const resetUrl = '?token=' + token + '&email=' + login;
       sendResetPasswordEmail(login, resetUrl);
       const resetLink = `${token} `;
@@ -136,19 +138,18 @@ export class UserService implements IUserService {
         link: resetLink,
       };
     }
-    // throw new BadRequestError('Email address is not in db.');
   }
+
   public async resetPassword(login: string, password: string, token: string): Promise<IUserResetPassword> {
+    login = login.toLowerCase();
     try {
       this.validatePassword(password);
       const userDb = await User.findOne({ login }).exec();
       const secret = JWT_SECRET + userDb.passwordHash;
       jwt.verify(token, secret);
       if (userDb) {
-        const newSalt = await bcrypt.genSalt(5);
-        const newPasswordHash = await bcrypt.hash(password, newSalt);
-        await User.updateOne({ _id: userDb._id }, { salt: newSalt });
-        await User.updateOne({ _id: userDb._id }, { passwordHash: newPasswordHash });
+        const hashedPassword = await this.generateSaltAndHash(password);
+        await User.updateOne({ _id: userDb._id }, { salt: hashedPassword.salt, passwordHash: hashedPassword.hash });
         return {
           login,
           link: token,
@@ -158,6 +159,7 @@ export class UserService implements IUserService {
       throw new BadRequestError('Password reset is unsuccessful please request a new email.');
     }
   }
+
   private validateEmail(email: string): void {
     const emailRegex = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/i;
     if (!emailRegex.test(email)) {
@@ -182,6 +184,15 @@ export class UserService implements IUserService {
     if (hashed !== passwordHash) {
       throw new BadRequestError('Invalid credentials');
     }
+  }
+
+  private async generateSaltAndHash(password: string) {
+    const salt = await bcrypt.genSalt(5);
+    const hash = await bcrypt.hash(password, salt);
+    return {
+      salt,
+      hash,
+    };
   }
 }
 
