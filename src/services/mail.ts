@@ -18,7 +18,7 @@ const cancelledTemplateId = 'd-2297e2d4f3de48e487c885601642603e';
 const successTemplateId = 'd-2f91d8bbb6494ae7a869b0c94f6079c9';
 const failureTemplateId = 'd-2ab9ac45ca864550bd69900bccd0a8ee';
 const delayedGasPriceTemplateId = 'd-1e832369e2cc42489011610c8bf191d2';
-const passwordResetId = 'd-061cd0a77d2b4fb282318b7c187f3ab6';
+const passwordResetTemplateId = 'd-061cd0a77d2b4fb282318b7c187f3ab6';
 
 client.setApiKey(API_KEY);
 
@@ -137,7 +137,7 @@ export async function sendResetPasswordEmail(resetPasswordEmail: string, resetLi
       to: resetPasswordEmail,
       subject: '[AUTOMATE] 🔃 Reset your password in Automate',
       from: 'team@chronologic.network',
-      templateId: passwordResetId,
+      templateId: passwordResetTemplateId,
       dynamicTemplateData: {
         passwordResetUrl: resetLink,
       },
