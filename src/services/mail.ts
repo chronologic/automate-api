@@ -45,7 +45,7 @@ const mailSubjects = {
   delayed_gasPrice: '[AUTOMATE] ⏳ Delayed due to gas price',
 };
 
-async function send(scheduledTx: IMailParams, status: MailStatus, resetPasswordEmail?: string): Promise<void> {
+async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void> {
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
