@@ -51,12 +51,16 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
   const from = scheduledTx.from;
   const subject = `${mailSubjects[status]} ${amount} ${name} from ${from}`;
   const networkName: string = ChainId[scheduledTx.chainId];
+
   const txUrl: string =
     BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'tx/' + scheduledTx.transactionHash;
   const fromUrl: string =
     BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'address/' + scheduledTx.from;
-  const conditionAssetUrl: string =
-    BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'address/' + scheduledTx.conditionAsset;
+  let conditionAssetUrl = '';
+  if (scheduledTx.conditionAsset) {
+    conditionAssetUrl =
+      BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'address/' + scheduledTx.conditionAsset;
+  }
 
   try {
     logger.info(
@@ -78,7 +82,8 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
         chainId: scheduledTx.chainId,
         txHash: txUrl,
         nonce: scheduledTx.nonce,
-        from: fromUrl,
+        from: scheduledTx.from,
+        fromLink: fromUrl,
         conditionBlock: scheduledTx.conditionBlock,
         conditionAmount: scheduledTx.conditionAmount,
         conditionAsset: conditionAssetUrl,
@@ -115,10 +120,11 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
           chainId: scheduledTx.chainId,
           txHash: txUrl,
           nonce: scheduledTx.nonce,
-          from: fromUrl,
+          from: scheduledTx.from,
+          fromLink: fromUrl,
           conditionBlock: scheduledTx.conditionBlock,
-          conditionAmount: conditionAssetUrl,
-          conditionAsset: scheduledTx.conditionAsset,
+          conditionAmount: scheduledTx.conditionAmount,
+          conditionAsset: conditionAssetUrl,
           timeCondition: scheduledTx.timeCondition,
           timeConditionTZ: scheduledTx.timeConditionTZ,
           createdAt: scheduledTx.createdAt,
