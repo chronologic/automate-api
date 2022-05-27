@@ -5,9 +5,9 @@ import jwt from 'jsonwebtoken';
 import { AssetType, IPlatform, IUser, IUserCredits, IUserPublic, IUserResetPassword } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
-import { sendResetPasswordEmail } from './mail';
-import { BadRequestError } from '../errors';
 import { NEW_USER_CREDITS, JWT_SECRET } from '../env';
+import { BadRequestError } from '../errors';
+import { sendResetPasswordEmail } from './mail';
 import platformService from './platform';
 
 export interface IUserService {
@@ -57,7 +57,7 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     this.validatePassword(password);
 
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserInDb(login);
 
     if (userDb) {
       await this.validateCredentials(password, userDb.salt, userDb.passwordHash);
@@ -65,7 +65,7 @@ export class UserService implements IUserService {
       return {
         login,
         source: userDb.source,
-        // login: userDb.login,
+        // accessKey: userDb.accessKey,
         apiKey: userDb.apiKey,
       };
     }
@@ -77,15 +77,13 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     this.validatePassword(password);
 
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserInDb(login);
 
     if (userDb) {
       throw new BadRequestError('Email already taken');
     }
     const credits = NEW_USER_CREDITS;
-    const hashedPassword = await this.generateSaltAndHash(password);
-    const salt = hashedPassword.salt;
-    const passwordHash = hashedPassword.hash;
+    const { salt, hash: passwordHash } = await this.generateSaltAndHash(password);
     const apiKey = apiKeygen();
     const accessKey = accessKeygen();
 
@@ -111,7 +109,7 @@ export class UserService implements IUserService {
   }
 
   public async loginOrSignup(login: string, password: string): Promise<IUserPublic> {
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserInDb(login);
 
     if (userDb) {
       return this.login(login, password);
@@ -120,9 +118,8 @@ export class UserService implements IUserService {
   }
 
   public async requestResetPassword(login: string): Promise<IUserResetPassword> {
-    login = login.toLowerCase();
     this.validateEmail(login);
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserInDb(login);
     if (userDb) {
       const secret = JWT_SECRET + userDb.passwordHash;
       const paylod = {
@@ -141,15 +138,14 @@ export class UserService implements IUserService {
   }
 
   public async resetPassword(login: string, password: string, token: string): Promise<IUserResetPassword> {
-    login = login.toLowerCase();
     try {
       this.validatePassword(password);
-      const userDb = await User.findOne({ login }).exec();
+      const userDb = await this.findUserInDb(login);
       const secret = JWT_SECRET + userDb.passwordHash;
       jwt.verify(token, secret);
       if (userDb) {
-        const hashedPassword = await this.generateSaltAndHash(password);
-        await User.updateOne({ _id: userDb._id }, { salt: hashedPassword.salt, passwordHash: hashedPassword.hash });
+        const { salt: pwSalt, hash: pwHash } = await this.generateSaltAndHash(password);
+        await User.updateOne({ _id: userDb._id }, { salt: pwSalt, passwordHash: pwHash });
         return {
           login,
           link: token,
@@ -186,13 +182,18 @@ export class UserService implements IUserService {
     }
   }
 
-  private async generateSaltAndHash(password: string) {
+  private async generateSaltAndHash(password: string): Promise<{ salt: string; hash: string }> {
     const salt = await bcrypt.genSalt(5);
     const hash = await bcrypt.hash(password, salt);
     return {
       salt,
       hash,
     };
+  }
+
+  private async findUserInDb(login: string): Promise<IUser> {
+    const userDb = await User.findOne({ login }).collation({ locale: 'en', strength: 2 }).exec();
+    return userDb;
   }
 }
 
