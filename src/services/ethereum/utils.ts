@@ -14,6 +14,7 @@ import { getTimedCachedValue, sleep, weiToGwei } from '../../utils';
 import logger from './logger';
 
 const lru = new LRU({ max: 10000 });
+const erc20Decoder = new InputDataDecoder(ERC20);
 
 interface ICoinGeckoCoin {
   id: string;
@@ -74,37 +75,55 @@ export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigN
 export async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
   const provider = getProvider(transaction.chainId);
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
-  const fetchMetadata = parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
+  let txWithMeta = transaction;
 
-  const {
-    assetName,
-    assetAmount,
-    assetAmountWei,
-    assetDecimals,
-    assetValue,
-    assetContract,
-    executedAt,
-  } = await retryRpcCallOnIntermittentError(() =>
-    fetchMetadata({
+  if (isEthTx(parsedTx.data)) {
+    txWithMeta = await fetchEthMetadata({
       chainId: transaction.chainId,
       parsedTx,
       provider,
       transaction,
-    }),
-  );
+    });
+  } else if (isTokenTx(parsedTx.data)) {
+    txWithMeta = await fetchTokenMetadata({
+      chainId: transaction.chainId,
+      parsedTx,
+      provider,
+      transaction,
+    });
+  }
 
   const priceStats = await fetchPriceStats(parsedTx);
 
+  const metadata: ITransactionMetadata = {
+    assetAmount: txWithMeta.assetAmount,
+    assetAmountWei: txWithMeta.assetAmountWei,
+    assetContract: txWithMeta.assetContract,
+    assetDecimals: txWithMeta.assetDecimals,
+    assetName: txWithMeta.assetName,
+    assetValue: txWithMeta.assetValue,
+    executedAt: txWithMeta.executedAt,
+  };
+
   return {
-    assetName,
-    assetAmount,
-    assetAmountWei,
-    assetDecimals,
-    assetValue,
-    assetContract,
-    executedAt,
+    ...metadata,
     ...priceStats,
   };
+}
+
+function isEthTx(txData: string): boolean {
+  return (txData || '').toLowerCase() === '0x';
+}
+
+function isTokenTx(txData: string): boolean {
+  try {
+    const decoded = erc20Decoder.decodeData(txData);
+
+    return !!decoded.method;
+  } catch (e) {
+    logger.debug(e);
+    return false;
+  }
 }
 
 export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats> {
@@ -435,8 +454,11 @@ async function fetchTokenAmount({
   };
 
   try {
-    const decoder = new InputDataDecoder(ERC20);
-    const decoded = decoder.decodeData(txData);
+    const decoded = erc20Decoder.decodeData(txData);
+    if (!decoded.method) {
+      return defaultValue;
+    }
+
     const decimals = await fetchTokenDecimals(contractAddress, chainId);
 
     if (decoded.method === 'transfer') {
@@ -460,6 +482,7 @@ async function fetchTokenAmount({
       return defaultValue;
     }
   } catch (e) {
+    console.log('CCCCCCCCCCCCCCCCCCCC');
     logger.error(e);
     return defaultValue;
   }
