@@ -7,11 +7,11 @@ import LRU from 'lru-cache';
 
 import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';
 import { ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI, ROPSTEN_URI } from '../../env';
-import { ChainId } from '../../constants';
-import logger from './logger';
+import { ChainId, SECOND_MILLIS } from '../../constants';
 import ERC20 from '../../abi/erc20';
 import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
-import { weiToGwei } from '../../utils';
+import { getTimedCachedValue, sleep, weiToGwei } from '../../utils';
+import logger from './logger';
 
 const lru = new LRU({ max: 10000 });
 
@@ -27,48 +27,54 @@ interface ITokenMetadata {
   assetName: string;
 }
 
-const fallbackAssetName = '_';
 let coinGeckoCoins: ICoinGeckoCoin[] = [];
 
-function getSenderNextNonce({ chainId, from }): Promise<number> {
+const PROVIDER: {
+  [key in ChainId]?: ethers.providers.BaseProvider;
+} = {
+  [ChainId.Arbitrum]: new ethers.providers.JsonRpcProvider(ARBITRUM_URI),
+  [ChainId.Arbitrum_Rinkeby]: new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI),
+  [ChainId.Ropsten]: new ethers.providers.JsonRpcProvider(ROPSTEN_URI),
+  [ChainId.Ethereum]: new ethers.providers.JsonRpcProvider(ETHERUM_URI),
+};
+
+export function getProvider(chainId: number): ethers.providers.BaseProvider {
+  return PROVIDER[chainId] || PROVIDER[ChainId.Ethereum];
+}
+
+export async function getSenderNextNonce({ chainId, from }): Promise<number> {
   const provider = getProvider(chainId);
   return retryRpcCallOnIntermittentError(() => provider.getTransactionCount(from));
 }
 
 export async function getBlockNumber(chainId: number): Promise<number> {
-  const provider = getProvider(chainId);
-  return retryRpcCallOnIntermittentError(() => provider.getBlockNumber());
-}
-
-export function getProvider(chainId: number): ethers.providers.BaseProvider {
-  let provider: ethers.providers.BaseProvider;
-  switch (chainId) {
-    case ChainId.Arbitrum:
-      provider = new ethers.providers.JsonRpcProvider(ARBITRUM_URI);
-      break;
-    case ChainId.Arbitrum_Rinkeby:
-      provider = new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI);
-      break;
-    case ChainId.Ropsten:
-      provider = new ethers.providers.JsonRpcProvider(ROPSTEN_URI);
-      break;
-    default:
-      provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
-      break;
-  }
-  return provider;
+  const cacheKey = `eth.blockNumber.${chainId}`;
+  return getTimedCachedValue({
+    key: cacheKey,
+    ttlMillis: 10 * SECOND_MILLIS,
+    fetchValue: async () => {
+      const provider = getProvider(chainId);
+      return retryRpcCallOnIntermittentError(() => provider.getBlockNumber());
+    },
+  });
 }
 
 export async function fetchNetworkGasPrice(chainId: number): Promise<ethers.BigNumber> {
-  const provider = getProvider(chainId);
-
-  return retryRpcCallOnIntermittentError(() => provider.getGasPrice());
+  const cacheKey = `eth.gasPrice.${chainId}`;
+  return getTimedCachedValue({
+    key: cacheKey,
+    ttlMillis: 10 * SECOND_MILLIS,
+    fetchValue: async () => {
+      const provider = getProvider(chainId);
+      return retryRpcCallOnIntermittentError(() => provider.getGasPrice());
+    },
+  });
 }
 
-async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
+export async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITransactionMetadata> {
   const provider = getProvider(transaction.chainId);
   const parsedTx = ethers.utils.parseTransaction(transaction.signedTransaction);
-  const method = parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
+  const fetchMetadata = parsedTx.data !== '0x' ? fetchTokenMetadata : fetchEthMetadata;
 
   const {
     assetName,
@@ -78,7 +84,14 @@ async function fetchTransactionMetadata(transaction: IScheduled): Promise<ITrans
     assetValue,
     assetContract,
     executedAt,
-  } = await retryRpcCallOnIntermittentError(() => method.call(null, transaction, parsedTx, provider));
+  } = await retryRpcCallOnIntermittentError(() =>
+    fetchMetadata({
+      chainId: transaction.chainId,
+      parsedTx,
+      provider,
+      transaction,
+    }),
+  );
 
   const priceStats = await fetchPriceStats(parsedTx);
 
@@ -114,8 +127,7 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
       gasUsed = txReceipt.gasUsed || gasLimit;
     } catch (e) {}
 
-    // TODO: cache gas price
-    const networkGasPriceWei = await retryRpcCallOnIntermittentError(() => provider.getGasPrice());
+    const networkGasPriceWei = await fetchNetworkGasPrice(tx.chainId);
     gasPrice = weiToGwei(networkGasPriceWei);
 
     const gasPaidWei = ethers.BigNumber.from(gasPriceWei).mul(ethers.BigNumber.from(gasUsed));
@@ -144,20 +156,26 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
   }
 }
 
-async function fetchTokenMetadata(
-  transaction: IScheduled,
-  parsedTx: ethers.Transaction,
-  provider: ethers.providers.BaseProvider,
-): Promise<IScheduled> {
+async function fetchTokenMetadata({
+  transaction,
+  parsedTx,
+  provider,
+  chainId,
+}: {
+  transaction: IScheduled;
+  parsedTx: ethers.Transaction;
+  provider: ethers.providers.BaseProvider;
+  chainId: ChainId;
+}): Promise<IScheduled> {
   transaction.assetContract = parsedTx.to;
 
-  if (!transaction.assetName || transaction.assetName === '_') {
+  if (!transaction.assetName) {
     logger.debug(`fetchTokenMetadata fetching assetName...`);
     transaction.assetName = await fetchTokenName(parsedTx.to, transaction.chainId);
     logger.debug(`fetchTokenMetadata fetched assetName: ${transaction.assetName}`);
   }
 
-  if (transaction.assetAmount == null) {
+  if (!transaction.assetAmount) {
     logger.debug(`fetchTokenMetadata fetching assetAmount...`);
     const amountData = await fetchTokenAmount({
       chainId: transaction.chainId,
@@ -170,88 +188,125 @@ async function fetchTokenMetadata(
     logger.debug(`fetchTokenMetadata fetched assetAmount: ${transaction.assetAmount}`);
   }
 
-  if (!transaction.executedAt && transaction.transactionHash) {
-    logger.debug(`fetchTokenMetadata fetching executedAt...`);
-    transaction.executedAt = await fetchExecutedAt(transaction.transactionHash, provider);
-    logger.debug(`fetchTokenMetadata fetched executedAt: ${transaction.executedAt}`);
-  }
-
-  if (transaction.assetValue == null || transaction.status === Status.Completed) {
+  if ((!transaction.assetValue || transaction.status === Status.Completed) && transaction.assetAmount) {
     logger.debug(`fetchTokenMetadata fetching assetValue...`);
-    const price = await fetchAssetPrice(transaction.assetContract, transaction.assetName, transaction.executedAt);
+    const price = await fetchAssetPrice({
+      contract: transaction.assetContract,
+      symbol: transaction.assetName,
+      timestamp: transaction.executedAt,
+      chainId,
+    });
 
     transaction.assetValue = transaction.assetAmount * price;
     logger.debug(`fetchTokenMetadata fetched assetValue: ${transaction.assetValue}`);
   }
 
-  if ((transaction.assetName === fallbackAssetName || transaction.assetValue === 0) && transaction.transactionHash) {
+  if ((!transaction.assetName || !transaction.assetValue) && transaction.transactionHash) {
     logger.debug('fetchTokenMetadata scraping data as fallback...');
-    const { assetName, assetAmount, assetValue } = await scrapeTokenMetadata(transaction.transactionHash);
+    const { assetName, assetAmount, assetValue } = await scrapeTokenMetadata(
+      transaction.transactionHash,
+      transaction.chainId,
+    );
 
     transaction.assetName = assetName || transaction.assetName;
     transaction.assetAmount = assetAmount || transaction.assetAmount;
     transaction.assetValue = assetValue || transaction.assetValue;
   }
 
+  if (!transaction.executedAt && transaction.transactionHash) {
+    logger.debug(`fetchTokenMetadata fetching executedAt...`);
+    transaction.executedAt = await fetchExecutedAt(transaction.transactionHash, provider);
+    logger.debug(`fetchTokenMetadata fetched executedAt: ${transaction.executedAt}`);
+  }
+
   return transaction;
 }
 
-async function scrapeTokenMetadata(txHash: string): Promise<ITokenMetadata> {
+async function scrapeTokenMetadata(txHash: string, chainId: ChainId): Promise<ITokenMetadata> {
   const cacheKey = `tokenMeta:${txHash}`;
 
   if (lru.has(cacheKey)) {
     return lru.get(cacheKey) as ITokenMetadata;
   }
 
-  try {
-    const res = await fetch(`https://etherscan.io/tx/${txHash}`).then((response) => response.text());
-    const $ = cheerio.load(res);
-    const tokenDetails = $('.row .list-unstyled');
-    let assetAmount = 0;
-    let assetValue = 0;
-    tokenDetails.find('.media-body').each((_, mb) => {
-      assetAmount = Number($(mb).find('> span.mr-1').last().text().trim().replace(/,/g, '')) || 0;
-    });
+  const defaultResult = {} as ITokenMetadata;
 
-    const transferDetails = tokenDetails.find('.media-body').text();
+  const explorerNameForChainId: {
+    [key in ChainId]?: string;
+  } = {
+    [ChainId.Arbitrum]: 'arbiscan',
+    [ChainId.Arbitrum_Rinkeby]: 'testnet.arbiscan',
+    [ChainId.Ethereum]: 'etherscan',
+    [ChainId.Ropsten]: 'ropsten.etherscan',
+  };
 
+  const explorerName = explorerNameForChainId[chainId];
+
+  if (!explorerName) {
+    return defaultResult;
+  }
+
+  const resPromise = (async () => {
     try {
-      assetValue = Number(/\(\$[0-9,.]+\)/.exec(transferDetails)[0].replace(/[\(\)\$,]/g, ''));
+      const res = await fetch(`https://${explorerName}.io/tx/${txHash}`).then((response) => response.text());
+      const $ = cheerio.load(res);
+      const tokenDetails = $('.row .list-unstyled');
+      let assetAmount = 0;
+      let assetValue = 0;
+      tokenDetails.find('.media-body').each((_, mb) => {
+        assetAmount = Number($(mb).find('> span.mr-1').last().text().trim().replace(/,/g, '')) || 0;
+      });
+
+      const transferDetails = tokenDetails.find('.media-body').text();
+
+      try {
+        assetValue = Number(/\(\$[0-9,.]+\)/.exec(transferDetails)[0].replace(/[\(\)\$,]/g, ''));
+      } catch (e) {
+        logger.error(e);
+      }
+
+      const assetName = tokenDetails
+        .find('.media-body > a')
+        .first()
+        .text()
+        .trim()
+        .split(' ')
+        .reverse()[0]
+        .replace(/[\(\)]/g, '')
+        .toLowerCase();
+
+      const meta = {
+        assetAmount: assetAmount || 0,
+        assetValue: assetValue || 0,
+        assetName: assetName || '',
+      };
+
+      lru.set(cacheKey, meta);
+
+      return meta;
     } catch (e) {
       logger.error(e);
+      return defaultResult;
     }
+  })();
 
-    const assetName = tokenDetails
-      .find('.media-body > a')
-      .first()
-      .text()
-      .trim()
-      .split(' ')
-      .reverse()[0]
-      .replace(/[\(\)]/g, '')
-      .toLowerCase();
+  lru.set(cacheKey, resPromise);
 
-    const meta = {
-      assetAmount: assetAmount || 0,
-      assetValue: assetValue || 0,
-      assetName: assetName || '',
-    };
-
-    lru.set(cacheKey, meta);
-
-    return meta;
-  } catch (e) {
-    logger.error(e);
-    return {} as ITokenMetadata;
-  }
+  return resPromise;
 }
 
-async function fetchEthMetadata(
-  transaction: IScheduled,
-  parsedTx: ethers.Transaction,
-  provider: ethers.providers.BaseProvider,
-): Promise<IScheduled> {
-  if (!transaction.assetName || transaction.assetName === fallbackAssetName) {
+async function fetchEthMetadata({
+  transaction,
+  parsedTx,
+  provider,
+  chainId,
+}: {
+  transaction: IScheduled;
+  parsedTx: ethers.Transaction;
+  provider: ethers.providers.BaseProvider;
+  chainId: ChainId;
+}): Promise<IScheduled> {
+  if (!transaction.assetName) {
     transaction.assetName = 'eth';
   }
 
@@ -273,7 +328,12 @@ async function fetchEthMetadata(
 
   if (transaction.assetValue == null || transaction.status === Status.Completed) {
     logger.debug(`fetchEthMetadata fetching assetValue...`);
-    const price = await fetchAssetPrice('', 'eth', transaction.executedAt);
+    const price = await fetchAssetPrice({
+      contract: '',
+      symbol: 'eth',
+      timestamp: transaction.executedAt,
+      chainId,
+    });
 
     transaction.assetValue = transaction.assetAmount * price;
     logger.debug(`fetchEthMetadata fetched assetValue: ${transaction.assetValue}`);
@@ -293,17 +353,29 @@ async function fetchExecutedAt(txHash: string, provider: ethers.providers.BasePr
   }
 }
 
-const wethContract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
-async function fetchAssetPrice(contract: string, symbol: string, timestamp: string): Promise<number> {
+async function fetchAssetPrice({
+  contract,
+  symbol,
+  timestamp,
+  chainId,
+}: {
+  contract: string;
+  symbol: string;
+  timestamp: string;
+  chainId: ChainId;
+}): Promise<number> {
   let _contract = contract;
+  let _chainId = chainId;
 
   if (symbol === 'eth') {
+    const wethContract = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
     _contract = wethContract;
+    _chainId = ChainId.Ethereum;
   }
 
   try {
     logger.debug(`fetchAssetPrice fetching assetId...`);
-    const assetId = await fetchCoinGeckoAssetId(contract);
+    const assetId = await fetchCoinGeckoAssetId(_contract, _chainId);
     logger.debug(`fetchAssetPrice fetched assetId: ${assetId}`);
 
     let price = 0;
@@ -337,12 +409,10 @@ async function fetchAssetPrice(contract: string, symbol: string, timestamp: stri
   }
 }
 
-async function fetchCoinGeckoAssetId(contract: string): Promise<string> {
-  const fallbackAssetId = '_';
-  const { id } = await fetchCoingeckoAssetData(contract);
-  const res = id || fallbackAssetId;
+async function fetchCoinGeckoAssetId(contract: string, chainId: ChainId): Promise<string> {
+  const { id } = await fetchCoingeckoAssetData(contract, chainId);
 
-  return res;
+  return id;
 }
 
 async function fetchTokenAmount({
@@ -359,9 +429,9 @@ async function fetchTokenAmount({
   decimals: number;
 }> {
   const defaultValue = {
-    amountWei: '0',
-    amount: 0,
-    decimals: 18,
+    amountWei: '',
+    amount: null,
+    decimals: null,
   };
 
   try {
@@ -373,7 +443,7 @@ async function fetchTokenAmount({
       const amount = ethers.BigNumber.from(decoded.inputs[1].toString(10));
 
       return {
-        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+        amount: Number(ethers.utils.formatUnits(amount, decimals)),
         amountWei: amount.toString(),
         decimals,
       };
@@ -381,7 +451,7 @@ async function fetchTokenAmount({
       const amount = ethers.BigNumber.from(decoded.inputs[2].toString(10));
 
       return {
-        amount: amount.div(ethers.BigNumber.from(10).pow(decimals)).toNumber(),
+        amount: Number(ethers.utils.formatUnits(amount, decimals)),
         amountWei: amount.toString(),
         decimals,
       };
@@ -408,43 +478,42 @@ async function fetchABI(contractAddress: string): Promise<any> {
   }
 }
 
-async function fetchTokenName(contractAddress: string, chainId = 1): Promise<string> {
-  const fallbackName = '_';
+async function fetchTokenName(contractAddress: string, chainId: ChainId): Promise<string> {
   const cacheKey = `tokenName:${contractAddress}:${chainId}`;
 
   if (lru.has(cacheKey)) {
     return lru.get(cacheKey) as string;
   }
 
-  try {
-    const provider = getProvider(chainId);
+  const resPromise = (async () => {
+    try {
+      const provider = getProvider(chainId);
+      const contract = new ethers.Contract(contractAddress, ERC20, provider);
+      const [name] = await retryRpcCallOnIntermittentError(() => contract.functions.symbol());
 
-    const contract = new ethers.Contract(contractAddress, ERC20, provider);
+      return name;
+    } catch (e) {
+      console.error('Failed to fetch token name from chain');
+      logger.error(e);
+    }
 
-    const [name] = await retryRpcCallOnIntermittentError(() => contract.functions.symbol());
+    try {
+      const res = await fetchCoingeckoAssetData(contractAddress, chainId);
+      const name = res.symbol;
 
-    lru.set(cacheKey, name);
+      return name;
+    } catch (e) {
+      console.error('Failed to fetch token name from coingecko');
+      logger.error(e);
+    }
+  })();
 
-    return name;
-  } catch (e) {
-    logger.error(e);
-  }
+  lru.set(cacheKey, resPromise);
 
-  try {
-    const res = await fetchCoingeckoAssetData(contractAddress);
-
-    const name = res.symbol || fallbackName;
-
-    lru.set(cacheKey, name);
-
-    return name;
-  } catch (e) {
-    logger.error(e);
-    return fallbackName;
-  }
+  return resPromise;
 }
 
-async function fetchConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
+export async function fetchConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
   try {
     if (!transaction.conditionAsset && !transaction.conditionAmount) {
       return {
@@ -483,35 +552,50 @@ async function fetchTokenDecimals(contractAddress: string, chainId: number): Pro
   const cacheKey = `decimals:${contractAddress}:${chainId}`;
 
   if (lru.has(cacheKey)) {
-    return lru.get(cacheKey) as number;
+    return lru.get(cacheKey) as Promise<number>;
   }
 
   const contract = new ethers.Contract(contractAddress, ERC20, provider);
 
-  const [decimals] = await retryRpcCallOnIntermittentError(() => contract.functions.decimals());
+  const resPromise = (async () => {
+    const [decimals] = await retryRpcCallOnIntermittentError(() => contract.functions.decimals());
+    return decimals;
+  })();
 
-  lru.set(cacheKey, decimals);
+  lru.set(cacheKey, resPromise);
 
-  return decimals;
+  return resPromise;
 }
 
-async function fetchCoingeckoAssetData(contractAddress: string): Promise<any> {
-  const cacheKey = `assetData:${contractAddress}`;
+async function fetchCoingeckoAssetData(contractAddress: string, chainId: ChainId): Promise<any> {
+  const contractAddressLowercase = (contractAddress || '').toLowerCase();
+  const cacheKey = `assetData:${contractAddressLowercase}`;
 
   if (lru.has(cacheKey)) {
-    return lru.get(cacheKey) as string;
+    return lru.get(cacheKey);
   }
 
-  const json = await fetch(
-    `https://api.coingecko.com/api/v3/coins/ethereum/contract/${contractAddress}`,
+  const platformForChainId: {
+    [key in ChainId]?: string;
+  } = {
+    [ChainId.Arbitrum]: 'arbitrum-one',
+    [ChainId.Ethereum]: 'ethereum',
+  };
+
+  const platform = platformForChainId[chainId];
+
+  if (!platform) {
+    return {};
+  }
+
+  const resPromise = fetch(
+    `https://api.coingecko.com/api/v3/coins/${platform}/contract/${contractAddressLowercase}`,
   ).then((response) => response.json());
 
-  lru.set(cacheKey, json);
+  lru.set(cacheKey, resPromise);
 
-  return json;
+  return resPromise;
 }
-
-export { getSenderNextNonce, fetchTransactionMetadata, fetchConditionAssetMetadata };
 
 export async function retryRpcCallOnIntermittentError<T>(fn: () => Promise<T>): Promise<T> {
   return await _retryRpcCallOnIntermittentError(fn);
@@ -531,8 +615,4 @@ async function _retryRpcCallOnIntermittentError<T>(fn: () => Promise<T>, retryCo
       throw e;
     }
   }
-}
-
-export async function sleep(ms: number): Promise<void> {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
