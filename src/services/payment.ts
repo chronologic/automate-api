@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 import ERC20 from '../abi/erc20';
-import { MINUTE_MILLIS } from '../constants';
+import { HOUR_MILLIS, MINUTE_MILLIS } from '../constants';
 import { ETHERUM_URI, PAYMENT_ADDRESS } from '../env';
 import { IPayment, IUser } from '../models/Models';
 import Payment from '../models/PaymentSchema';
@@ -19,12 +19,21 @@ const dayContract = new ethers.Contract(DAY_ADDRESS, ERC20, provider);
 const SYNC_MIN_BLOCK = 14855555;
 const TX_STATUS_FAILED = 0;
 const CREDITS_PER_DAY = 1;
+const PAYMENT_TTL = 24 * HOUR_MILLIS;
 
 let startBlock = SYNC_MIN_BLOCK;
 
 async function init(): Promise<void> {
+  await removeExpiredPayments();
   startBlock = await getLastSyncedBlockNumber();
   await processPeriodically();
+}
+
+async function removeExpiredPayments() {
+  logger.info('Removing expired payments...');
+  const cutoffDate = new Date(Date.now() - PAYMENT_TTL).toISOString();
+  const res = await Payment.remove({ processed: false, createdAt: { $lte: cutoffDate } });
+  logger.info(`Removed ${res.deletedCount} expired payments`);
 }
 
 async function getLastSyncedBlockNumber(): Promise<number> {
@@ -68,7 +77,6 @@ async function processPayment(event: ethers.Event): Promise<void> {
     const parsed = dayContract.interface.parseLog(event);
     const [from, _to, amountDay]: [string, string, ethers.BigNumber] = parsed.args as any;
     const txHash = event.transactionHash;
-    console.log(event.blockNumber);
     const { user, payment } = await matchSenderToPaymentAndUser(from, event.transactionHash);
     await waitForConfirmations(txHash);
 
@@ -133,6 +141,13 @@ async function giveCreditsToUser(userId: string, credits: number) {
   await User.updateOne({ _id: userId }, { $inc: { credits } });
 }
 
+////////////////
+
+async function initializePayment(userId: string, from: string) {
+  await Payment.create({ userId, from });
+}
+
 export default {
   init,
+  initializePayment,
 };
