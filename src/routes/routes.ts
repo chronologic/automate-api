@@ -60,6 +60,7 @@ export class Routes {
 
     ///////// payments
 
+    app.route('/payments/address').get(paymentController.getPaymentAddress);
     app.route('/payments/initialize').post(authMiddleware, paymentController.initializePayment);
 
     ///////// strategies

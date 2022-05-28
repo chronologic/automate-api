@@ -20,8 +20,6 @@ const PaymentSchema = new Schema({
   },
   txHash: {
     type: String,
-    required: true,
-    unique: true,
   },
   blockNumber: {
     type: Number,

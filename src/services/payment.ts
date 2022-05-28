@@ -102,6 +102,11 @@ async function processPayment(event: ethers.Event): Promise<void> {
 
 async function matchSenderToPaymentAndUser(from: string, txHash: string): Promise<{ user: IUser; payment: IPayment }> {
   const payment = await Payment.findOne({ from: from.toLowerCase(), processed: false });
+  const duplicate = await Payment.findOne({ txHash });
+
+  if (duplicate) {
+    throw new Error(`Payment ${txHash} has already been processed`);
+  }
 
   if (!payment) {
     throw new Error(`Payment ${txHash} from ${from} has no match in the database`);
@@ -143,11 +148,16 @@ async function giveCreditsToUser(userId: string, credits: number) {
 
 ////////////////
 
+async function getPaymentAddress() {
+  return { address: PAYMENT_ADDRESS };
+}
+
 async function initializePayment(userId: string, from: string) {
-  await Payment.create({ userId, from });
+  await Payment.create({ userId, from: from.toLowerCase() });
 }
 
 export default {
   init,
+  getPaymentAddress,
   initializePayment,
 };
