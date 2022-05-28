@@ -15,7 +15,7 @@ export interface IUserService {
   signup(email: string, password: string, source?: string): Promise<IUserPublic>;
   loginOrSignup(email: string, password: string): Promise<IUserPublic>;
   requestResetPassword(email: string): Promise<IUserResetPassword>;
-  resetPassword(email: string, password: string, token: string);
+  resetPassword(email: string, password: string, token: string): Promise<IUserResetPassword>;
   getCredits(user: IUser): Promise<IUserCredits>;
 }
 
@@ -152,7 +152,7 @@ export class UserService implements IUserService {
         };
       }
     } catch (error) {
-      throw new BadRequestError('Password reset is unsuccessful please request a new email.');
+      throw new BadRequestError('Password reset is unsuccessful, please request a new email.');
     }
   }
 
