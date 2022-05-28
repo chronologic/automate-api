@@ -139,7 +139,7 @@ async function markPaymentProcessed({
   txHash: string;
   blockNumber: number;
 }): Promise<void> {
-  await Payment.updateOne({ _id: paymentId }, { amount, credits, txHash, blockNumber });
+  await Payment.updateOne({ _id: paymentId }, { amount, credits, txHash, blockNumber, processed: true });
 }
 
 async function giveCreditsToUser(userId: string, credits: number) {
