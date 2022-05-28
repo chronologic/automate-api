@@ -10,7 +10,7 @@ import { sleep } from '../utils';
 import { createLogger } from './logger';
 
 const DAY_ADDRESS = '0xe814aee960a85208c3db542c53e7d4a6c8d5f60f';
-const CONFIRMATIONS = 3;
+const CONFIRMATIONS = 2;
 
 const logger = createLogger('payment');
 const provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
@@ -52,7 +52,7 @@ async function processPeriodically(): Promise<void> {
 }
 
 async function processLogs(): Promise<void> {
-  const latestBlock = await provider.getBlockNumber();
+  const latestBlock = (await provider.getBlockNumber()) - 1;
   logger.info(`🚀 processing payments for blocks ${startBlock} - ${latestBlock}...`);
   const events = await dayContract.queryFilter(
     dayContract.filters.Transfer(null, PAYMENT_ADDRESS),
