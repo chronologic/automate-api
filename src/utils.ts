@@ -10,7 +10,7 @@ interface ICache<T> {
   keys: () => T[];
 }
 
-export function createTimedCache<T>(ttlMillis: number): ICache<T> {
+export function createTimedCache<T>(ttlMillis?: number): ICache<T> {
   const cache = new Cache();
 
   return {
@@ -18,6 +18,30 @@ export function createTimedCache<T>(ttlMillis: number): ICache<T> {
     get: (key: string) => cache.get(key) as any,
     keys: () => cache.keys() as any,
   };
+}
+
+const universalCache = createTimedCache<any>();
+
+export async function getTimedCachedValue<T>({
+  key,
+  ttlMillis,
+  fetchValue,
+}: {
+  key: string;
+  ttlMillis: number;
+  fetchValue: () => T;
+}): Promise<T> {
+  const cachedValue = universalCache.get(key);
+
+  if (cachedValue != null) {
+    return cachedValue;
+  }
+
+  const valuePromise = fetchValue();
+
+  universalCache.put(key, valuePromise, ttlMillis);
+
+  return valuePromise;
 }
 
 export function numberToBnEth(num: number): ethers.BigNumber {
