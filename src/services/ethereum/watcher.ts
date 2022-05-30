@@ -11,6 +11,7 @@ import { fetchTransactionMetadata } from './utils';
 
 export class Watcher {
   public static async init() {
+    logger.info('Starting ethereum watcher...');
     await Watcher.fillMissingMetadata();
     await Watcher.fillMissingAssetType();
 

@@ -184,9 +184,10 @@ export class TransactionExecutor implements ITransactionExecutor {
           const txReceipt = await retryRpcCallOnIntermittentError(() =>
             provider.getTransactionReceipt(scheduled.transactionHash),
           );
-          if (txReceipt.status === 1) {
+
+          if (txReceipt?.status === 1) {
             status = Status.Completed;
-          } else if (txReceipt.status) {
+          } else if (txReceipt?.status) {
             status = Status.Error;
           }
         } catch (e) {

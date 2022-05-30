@@ -25,7 +25,9 @@ export class Processor {
 
       logger.debug(`Found ${scheduleds.length} pending transactions`);
 
-      await this.processTransactions(scheduleds);
+      if (scheduleds.length > 0) {
+        await this.processTransactions(scheduleds);
+      }
     } catch (e) {
       logger.error(e);
     }
@@ -53,7 +55,7 @@ export class Processor {
     const groupedByChain = this.groupByChain(scheduleds);
     const chainIds = Object.keys(groupedByChain).map(Number);
 
-    logger.debug(`Processing transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
+    logger.info(`Processing ${scheduleds.length} transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
 
     const promisesForChain = chainIds.map((chainId) =>
       this.processTransactionsForChain(chainId, groupedByChain[chainId]),
