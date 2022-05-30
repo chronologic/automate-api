@@ -57,7 +57,7 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     this.validatePassword(password);
 
-    const userDb = await this.findUserInDb(login);
+    const userDb = await this.findUserByLogin(login);
 
     if (userDb) {
       await this.validateCredentials(password, userDb.salt, userDb.passwordHash);
@@ -77,7 +77,7 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     this.validatePassword(password);
 
-    const userDb = await this.findUserInDb(login);
+    const userDb = await this.findUserByLogin(login);
 
     if (userDb) {
       throw new BadRequestError('Email already taken');
@@ -109,7 +109,7 @@ export class UserService implements IUserService {
   }
 
   public async loginOrSignup(login: string, password: string): Promise<IUserPublic> {
-    const userDb = await this.findUserInDb(login);
+    const userDb = await this.findUserByLogin(login);
 
     if (userDb) {
       return this.login(login, password);
@@ -119,7 +119,9 @@ export class UserService implements IUserService {
 
   public async requestResetPassword(login: string): Promise<IUserResetPassword> {
     this.validateEmail(login);
-    const userDb = await this.findUserInDb(login);
+
+    const userDb = await this.findUserByLogin(login);
+
     if (userDb) {
       const secret = JWT_SECRET + userDb.passwordHash;
       const paylod = {
@@ -128,8 +130,9 @@ export class UserService implements IUserService {
       };
       const token = jwt.sign(paylod, secret, { expiresIn: '1h' });
       const resetUrl = '?token=' + token + '&email=' + login;
-      sendResetPasswordEmail(login, resetUrl);
       const resetLink = `${token} `;
+
+      sendResetPasswordEmail(login, resetUrl);
       return {
         login,
         link: resetLink,
@@ -140,7 +143,9 @@ export class UserService implements IUserService {
   public async resetPassword(login: string, password: string, token: string): Promise<IUserResetPassword> {
     try {
       this.validatePassword(password);
-      const userDb = await this.findUserInDb(login);
+
+      const userDb = await this.findUserByLogin(login);
+
       const secret = JWT_SECRET + userDb.passwordHash;
       jwt.verify(token, secret);
       if (userDb) {
@@ -191,7 +196,7 @@ export class UserService implements IUserService {
     };
   }
 
-  private async findUserInDb(login: string): Promise<IUser> {
+  private async findUserByLogin(login: string): Promise<IUser> {
     const userDb = await User.findOne({ login }).collation({ locale: 'en', strength: 2 }).exec();
     return userDb;
   }
