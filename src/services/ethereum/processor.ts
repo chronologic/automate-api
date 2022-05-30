@@ -18,7 +18,7 @@ export class Processor {
     this.transactionExecutor = transactionExecutor;
   }
   public async process() {
-    logger.info(`START processing...`);
+    logger.debug(`START processing...`);
 
     try {
       const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
@@ -32,7 +32,7 @@ export class Processor {
       logger.error(e);
     }
 
-    logger.info(`END processed`);
+    logger.debug(`END processed`);
   }
 
   public async processByIds(ids: string[]) {
@@ -55,7 +55,7 @@ export class Processor {
     const groupedByChain = this.groupByChain(scheduleds);
     const chainIds = Object.keys(groupedByChain).map(Number);
 
-    logger.info(`Processing ${scheduleds.length} transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
+    logger.debug(`Processing ${scheduleds.length} transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
 
     const promisesForChain = chainIds.map((chainId) =>
       this.processTransactionsForChain(chainId, groupedByChain[chainId]),
