@@ -159,6 +159,7 @@ export class Processor {
     transactionList: IScheduled[],
     blockNum: number,
   ): Promise<{ executed: boolean; conditionMet: boolean }> {
+    let executed = false;
     const {
       transactionHash,
       conditionMet,
@@ -173,13 +174,13 @@ export class Processor {
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
 
     if (status !== Status.Pending) {
-      logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
+      logger.info(`${scheduled._id} processed with status ${Status[status]}`);
 
       const priceStats = await fetchPriceStats(ethers.utils.parseTransaction(scheduled.signedTransaction));
       const gasPaid = priceStats.gasPaid || scheduled.gasSaved;
       const gasSaved = scheduled.gasSaved > priceStats.gasSaved ? scheduled.gasSaved : priceStats.gasSaved;
 
-      scheduled
+      await scheduled
         .update({
           transactionHash,
           status,
@@ -195,25 +196,33 @@ export class Processor {
         })
         .exec();
 
-      sendMail(
-        // tslint:disable-next-line: no-object-literal-type-assertion
-        {
-          ...scheduled.toJSON(),
-          transactionHash,
-          status,
-          error,
-          executedAt,
-          assetName: assetName || scheduled.assetName,
-          assetAmount: assetAmount || scheduled.assetAmount,
-          assetValue: assetValue || scheduled.assetValue,
-        } as IScheduled,
-        error ? 'failure' : 'success',
-      );
+      const isSuccess = status === Status.Completed;
+      const isError = status === Status.Error;
+      executed = isSuccess || isError;
 
-      tgBot.executed({ value: assetValue, savings: gasSaved });
-      webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
+      if (executed) {
+        sendMail(
+          // tslint:disable-next-line: no-object-literal-type-assertion
+          {
+            ...scheduled.toJSON(),
+            transactionHash,
+            status,
+            error,
+            executedAt,
+            assetName: assetName || scheduled.assetName,
+            assetAmount: assetAmount || scheduled.assetAmount,
+            assetValue: assetValue || scheduled.assetValue,
+          } as IScheduled,
+          error ? 'failure' : 'success',
+        );
+      }
 
-      return { executed: true, conditionMet };
+      if (isSuccess) {
+        tgBot.executed({ value: assetValue, savings: gasSaved });
+        webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
+      }
+
+      return { executed, conditionMet };
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -221,7 +230,7 @@ export class Processor {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
     }
 
-    return { executed: false, conditionMet };
+    return { executed, conditionMet };
   }
 
   private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {

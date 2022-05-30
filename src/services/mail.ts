@@ -46,6 +46,9 @@ const mailSubjects = {
 };
 
 async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void> {
+  if (!mailSubjects[status]) {
+    throw new Error(`Unsupported mail status: ${status}`);
+  }
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
