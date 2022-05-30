@@ -26,14 +26,15 @@ let startBlock = SYNC_MIN_BLOCK;
 async function init(): Promise<void> {
   await removeExpiredPayments();
   startBlock = await getLastSyncedBlockNumber();
+  logger.info('Starting payment monitor...');
   await processPeriodically();
 }
 
 async function removeExpiredPayments() {
-  logger.info('Removing expired payments...');
+  logger.debug('Removing expired payments...');
   const cutoffDate = new Date(Date.now() - PAYMENT_TTL).toISOString();
   const res = await Payment.remove({ processed: false, createdAt: { $lte: cutoffDate } });
-  logger.info(`Removed ${res.deletedCount} expired payments`);
+  logger.debug(`Removed ${res.deletedCount} expired payments`);
 }
 
 async function getLastSyncedBlockNumber(): Promise<number> {
@@ -53,7 +54,7 @@ async function processPeriodically(): Promise<void> {
 
 async function processLogs(): Promise<void> {
   const latestBlock = (await provider.getBlockNumber()) - 1;
-  logger.info(`🚀 processing payments for blocks ${startBlock} - ${latestBlock}...`);
+  logger.debug(`🚀 processing payments for blocks ${startBlock} - ${latestBlock}...`);
   const events = await dayContract.queryFilter(
     dayContract.filters.Transfer(null, PAYMENT_ADDRESS),
     startBlock,
@@ -61,7 +62,7 @@ async function processLogs(): Promise<void> {
   );
   const sortedEvents = events.sort((a, b) => a.blockNumber - b.blockNumber);
 
-  logger.info(`ℹ found ${sortedEvents.length} events, processing...`);
+  logger.debug(`ℹ found ${sortedEvents.length} events, processing...`);
 
   for (const event of sortedEvents) {
     await processPayment(event);
@@ -69,7 +70,7 @@ async function processLogs(): Promise<void> {
 
   startBlock = Math.max(startBlock, latestBlock);
 
-  logger.info(`🎉 processing payments from logs completed`);
+  logger.debug(`🎉 processing payments from logs completed`);
 }
 
 async function processPayment(event: ethers.Event): Promise<void> {
