@@ -99,41 +99,46 @@ export class Processor {
   private async processTransactionsForChainAndSender(scheduleds: IScheduled[], blockNum: number) {
     const groupedByNonce = this.groupByNonce(scheduleds);
     const nonces = Object.keys(groupedByNonce);
+    const [firstNonce] = nonces;
 
-    logger.debug(`Processing ${nonces.length} nonces for sender ${scheduleds[0].from}: ${nonces.join(', ')}`);
+    logger.debug(
+      `Processing first nonce (${firstNonce}) out of ${nonces.length} nonces for sender ${
+        scheduleds[0].from
+      }: ${nonces.join(', ')}`,
+    );
 
-    for (const nonce of nonces) {
-      const transactionsForNonce = groupedByNonce[nonce];
-      logger.debug(`Processing ${transactionsForNonce.length} txs for sender ${scheduleds[0].from} and nonce ${nonce}`);
+    const transactionsForNonce = groupedByNonce[firstNonce];
+    logger.debug(
+      `Processing ${transactionsForNonce.length} txs for sender ${scheduleds[0].from} and nonce ${firstNonce}`,
+    );
 
-      const sortedByPriority = this.sortByPriority(transactionsForNonce);
+    const sortedByPriority = this.sortByPriority(transactionsForNonce);
 
-      for (const transaction of sortedByPriority) {
-        let executed = false;
-        let conditionMet = false;
-        logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
-        try {
-          const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
-          executed = res.executed;
-          conditionMet = res.conditionMet;
-        } catch (e) {
-          logger.error(`${transaction._id} processing failed with ${e}`);
-        }
+    for (const transaction of sortedByPriority) {
+      let executed = false;
+      let conditionMet = false;
+      logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
+      try {
+        const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
+        executed = res.executed;
+        conditionMet = res.conditionMet;
+      } catch (e) {
+        logger.error(`${transaction._id} processing failed with ${e}`);
+      }
+      logger.debug(
+        `${transaction._id} nonce: ${transaction.nonce} priority: ${
+          transaction.priority
+        } processed with result ${JSON.stringify({
+          executed,
+          conditionMet,
+        })}`,
+      );
+      if (conditionMet) {
         logger.debug(
-          `${transaction._id} nonce: ${transaction.nonce} priority: ${
-            transaction.priority
-          } processed with result ${JSON.stringify({
-            executed,
-            conditionMet,
-          })}`,
+          `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
         );
-        if (conditionMet) {
-          logger.debug(
-            `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
-          );
-          await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
-          break;
-        }
+        await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
+        break;
       }
     }
   }
