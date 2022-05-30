@@ -14,7 +14,6 @@ import {
 import Scheduled from '../models/ScheduledSchema';
 import * as ethUtils from './ethereum/utils';
 import send from './mail';
-import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 import { UserService } from './user';
 import tgBot from './telegram';
@@ -100,8 +99,6 @@ export class ScheduleService implements IScheduleService {
       isProxyRequest,
       isStrategyTx,
     });
-
-    transaction.paymentAddress = isFreeTx ? '' : PaymentService.getNextPaymentAddress();
 
     // extra check for duplicate in db
     // if same tx didn't exist when the process started

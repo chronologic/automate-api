@@ -1,18 +1,18 @@
 // tslint:disable-next-line:no-implicit-dependencies
 import { IRouter } from 'express-serve-static-core';
 
+import { authMiddleware } from '../middleware';
+import { ScheduleService } from '../services/schedule';
+import { StatsService } from '../services/stats';
+import { UserService } from '../services/user';
 import { PolkadotController } from '../controllers/PolkadotController';
 import { ScheduleController } from '../controllers/ScheduleController';
 import { StatsController } from '../controllers/StatsController';
 import { UserController } from '../controllers/UserController';
-import { ScheduleService } from '../services/schedule';
-import { StatsService } from '../services/stats';
-import { UserService } from '../services/user';
-import { authMiddleware, requestMiddleware } from '../middleware';
 import { TransactionController } from '../controllers/TransactionController';
-import { transactionService } from '../services/transaction';
 import { gasController } from '../controllers/GasController';
 import { strategyController } from '../controllers/StrategyController';
+import { paymentController } from '../controllers/PaymentController';
 
 export class Routes {
   private scheduleController: ScheduleController = new ScheduleController(new ScheduleService());
@@ -46,19 +46,22 @@ export class Routes {
 
     ///////// user specific
 
-    app.route('/auth').post(requestMiddleware(this.userController.loginOrSignup.bind(this.userController)));
-    app.route('/auth/login').post(requestMiddleware(this.userController.login.bind(this.userController)));
-    app.route('/auth/signup').post(requestMiddleware(this.userController.signup.bind(this.userController)));
+    app.route('/auth').post(this.userController.loginOrSignup.bind(this.userController));
+    app.route('/auth/login').post(this.userController.login.bind(this.userController));
+    app.route('/auth/signup').post(this.userController.signup.bind(this.userController));
 
-    app
-      .route('/user/credits')
-      .get(authMiddleware, requestMiddleware(this.userController.credits.bind(this.userController)));
+    app.route('/user/credits').get(authMiddleware, this.userController.credits.bind(this.userController));
 
     app
       .route('/transactions')
       .get(authMiddleware, this.transactionController.list.bind(this.transactionController))
       .post(authMiddleware, this.transactionController.edit.bind(this.transactionController))
       .delete(authMiddleware, this.transactionController.cancel.bind(this.transactionController));
+
+    ///////// payments
+
+    app.route('/payments/address').get(paymentController.getPaymentAddress);
+    app.route('/payments/initialize').post(authMiddleware, paymentController.initializePayment);
 
     ///////// strategies
 

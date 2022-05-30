@@ -4,6 +4,7 @@ import express from 'express';
 import expressWinston from 'express-winston';
 import mongoose from 'mongoose';
 import winston from 'winston';
+import 'express-async-errors';
 
 import { LOG_LEVEL } from './env';
 import { ApplicationError } from './errors';

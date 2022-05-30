@@ -140,5 +140,3 @@ export class UserService implements IUserService {
     }
   }
 }
-
-// Platform.create({ name: 'name', credits: 123, whitelist: ['0xabc'] } as any);
