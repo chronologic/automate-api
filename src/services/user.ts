@@ -124,11 +124,11 @@ export class UserService implements IUserService {
 
     if (userDb) {
       const secret = JWT_SECRET + userDb.passwordHash;
-      const paylod = {
+      const payload = {
         email: login,
         id: userDb._id,
       };
-      const token = jwt.sign(paylod, secret, { expiresIn: '1h' });
+      const token = jwt.sign(payload, secret, { expiresIn: '1h' });
       const resetUrl = '?token=' + token + '&email=' + login;
       const resetLink = `${token} `;
 
