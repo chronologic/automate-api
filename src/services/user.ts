@@ -1,17 +1,21 @@
 import * as bcrypt from 'bcrypt';
 import ShortUniqueId from 'short-unique-id';
+import jwt from 'jsonwebtoken';
 
-import { AssetType, IPlatform, IUser, IUserCredits, IUserPublic } from '../models/Models';
+import { AssetType, IPlatform, IUser, IUserCredits, IUserPublic, IUserResetPassword } from '../models/Models';
 import Platform from '../models/PlatformSchema';
 import User from '../models/UserSchema';
+import { NEW_USER_CREDITS, JWT_SECRET } from '../env';
 import { BadRequestError } from '../errors';
-import { NEW_USER_CREDITS } from '../env';
+import { sendResetPasswordEmail } from './mail';
 import platformService from './platform';
 
 export interface IUserService {
   login(email: string, password: string): Promise<IUserPublic>;
   signup(email: string, password: string, source?: string): Promise<IUserPublic>;
   loginOrSignup(email: string, password: string): Promise<IUserPublic>;
+  requestResetPassword(email: string): Promise<IUserResetPassword>;
+  resetPassword(email: string, password: string, token: string): Promise<IUserResetPassword>;
   getCredits(user: IUser): Promise<IUserCredits>;
 }
 
@@ -53,7 +57,7 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     this.validatePassword(password);
 
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserByLogin(login);
 
     if (userDb) {
       await this.validateCredentials(password, userDb.salt, userDb.passwordHash);
@@ -73,14 +77,13 @@ export class UserService implements IUserService {
     this.validateEmail(login);
     this.validatePassword(password);
 
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserByLogin(login);
 
     if (userDb) {
       throw new BadRequestError('Email already taken');
     }
     const credits = NEW_USER_CREDITS;
-    const salt = await bcrypt.genSalt(5);
-    const passwordHash = await bcrypt.hash(password, salt);
+    const { salt, hash: passwordHash } = await this.generateSaltAndHash(password);
     const apiKey = apiKeygen();
     const accessKey = accessKeygen();
 
@@ -106,12 +109,56 @@ export class UserService implements IUserService {
   }
 
   public async loginOrSignup(login: string, password: string): Promise<IUserPublic> {
-    const userDb = await User.findOne({ login }).exec();
+    const userDb = await this.findUserByLogin(login);
 
     if (userDb) {
       return this.login(login, password);
     }
     return this.signup(login, password);
+  }
+
+  public async requestResetPassword(login: string): Promise<IUserResetPassword> {
+    this.validateEmail(login);
+
+    const userDb = await this.findUserByLogin(login);
+
+    if (userDb) {
+      const secret = JWT_SECRET + userDb.passwordHash;
+      const payload = {
+        email: login,
+        id: userDb._id,
+      };
+      const token = jwt.sign(payload, secret, { expiresIn: '1h' });
+      const resetUrl = '?token=' + token + '&email=' + login;
+      const resetLink = `${token} `;
+
+      sendResetPasswordEmail(login, resetUrl);
+      return {
+        login,
+        link: resetLink,
+      };
+    }
+  }
+
+  public async resetPassword(login: string, password: string, token: string): Promise<IUserResetPassword> {
+    try {
+      this.validatePassword(password);
+
+      const userDb = await this.findUserByLogin(login);
+
+      const secret = JWT_SECRET + userDb.passwordHash;
+      jwt.verify(token, secret);
+      if (userDb) {
+        const { salt: pwSalt, hash: pwHash } = await this.generateSaltAndHash(password);
+        await User.updateOne({ _id: userDb._id }, { salt: pwSalt, passwordHash: pwHash });
+        return {
+          login,
+          link: token,
+        };
+      }
+    } catch (error) {
+      throw new BadRequestError('Password reset is unsuccessful, please request a new email.');
+    }
   }
 
   private validateEmail(email: string): void {
@@ -138,5 +185,19 @@ export class UserService implements IUserService {
     if (hashed !== passwordHash) {
       throw new BadRequestError('Invalid credentials');
     }
+  }
+
+  private async generateSaltAndHash(password: string): Promise<{ salt: string; hash: string }> {
+    const salt = await bcrypt.genSalt(5);
+    const hash = await bcrypt.hash(password, salt);
+    return {
+      salt,
+      hash,
+    };
+  }
+
+  private async findUserByLogin(login: string): Promise<IUser> {
+    const userDb = await User.findOne({ login }).collation({ locale: 'en', strength: 2 }).exec();
+    return userDb;
   }
 }
