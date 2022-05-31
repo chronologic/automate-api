@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from 'express';
+import { Response } from 'express';
 
 import { RequestWithAuth } from '../models/Models';
 import { strategyService } from '../services/strategy';

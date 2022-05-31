@@ -14,17 +14,17 @@ import {
 import Scheduled from '../models/ScheduledSchema';
 import * as ethUtils from './ethereum/utils';
 import send from './mail';
-import { PaymentService } from './payment';
 import getApi from './polkadot/api';
 import { UserService } from './user';
 import tgBot from './telegram';
 import { createTimedCache, decodeMethod, isTruthy } from '../utils';
 import { CREDITS } from '../env';
-import { ChainId, MINUTE_MILLIS } from '../constants';
+import { MINUTE_MILLIS } from '../constants';
 import webhookService from './webhook';
 import { strategyService } from './strategy';
 import { transactionService } from './transaction';
 import { mapToScheduledForUser } from './txLabel';
+import logger from './logger';
 
 const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
@@ -37,6 +37,7 @@ export interface IScheduleService {
   find(id: string): Promise<IScheduled>;
   cancel(id: string);
   getPending(assetType: AssetType): Promise<IScheduled[]>;
+  getByIds(assetType: AssetType, ids: string[]): Promise<IScheduled[]>;
   listForApiKey(apiKey: string): Promise<IScheduledForUser[]>;
   getByHash(apiKey: string, hash: string): Promise<IScheduledForUser>;
   getMaxNonce(apiKey: string, address: string, chainId: number): Promise<number>;
@@ -72,24 +73,10 @@ export class ScheduleService implements IScheduleService {
     const { isStrategyTx, transaction: matchedTransaction, isLastPrepForNonce } = await matchStrategyPrep(transaction);
     transaction = matchedTransaction;
 
-    const isEthereumMainnetTx = transaction.chainId === ChainId.Ethereum;
-    if (isEthereumMainnetTx) {
-      transaction = await populateTransactionMetadata({
-        transaction,
-        isGasPriceAware: isTruthy(request.gasPriceAware),
-        isProxyRequest,
-        transactionExists,
-      });
-    }
-
-    const conditionAssetMetadata = await this.getConditionAssetMetadata(transaction);
-    transaction.conditionAssetName = conditionAssetMetadata.name;
-    transaction.conditionAssetDecimals = conditionAssetMetadata.decimals;
-
     const isDevTx = this.isDevTx(request.paymentEmail);
     const isValidCouponCode = this.isValidCouponCode(request.paymentRefundAddress);
 
-    const isFreeTx = isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
+    const isFreeTx = transactionExists || isDevTx || isValidCouponCode || !PAYMENTS_ENABLED;
 
     const prevStatus = transaction.status;
 
@@ -100,8 +87,6 @@ export class ScheduleService implements IScheduleService {
       isProxyRequest,
       isStrategyTx,
     });
-
-    transaction.paymentAddress = isFreeTx ? '' : PaymentService.getNextPaymentAddress();
 
     // extra check for duplicate in db
     // if same tx didn't exist when the process started
@@ -122,6 +107,13 @@ export class ScheduleService implements IScheduleService {
       tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
       webhookService.notify(scheduled);
     }
+
+    // do not wait for this - let it run in the background
+    populateTransactionMetadata({
+      transaction: scheduled,
+      isProxyRequest,
+      transactionExists,
+    });
 
     if (isStrategyTx && !isLastPrepForNonce) {
       throw new Error(
@@ -159,6 +151,12 @@ export class ScheduleService implements IScheduleService {
       item.priority = item.priority || 1;
       return item;
     });
+  }
+
+  public async getByIds(assetType: AssetType, ids: string[]): Promise<IScheduled[]> {
+    const rows: IScheduled[] = await Scheduled.where('assetType', assetType).where('_id', ids).exec();
+
+    return rows;
   }
 
   public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {
@@ -200,21 +198,6 @@ export class ScheduleService implements IScheduleService {
     }
 
     return -1;
-  }
-
-  private async getConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
-    switch (transaction.assetType) {
-      case AssetType.Ethereum:
-      case undefined: {
-        return ethUtils.fetchConditionAssetMetadata(transaction);
-      }
-      case AssetType.Polkadot: {
-        return {
-          name: '',
-          decimals: 10,
-        };
-      }
-    }
   }
 
   private isDevTx(email: string): boolean {
@@ -323,37 +306,60 @@ function calculateNewStatusForDirectRequest({
 
 async function populateTransactionMetadata({
   transaction,
-  isGasPriceAware,
   transactionExists,
   isProxyRequest,
 }: {
   transaction: IScheduled;
-  isGasPriceAware: boolean;
   transactionExists: boolean;
   isProxyRequest: boolean;
-}): Promise<IScheduled> {
+}): Promise<void> {
+  const startTime = Date.now();
   const metadata = await getTransactionMetadata(transaction);
-  transaction.assetName = metadata.assetName;
-  transaction.assetAmount = metadata.assetAmount;
-  transaction.assetAmountWei = metadata.assetAmountWei;
-  transaction.assetDecimals = metadata.assetDecimals;
-  transaction.assetValue = metadata.assetValue;
-  transaction.assetContract = metadata.assetContract;
-  transaction.gasPriceAware = isGasPriceAware;
-
-  transaction.scheduledEthPrice = metadata.ethPrice;
-  transaction.scheduledGasPrice = metadata.gasPrice;
-  transaction.gasPaid = metadata.gasPaid;
-  transaction.gasSaved = metadata.gasSaved;
+  const txMeta: Partial<IScheduled> = {
+    assetName: metadata.assetName,
+    assetAmount: metadata.assetAmount,
+    assetAmountWei: metadata.assetAmountWei,
+    assetDecimals: metadata.assetDecimals,
+    assetValue: metadata.assetValue,
+    assetContract: metadata.assetContract,
+    scheduledEthPrice: metadata.ethPrice,
+    scheduledGasPrice: metadata.gasPrice,
+    gasPaid: metadata.gasPaid,
+    gasSaved: metadata.gasSaved,
+  };
 
   // if newly creating a tx, autopopulate condition to match the asset being transferred
   if (!transactionExists && isProxyRequest) {
-    transaction.conditionAsset = metadata.assetContract;
-    transaction.conditionAmount = metadata.assetAmountWei;
-    transaction.conditionAssetDecimals = metadata.assetDecimals;
+    txMeta.conditionAsset = metadata.assetContract;
+    txMeta.conditionAmount = metadata.assetAmountWei;
+    txMeta.conditionAssetDecimals = metadata.assetDecimals;
   }
 
-  return transaction;
+  const conditionAssetMetadata = await getConditionAssetMetadata(transaction);
+  txMeta.conditionAssetName = conditionAssetMetadata.name;
+  txMeta.conditionAssetDecimals = conditionAssetMetadata.decimals;
+
+  console.log('txMeta:', txMeta);
+
+  await Scheduled.updateOne({ _id: transaction._id }, txMeta);
+
+  const executionTimeSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
+  logger.debug(`${transaction._id} Populated tx metadata in ${executionTimeSeconds}s`);
+}
+
+async function getConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
+  switch (transaction.assetType) {
+    case AssetType.Ethereum:
+    case undefined: {
+      return ethUtils.fetchConditionAssetMetadata(transaction);
+    }
+    case AssetType.Polkadot: {
+      return {
+        name: '',
+        decimals: 10,
+      };
+    }
+  }
 }
 
 // TODO: optimize this function - takes too much time
@@ -405,6 +411,7 @@ async function matchStrategyPrep(
   transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
   transaction.strategyInstanceId = strategyPrep.instanceId;
   transaction.strategyPrepId = strategyPrep.id;
+  transaction.gasPriceAware = true; // ensure no 'gas price too low' error
 
   return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };
 }

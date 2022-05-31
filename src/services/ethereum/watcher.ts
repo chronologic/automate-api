@@ -11,6 +11,7 @@ import { fetchTransactionMetadata } from './utils';
 
 export class Watcher {
   public static async init() {
+    logger.info('Starting ethereum watcher...');
     await Watcher.fillMissingMetadata();
     await Watcher.fillMissingAssetType();
 
@@ -18,6 +19,13 @@ export class Watcher {
     const processor = new Processor(new ScheduleService(), transactionExecutor);
 
     Watcher.processInLoop(processor);
+  }
+
+  public static async processByIds(ids: string[]) {
+    const transactionExecutor = new TransactionExecutor();
+    const processor = new Processor(new ScheduleService(), transactionExecutor);
+
+    processor.processByIds(ids);
   }
 
   private static async processInLoop(processor: Processor) {

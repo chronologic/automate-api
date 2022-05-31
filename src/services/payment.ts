@@ -1,107 +1,164 @@
 import { ethers } from 'ethers';
 
 import ERC20 from '../abi/erc20';
-import { IScheduled, Status } from '../models/Models';
-import Scheduled from '../models/ScheduledSchema';
+import { HOUR_MILLIS, MINUTE_MILLIS } from '../constants';
+import { ETHERUM_URI, PAYMENT_ADDRESS } from '../env';
+import { IPayment, IUser } from '../models/Models';
+import Payment from '../models/PaymentSchema';
+import User from '../models/UserSchema';
+import { sleep } from '../utils';
 import { createLogger } from './logger';
 
-const PAYMENT_ADDRESSES = (process.env.PAYMENT_ADDRESSES || '').split(',');
 const DAY_ADDRESS = '0xe814aee960a85208c3db542c53e7d4a6c8d5f60f';
-const MINUTE_MILLIS = 60 * 1000;
-const MAX_PAYMENT_LIFETIME = 60 * MINUTE_MILLIS;
-const CONFIRMATIONS = 3;
-const SCHEDULE_PRICE = ethers.BigNumber.from('10 000 000 000 000 000 000'.replace(/ /g, ''));
+const CONFIRMATIONS = 2;
 
 const logger = createLogger('payment');
-const tokenInterface = new ethers.utils.Interface(ERC20);
-const transferTopic = tokenInterface.getEventTopic('Transfer');
+const provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
+const dayContract = new ethers.Contract(DAY_ADDRESS, ERC20, provider);
 
-export class PaymentService {
-  // TODO: check existing pending payments and use them as a last resort
-  // This is helpful when restarting server
-  public static getNextPaymentAddress() {
-    PaymentService.currentAddressIndex =
-      PaymentService.currentAddressIndex >= PAYMENT_ADDRESSES.length ? 0 : PaymentService.currentAddressIndex++;
+const SYNC_MIN_BLOCK = 14855555;
+const TX_STATUS_FAILED = 0;
+const CREDITS_PER_DAY = 1;
+const PAYMENT_TTL = 24 * HOUR_MILLIS;
 
-    return PAYMENT_ADDRESSES[PaymentService.currentAddressIndex];
+let startBlock = SYNC_MIN_BLOCK;
+
+async function init(): Promise<void> {
+  await removeExpiredPayments();
+  startBlock = await getLastSyncedBlockNumber();
+  logger.info('Starting payment monitor...');
+  await processPeriodically();
+}
+
+async function removeExpiredPayments() {
+  logger.debug('Removing expired payments...');
+  const cutoffDate = new Date(Date.now() - PAYMENT_TTL).toISOString();
+  const res = await Payment.remove({ processed: false, createdAt: { $lte: cutoffDate } });
+  logger.debug(`Removed ${res.deletedCount} expired payments`);
+}
+
+async function getLastSyncedBlockNumber(): Promise<number> {
+  const [res] = await Payment.find({ processed: true }).sort({ blockNumber: 'desc' }).limit(1);
+
+  return res?.blockNumber || SYNC_MIN_BLOCK;
+}
+
+async function processPeriodically(): Promise<void> {
+  try {
+    await Promise.all([processLogs(), sleep(MINUTE_MILLIS)]);
+  } catch (e) {
+    logger.error(e);
+  }
+  processPeriodically();
+}
+
+async function processLogs(): Promise<void> {
+  const latestBlock = (await provider.getBlockNumber()) - 1;
+  logger.debug(`🚀 processing payments for blocks ${startBlock} - ${latestBlock}...`);
+  const events = await dayContract.queryFilter(
+    dayContract.filters.Transfer(null, PAYMENT_ADDRESS),
+    startBlock,
+    latestBlock,
+  );
+  const sortedEvents = events.sort((a, b) => a.blockNumber - b.blockNumber);
+
+  logger.debug(`ℹ found ${sortedEvents.length} events, processing...`);
+
+  for (const event of sortedEvents) {
+    await processPayment(event);
   }
 
-  public static init(): void {
-    logger.info('Initializing payment processor');
-    const filter = {
-      address: DAY_ADDRESS,
-      topics: [transferTopic],
-    };
+  startBlock = Math.max(startBlock, latestBlock);
 
-    const provider = ethers.getDefaultProvider();
+  logger.debug(`🎉 processing payments from logs completed`);
+}
 
-    provider.on(filter, (event: any) => PaymentService.processPayment(event));
+async function processPayment(event: ethers.Event): Promise<void> {
+  try {
+    const parsed = dayContract.interface.parseLog(event);
+    const [from, _to, amountDay]: [string, string, ethers.BigNumber] = parsed.args as any;
+    const txHash = event.transactionHash;
+    const { user, payment } = await matchSenderToPaymentAndUser(from, event.transactionHash);
+    await waitForConfirmations(txHash);
 
-    PaymentService.startExpirationWatcher();
-  }
+    const formattedAmount = Math.floor(Number(ethers.utils.formatEther(amountDay)));
+    const credits = formattedAmount * CREDITS_PER_DAY;
 
-  private static currentAddressIndex = 0;
+    await markPaymentProcessed({
+      paymentId: payment.id,
+      amount: formattedAmount,
+      credits,
+      blockNumber: event.blockNumber,
+      txHash,
+    });
+    await giveCreditsToUser(user.id, credits);
 
-  private static async processPayment(event: any): Promise<void> {
-    const log = tokenInterface.parseLog(event);
-    // TODO: fixme
-    const values = log.args.values() as any;
-    const from = values.from;
-    const to = values.to;
-    const amount = values.value.toString();
+    logger.info(`✅ processed payment from ${from} for ${formattedAmount} DAY`);
 
-    if (PAYMENT_ADDRESSES.find((addr) => addr.toLowerCase() === to.toLowerCase())) {
-      logger.info(`Payment from ${from} to ${to} for ${amount} detected. Tx ${event.transactionHash}`);
-
-      const pending = await this.getPendingPayments();
-      const tx = pending.find((item) => item.paymentAddress.toLowerCase() === to.toLowerCase());
-
-      if (tx) {
-        logger.info(`[${tx._id}] Payment matched`);
-        if (SCHEDULE_PRICE.lte(amount)) {
-          logger.info(`[${tx._id}] Awaiting confirmations`);
-          tx.status = Status.PendingPaymentConfirmations;
-          tx.paymentTx = event.transactionHash;
-          await tx.save();
-          await PaymentService.waitForConfirmation(event.transactionHash);
-          logger.info(`[${tx._id}] Payment confirmed`);
-          tx.status = Status.Pending;
-          await tx.save();
-        } else {
-          logger.info(`[${tx._id}] Payment amount insufficient: ${amount}`);
-        }
-      } else {
-        logger.info('Payment not matched. Thank you for your donation!');
-      }
-    }
-  }
-
-  private static async startExpirationWatcher(): Promise<void> {
-    setInterval(async () => {
-      const pending = await this.getPendingPayments();
-      const now = new Date().getTime();
-      pending.forEach((tx) => {
-        if (now - new Date(tx.createdAt).getTime() > MAX_PAYMENT_LIFETIME) {
-          tx.status = Status.PaymentExpired;
-          tx.save();
-        }
-      });
-    }, MINUTE_MILLIS);
-  }
-
-  private static async waitForConfirmation(txHash: string): Promise<ethers.providers.TransactionReceipt> {
-    const provider = ethers.getDefaultProvider();
-    const tx = await provider.getTransaction(txHash);
-
-    if (!tx) {
-      logger.error('Transaction %s not found', txHash);
-      throw new Error();
-    }
-
-    return provider.waitForTransaction(txHash, CONFIRMATIONS);
-  }
-
-  private static async getPendingPayments(): Promise<IScheduled[]> {
-    return Scheduled.where('status', Status.PendingPayment).sort('createdAt').exec();
+    // TODO send email confirmation
+  } catch (e) {
+    logger.error(e);
   }
 }
+
+async function matchSenderToPaymentAndUser(from: string, txHash: string): Promise<{ user: IUser; payment: IPayment }> {
+  const payment = await Payment.findOne({ from: from.toLowerCase(), processed: false });
+  const duplicate = await Payment.findOne({ txHash });
+
+  if (duplicate) {
+    throw new Error(`Payment ${txHash} has already been processed`);
+  }
+
+  if (!payment) {
+    throw new Error(`Payment ${txHash} from ${from} has no match in the database`);
+  }
+
+  const user = await User.findById(payment.userId);
+
+  return { user, payment };
+}
+
+async function waitForConfirmations(txHash: string) {
+  const { status } = await provider.waitForTransaction(txHash, CONFIRMATIONS);
+  const success = status !== TX_STATUS_FAILED;
+
+  if (!success) {
+    throw new Error(`❌ tx ${txHash} failed. skipping`);
+  }
+}
+
+async function markPaymentProcessed({
+  paymentId,
+  amount,
+  credits,
+  txHash,
+  blockNumber,
+}: {
+  paymentId: string;
+  amount: number;
+  credits: number;
+  txHash: string;
+  blockNumber: number;
+}): Promise<void> {
+  await Payment.updateOne({ _id: paymentId }, { amount, credits, txHash, blockNumber, processed: true });
+}
+
+async function giveCreditsToUser(userId: string, credits: number) {
+  await User.updateOne({ _id: userId }, { $inc: { credits } });
+}
+
+////////////////
+
+async function getPaymentAddress() {
+  return { address: PAYMENT_ADDRESS };
+}
+
+async function initializePayment(userId: string, from: string) {
+  await Payment.create({ userId, from: from.toLowerCase() });
+}
+
+export default {
+  init,
+  getPaymentAddress,
+  initializePayment,
+};

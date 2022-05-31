@@ -30,7 +30,7 @@ jobs:
           HD_ETHEREUM_URI: ${{secrets.ETHEREUM_URI}}
           HD_ROPSTEN_URI: ${{secrets.ROPSTEN_URI}}
           HD_PAYMENT: ${{secrets.PAYMENT}}
-          HD_PAYMENT_ADDRESSES: ${{secrets.PAYMENT_ADDRESSES}}
+          HD_PAYMENT_ADDRESS: ${{secrets.PAYMENT_ADDRESS}}
           HD_DEV_PAYMENT_EMAIL: ${{secrets.DEV_PAYMENT_EMAIL}}
           HD_DEV_PAYMENT_REFUND_ADDRESS: ${{secrets.DEV_PAYMENT_REFUND_ADDRESS}}
           HD_SENDGRID_API_KEY: ${{secrets.SENDGRID_API_KEY}}

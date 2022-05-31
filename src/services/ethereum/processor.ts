@@ -18,26 +18,44 @@ export class Processor {
     this.transactionExecutor = transactionExecutor;
   }
   public async process() {
-    logger.info(`START processing...`);
+    logger.debug(`START processing...`);
 
     try {
       const scheduleds = await this.scheduleService.getPending(AssetType.Ethereum);
 
       logger.debug(`Found ${scheduleds.length} pending transactions`);
 
+      if (scheduleds.length > 0) {
+        await this.processTransactions(scheduleds);
+      }
+    } catch (e) {
+      logger.error(e);
+    }
+
+    logger.debug(`END processed`);
+  }
+
+  public async processByIds(ids: string[]) {
+    logger.info(`###DEBUG START processing...`);
+
+    try {
+      const scheduleds = await this.scheduleService.getByIds(AssetType.Ethereum, ids);
+
+      logger.debug(`Found ${scheduleds.length} transactions for ids ${ids.join(', ')}`);
+
       await this.processTransactions(scheduleds);
     } catch (e) {
       logger.error(e);
     }
 
-    logger.info(`END processed`);
+    logger.info(`###DEBUG END PROCESSED`);
   }
 
   private async processTransactions(scheduleds: IScheduled[]): Promise<void> {
     const groupedByChain = this.groupByChain(scheduleds);
     const chainIds = Object.keys(groupedByChain).map(Number);
 
-    logger.debug(`Processing transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
+    logger.debug(`Processing ${scheduleds.length} transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
 
     const promisesForChain = chainIds.map((chainId) =>
       this.processTransactionsForChain(chainId, groupedByChain[chainId]),
@@ -81,41 +99,46 @@ export class Processor {
   private async processTransactionsForChainAndSender(scheduleds: IScheduled[], blockNum: number) {
     const groupedByNonce = this.groupByNonce(scheduleds);
     const nonces = Object.keys(groupedByNonce);
+    const [firstNonce] = nonces;
 
-    logger.debug(`Processing ${nonces.length} nonces for sender ${scheduleds[0].from}: ${nonces.join(', ')}`);
+    logger.debug(
+      `Processing first nonce (${firstNonce}) out of ${nonces.length} nonces for sender ${
+        scheduleds[0].from
+      }: ${nonces.join(', ')}`,
+    );
 
-    for (const nonce of nonces) {
-      const transactionsForNonce = groupedByNonce[nonce];
-      logger.debug(`Processing ${transactionsForNonce.length} txs for sender ${scheduleds[0].from} and nonce ${nonce}`);
+    const transactionsForNonce = groupedByNonce[firstNonce];
+    logger.debug(
+      `Processing ${transactionsForNonce.length} txs for sender ${scheduleds[0].from} and nonce ${firstNonce}`,
+    );
 
-      const sortedByPriority = this.sortByPriority(transactionsForNonce);
+    const sortedByPriority = this.sortByPriority(transactionsForNonce);
 
-      for (const transaction of sortedByPriority) {
-        let executed = false;
-        let conditionMet = false;
-        logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
-        try {
-          const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
-          executed = res.executed;
-          conditionMet = res.conditionMet;
-        } catch (e) {
-          logger.error(`${transaction._id} processing failed with ${e}`);
-        }
+    for (const transaction of sortedByPriority) {
+      let executed = false;
+      let conditionMet = false;
+      logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
+      try {
+        const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
+        executed = res.executed;
+        conditionMet = res.conditionMet;
+      } catch (e) {
+        logger.error(`${transaction._id} processing failed with ${e}`);
+      }
+      logger.debug(
+        `${transaction._id} nonce: ${transaction.nonce} priority: ${
+          transaction.priority
+        } processed with result ${JSON.stringify({
+          executed,
+          conditionMet,
+        })}`,
+      );
+      if (conditionMet) {
         logger.debug(
-          `${transaction._id} nonce: ${transaction.nonce} priority: ${
-            transaction.priority
-          } processed with result ${JSON.stringify({
-            executed,
-            conditionMet,
-          })}`,
+          `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
         );
-        if (conditionMet) {
-          logger.debug(
-            `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
-          );
-          await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
-          break;
-        }
+        await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
+        break;
       }
     }
   }
@@ -143,6 +166,7 @@ export class Processor {
     transactionList: IScheduled[],
     blockNum: number,
   ): Promise<{ executed: boolean; conditionMet: boolean }> {
+    let executed = false;
     const {
       transactionHash,
       conditionMet,
@@ -157,13 +181,13 @@ export class Processor {
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
 
     if (status !== Status.Pending) {
-      logger.info(`${scheduled._id} Completed with status ${Status[status]}`);
+      logger.info(`${scheduled._id} processed with status ${Status[status]}`);
 
       const priceStats = await fetchPriceStats(ethers.utils.parseTransaction(scheduled.signedTransaction));
       const gasPaid = priceStats.gasPaid || scheduled.gasSaved;
       const gasSaved = scheduled.gasSaved > priceStats.gasSaved ? scheduled.gasSaved : priceStats.gasSaved;
 
-      scheduled
+      await scheduled
         .update({
           transactionHash,
           status,
@@ -179,25 +203,33 @@ export class Processor {
         })
         .exec();
 
-      sendMail(
-        // tslint:disable-next-line: no-object-literal-type-assertion
-        {
-          ...scheduled.toJSON(),
-          transactionHash,
-          status,
-          error,
-          executedAt,
-          assetName: assetName || scheduled.assetName,
-          assetAmount: assetAmount || scheduled.assetAmount,
-          assetValue: assetValue || scheduled.assetValue,
-        } as IScheduled,
-        error ? 'failure' : 'success',
-      );
+      const isSuccess = status === Status.Completed;
+      const isError = status === Status.Error;
+      executed = isSuccess || isError;
 
-      tgBot.executed({ value: assetValue, savings: gasSaved });
-      webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
+      if (executed) {
+        sendMail(
+          // tslint:disable-next-line: no-object-literal-type-assertion
+          {
+            ...scheduled.toJSON(),
+            transactionHash,
+            status,
+            error,
+            executedAt,
+            assetName: assetName || scheduled.assetName,
+            assetAmount: assetAmount || scheduled.assetAmount,
+            assetValue: assetValue || scheduled.assetValue,
+          } as IScheduled,
+          error ? 'failure' : 'success',
+        );
+      }
 
-      return { executed: true, conditionMet };
+      if (isSuccess) {
+        tgBot.executed({ value: assetValue, savings: gasSaved });
+        webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
+      }
+
+      return { executed, conditionMet };
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -205,7 +237,7 @@ export class Processor {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
     }
 
-    return { executed: false, conditionMet };
+    return { executed, conditionMet };
   }
 
   private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {

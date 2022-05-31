@@ -30,3 +30,6 @@ export const NEW_USER_CREDITS = Number(process.env.NEW_USER_CREDITS);
 export const SKIP_TX_BROADCAST = process.env.SKIP_TX_BROADCAST === 'true';
 
 export const PROD_BUILD = __filename.endsWith('.js');
+
+export const PAYMENT = process.env.PAYMENT === 'true';
+export const PAYMENT_ADDRESS = process.env.PAYMENT_ADDRESS as string;

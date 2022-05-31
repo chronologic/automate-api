@@ -4,6 +4,7 @@ import express from 'express';
 import expressWinston from 'express-winston';
 import mongoose from 'mongoose';
 import winston from 'winston';
+import 'express-async-errors';
 
 import { LOG_LEVEL } from './env';
 import { ApplicationError } from './errors';
@@ -45,10 +46,11 @@ class App {
   }
 
   private config(): void {
+    this.app.use(cors(corsOptions));
+    this.app.options('*', cors(corsOptions));
     this.app.use(bodyParser.json());
     // serving static files
     this.app.use(express.static('public'));
-    this.app.use(cors(corsOptions));
     this.app.use(
       expressWinston.logger({
         format: winston.format.combine(winston.format.colorize(), winston.format.json()),

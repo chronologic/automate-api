@@ -275,3 +275,15 @@ export interface ITxLabel extends Document {
   createdAt: string;
   executedAt: string;
 }
+
+export interface IPayment extends Document {
+  userId: string;
+  processed?: boolean;
+  from: string;
+  txHash?: string;
+  blockNumber?: number;
+  amount?: number;
+  credits?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}

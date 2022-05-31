@@ -291,7 +291,12 @@ async function preSave(next: () => {}) {
   next();
 }
 
+function postFind(result: IScheduled) {
+  result.priority = result.priority || 1;
+}
+
 ScheduledSchema.pre('save', preSave);
+ScheduledSchema.post('find', postFind);
 
 const Scheduled = model<IScheduled>('Scheduled', ScheduledSchema);
 

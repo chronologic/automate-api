@@ -1,6 +1,5 @@
 import fetch from 'node-fetch';
-import { ethers } from 'ethers';
-import { BigNumber } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 
 import { ChainId, DAY_MILLIS, GWEI_DECIMALS, MINUTE_MILLIS, SECOND_MILLIS } from '../../constants';
 import { CURRENT_GAS_PRICE_FEED_URL, GAS_PRICE_FEED_URL } from '../../env';
@@ -152,7 +151,7 @@ function validateGasPriceTimeRange(range: GasPriceTimeRange): void {
   }
 }
 
-async function getCurrentSafeLowGasPrice(chainId = 1): Promise<BigNumber> {
+async function getCurrentSafeLowGasPrice(chainId: ChainId): Promise<BigNumber> {
   const cacheKey = `${chainId}`;
   const res = safeLowGasPriceCache.get(cacheKey);
 
@@ -168,22 +167,24 @@ async function getCurrentSafeLowGasPrice(chainId = 1): Promise<BigNumber> {
 }
 
 async function fetchCurrentSafeLowGasPrice(chainId: number): Promise<BigNumber> {
-  if (chainId !== 1) {
-    return ethers.utils.parseUnits('1', 'gwei');
-  }
-  try {
-    const res = await fetch(CURRENT_GAS_PRICE_FEED_URL);
-    const json = await res.json();
+  const provider = getProvider(chainId);
 
-    return ethers.utils.parseUnits(json.SafeGasPrice, 'gwei');
-  } catch (e) {
-    logger.error(e);
-    // fallback - 85% of network price
-    const provider = getProvider(ChainId.Ethereum);
-    const gasPrice = await provider.getGasPrice();
+  if (chainId === ChainId.Ethereum) {
+    try {
+      const res = await fetch(CURRENT_GAS_PRICE_FEED_URL);
+      const json = await res.json();
 
-    return gasPrice.mul(BigNumber.from('85')).div(BigNumber.from('100'));
+      return ethers.utils.parseUnits(json.SafeGasPrice, 'gwei');
+    } catch (e) {
+      logger.error(e);
+      // fallback - 85% of network price
+      const gasPrice = await provider.getGasPrice();
+
+      return gasPrice.mul(BigNumber.from('85')).div(BigNumber.from('100'));
+    }
   }
+
+  return await provider.getGasPrice();
 }
 
 const gasService = {

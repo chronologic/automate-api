@@ -4,6 +4,7 @@ import BigNumber from 'bignumber.js';
 
 import { IScheduled } from '../models/Models';
 import logger from './logger';
+import { ChainId, BlockExplorerUrl } from '../constants';
 
 const API_KEY = process.env.SENDGRID_API_KEY;
 const SUCCESS_EMAILS = process.env.SUCCESS_EMAILS === 'true';
@@ -46,10 +47,24 @@ const mailSubjects = {
 };
 
 async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void> {
+  if (!mailSubjects[status]) {
+    throw new Error(`Unsupported mail status: ${status}`);
+  }
   const amount = (scheduledTx.assetAmount || 0).toFixed(2);
   const name = scheduledTx.assetName || '';
   const from = scheduledTx.from;
   const subject = `${mailSubjects[status]} ${amount} ${name} from ${from}`;
+  const networkName: string = ChainId[scheduledTx.chainId];
+
+  const txUrl: string =
+    BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'tx/' + scheduledTx.transactionHash;
+  const fromUrl: string =
+    BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'address/' + scheduledTx.from;
+  let conditionAssetUrl = '';
+  if (scheduledTx.conditionAsset) {
+    conditionAssetUrl =
+      BlockExplorerUrl[networkName as keyof typeof BlockExplorerUrl] + 'address/' + scheduledTx.conditionAsset;
+  }
 
   try {
     logger.info(
@@ -69,12 +84,13 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
         name,
         type: scheduledTx.assetType || '',
         chainId: scheduledTx.chainId,
-        txHash: scheduledTx.transactionHash,
+        txHash: txUrl,
         nonce: scheduledTx.nonce,
-        from,
+        from: scheduledTx.from,
+        fromLink: fromUrl,
         conditionBlock: scheduledTx.conditionBlock,
         conditionAmount: scheduledTx.conditionAmount,
-        conditionAsset: scheduledTx.conditionAsset,
+        conditionAsset: conditionAssetUrl,
         timeCondition: scheduledTx.timeCondition,
         timeConditionTZ: scheduledTx.timeConditionTZ,
         createdAt: scheduledTx.createdAt,
@@ -106,12 +122,13 @@ async function send(scheduledTx: IMailParams, status: MailStatus): Promise<void>
           name,
           type: scheduledTx.assetType || '',
           chainId: scheduledTx.chainId,
-          txHash: scheduledTx.transactionHash,
+          txHash: txUrl,
           nonce: scheduledTx.nonce,
-          from,
+          from: scheduledTx.from,
+          fromLink: fromUrl,
           conditionBlock: scheduledTx.conditionBlock,
           conditionAmount: scheduledTx.conditionAmount,
-          conditionAsset: scheduledTx.conditionAsset,
+          conditionAsset: conditionAssetUrl,
           timeCondition: scheduledTx.timeCondition,
           timeConditionTZ: scheduledTx.timeConditionTZ,
           createdAt: scheduledTx.createdAt,
