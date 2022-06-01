@@ -1,11 +1,14 @@
 import { Watcher as EthereumWatcher } from './ethereum/watcher';
 import { Watcher as PolkadotWatcher } from './polkadot/watcher';
 import paymentService from './payment';
+import gasService from './gas';
 import { debug } from './debug';
 import logger from './logger';
 
 export class Manager {
   public static async init() {
+    gasService.init();
+
     const ethereumSupport = process.env.ETHEREUM_SUPPORT === 'true';
     if (ethereumSupport) {
       EthereumWatcher.init();

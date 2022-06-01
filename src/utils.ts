@@ -71,12 +71,6 @@ export function bnToNumber(bn: ethers.BigNumberish, decimals = ETH_DECIMALS, pre
   return bnWithPrecision.toNumber() / 10 ** precision;
 }
 
-export function weiToGwei(wei: ethers.BigNumberish): number {
-  return ethers.BigNumber.from(wei)
-    .div(10 ** 9)
-    .toNumber();
-}
-
 export function isTruthy(value: any): boolean {
   return value === 'true' || value === true;
 }

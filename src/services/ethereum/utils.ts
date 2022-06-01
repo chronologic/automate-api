@@ -10,7 +10,7 @@ import { ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI, ROPSTEN_URI } from '..
 import { ChainId, SECOND_MILLIS } from '../../constants';
 import ERC20 from '../../abi/erc20';
 import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
-import { getTimedCachedValue, sleep, weiToGwei } from '../../utils';
+import { getTimedCachedValue, sleep } from '../../utils';
 import logger from './logger';
 
 const lru = new LRU({ max: 10000 });
@@ -148,7 +148,7 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
     } catch (e) {}
 
     const networkGasPriceWei = await fetchNetworkGasPrice(tx.chainId);
-    networkGasPrice = weiToGwei(networkGasPriceWei);
+    networkGasPrice = Number(ethers.utils.formatUnits(networkGasPriceWei, 'gwei'));
 
     const gasPaidWei = ethers.BigNumber.from(txGasPrice).mul(ethers.BigNumber.from(gasUsed));
     const networkGasPaidWei = ethers.BigNumber.from(networkGasPriceWei).mul(ethers.BigNumber.from(gasUsed));
