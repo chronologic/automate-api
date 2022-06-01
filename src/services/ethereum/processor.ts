@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { groupBy } from 'lodash';
+import { groupBy, merge } from 'lodash';
 
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
@@ -9,6 +9,7 @@ import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
 import tgBot from '../telegram';
 import webhookService from '../webhook';
+import Scheduled from '../../models/ScheduledSchema';
 
 export class Processor {
   private scheduleService: IScheduleService;
@@ -188,22 +189,29 @@ export class Processor {
       const gasPaid = priceStats.gasPaid || scheduled.gasSaved;
       const gasSaved = scheduled.gasSaved > priceStats.gasSaved ? scheduled.gasSaved : priceStats.gasSaved;
 
-      await scheduled
-        .update({
-          transactionHash,
-          conditionBlock: scheduled.conditionBlock || conditionBlock,
-          status,
-          error,
-          executedAt,
-          assetName,
-          assetAmount,
-          assetValue,
-          executedEthPrice: priceStats.ethPrice,
-          executedGasPrice: priceStats.gasPrice,
-          gasPaid,
-          gasSaved,
-        })
-        .exec();
+      const merged: IScheduled = {
+        ...merge(
+          // tslint:disable-next-line: no-object-literal-type-assertion
+          {
+            transactionHash,
+            status,
+            error,
+            executedAt,
+            assetName,
+            assetAmount,
+            assetValue,
+            executionAttempts,
+            lastExecutionAttempt,
+            conditionBlock,
+            gasPrice: priceStats.txGasPrice,
+          } as IScheduled,
+          scheduled.toObject(),
+        ),
+        gasPaid,
+        gasSaved,
+      };
+
+      await scheduled.update(merged).exec();
 
       const isSuccess = status === Status.Completed;
       const isError = status === Status.Error;
@@ -212,23 +220,14 @@ export class Processor {
       if (executed) {
         sendMail(
           // tslint:disable-next-line: no-object-literal-type-assertion
-          {
-            ...scheduled.toJSON(),
-            transactionHash,
-            status,
-            error,
-            executedAt,
-            assetName: assetName || scheduled.assetName,
-            assetAmount: assetAmount || scheduled.assetAmount,
-            assetValue: assetValue || scheduled.assetValue,
-          } as IScheduled,
+          merged,
           error ? 'failure' : 'success',
         );
       }
 
       if (isSuccess) {
-        tgBot.executed({ value: assetValue, savings: gasSaved });
-        webhookService.notify({ ...scheduled.toJSON(), status, gasPaid, gasSaved } as IScheduled);
+        tgBot.executed({ value: merged.assetValue, savings: gasSaved });
+        webhookService.notify(merged);
       }
 
       return { executed, conditionMet };

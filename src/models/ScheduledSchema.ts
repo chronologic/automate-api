@@ -290,12 +290,20 @@ async function preSave(next: () => {}) {
 
   next();
 }
+async function preUpdate(next: () => {}) {
+  this.createdAt = this.createdAt || new Date().toISOString();
+  this.updatedAt = new Date().toISOString();
+
+  next();
+}
 
 function postFind(result: IScheduled) {
   result.priority = result.priority || 1;
 }
 
 ScheduledSchema.pre('save', preSave);
+ScheduledSchema.pre('updateOne', preUpdate);
+ScheduledSchema.pre('update', preUpdate);
 ScheduledSchema.post('find', postFind);
 
 const Scheduled = model<IScheduled>('Scheduled', ScheduledSchema);

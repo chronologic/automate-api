@@ -129,12 +129,13 @@ function isTokenTx(txData: string): boolean {
 export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats> {
   let ethPrice = 0;
   let gasPaid = 0;
-  let gasPrice = 0;
+  let txGasPrice = '0';
   let gasSaved = 0;
+  let networkGasPrice = 0;
 
   try {
     const { gasPrice: _gasPriceWei, gasLimit, chainId, maxFeePerGas, maxPriorityFeePerGas } = tx;
-    const gasPriceWei = _gasPriceWei || maxFeePerGas.add(maxPriorityFeePerGas);
+    txGasPrice = (_gasPriceWei || maxFeePerGas.add(maxPriorityFeePerGas)).toString();
 
     const provider = getProvider(chainId);
 
@@ -147,9 +148,9 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
     } catch (e) {}
 
     const networkGasPriceWei = await fetchNetworkGasPrice(tx.chainId);
-    gasPrice = weiToGwei(networkGasPriceWei);
+    networkGasPrice = weiToGwei(networkGasPriceWei);
 
-    const gasPaidWei = ethers.BigNumber.from(gasPriceWei).mul(ethers.BigNumber.from(gasUsed));
+    const gasPaidWei = ethers.BigNumber.from(txGasPrice).mul(ethers.BigNumber.from(gasUsed));
     const networkGasPaidWei = ethers.BigNumber.from(networkGasPriceWei).mul(ethers.BigNumber.from(gasUsed));
 
     gasPaid = await convertWeiToUsd(gasPaidWei);
@@ -159,7 +160,8 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
 
     return {
       ethPrice,
-      gasPrice,
+      txGasPrice,
+      networkGasPrice,
       gasPaid,
       gasSaved,
     };
@@ -168,8 +170,9 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
 
     return {
       ethPrice,
+      txGasPrice,
       gasPaid,
-      gasPrice,
+      networkGasPrice,
       gasSaved,
     };
   }
@@ -482,7 +485,6 @@ async function fetchTokenAmount({
       return defaultValue;
     }
   } catch (e) {
-    console.log('CCCCCCCCCCCCCCCCCCCC');
     logger.error(e);
     return defaultValue;
   }

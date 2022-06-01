@@ -1,6 +1,6 @@
 import { ChainId, SECOND_MILLIS } from '../../constants';
 
-import { AssetType, Status } from '../../models/Models';
+import { AssetType, IScheduled, Status } from '../../models/Models';
 import Scheduled from '../../models/ScheduledSchema';
 import { sleep } from '../../utils';
 import { ScheduleService } from '../schedule';
@@ -38,6 +38,14 @@ export class Watcher {
     }
   }
 
+  public static async fillMetadataByIds(ids: string[]): Promise<void> {
+    const res: IScheduled[] = await Scheduled.where('_id', ids).exec();
+
+    for (const row of res) {
+      await Watcher.updateMetadata(row);
+    }
+  }
+
   private static async fillMissingMetadata(): Promise<void> {
     const res = await Scheduled.find({
       assetType: { $in: [AssetType.Ethereum, null, undefined] },
@@ -52,10 +60,14 @@ export class Watcher {
     });
 
     for (const row of res) {
-      const metadata = await fetchTransactionMetadata(row);
-
-      await row.update(metadata).exec();
+      await Watcher.updateMetadata(row);
     }
+  }
+
+  private static async updateMetadata(scheduled: IScheduled): Promise<void> {
+    const metadata = await fetchTransactionMetadata(scheduled);
+
+    await scheduled.update({ ...metadata, gasPrice: metadata.txGasPrice }).exec();
   }
 
   private static async fillMissingAssetType(): Promise<void> {

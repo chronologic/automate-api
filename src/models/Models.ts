@@ -66,6 +66,7 @@ export interface IScheduled extends Document {
   assetValue: number;
   assetContract: string;
   createdAt: string;
+  updatedAt: string;
   executedAt: string;
   paymentEmail: string;
   paymentRefundAddress: string;
@@ -165,15 +166,12 @@ export interface ITransactionMetadata extends IGasStats {
   assetValue: number;
   assetContract: string;
   executedAt: string;
-  ethPrice?: number;
-  gasPrice?: number;
-  gasPaid?: number;
-  gasSaved?: number;
 }
 
 export interface IGasStats {
   ethPrice?: number;
-  gasPrice?: number;
+  txGasPrice?: string;
+  networkGasPrice?: number;
   gasPaid?: number;
   gasSaved?: number;
 }
@@ -288,4 +286,11 @@ export interface IPayment extends Document {
   credits?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface IGasPrice extends Document {
+  assetType: AssetType;
+  chainId: ChainId;
+  price: number;
+  createdAt?: string;
 }

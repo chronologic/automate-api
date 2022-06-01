@@ -323,7 +323,8 @@ async function populateTransactionMetadata({
     assetValue: metadata.assetValue,
     assetContract: metadata.assetContract,
     scheduledEthPrice: metadata.ethPrice,
-    scheduledGasPrice: metadata.gasPrice,
+    scheduledGasPrice: metadata.networkGasPrice,
+    gasPrice: metadata.txGasPrice,
     gasPaid: metadata.gasPaid,
     gasSaved: metadata.gasSaved,
   };
@@ -338,8 +339,6 @@ async function populateTransactionMetadata({
   const conditionAssetMetadata = await getConditionAssetMetadata(transaction);
   txMeta.conditionAssetName = conditionAssetMetadata.name;
   txMeta.conditionAssetDecimals = conditionAssetMetadata.decimals;
-
-  console.log('txMeta:', txMeta);
 
   await Scheduled.updateOne({ _id: transaction._id }, txMeta);
 
