@@ -178,6 +178,7 @@ export class Processor {
       assetValue,
       executionAttempts,
       lastExecutionAttempt,
+      conditionBlock,
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
 
     if (status !== Status.Pending) {
@@ -190,6 +191,7 @@ export class Processor {
       await scheduled
         .update({
           transactionHash,
+          conditionBlock: scheduled.conditionBlock || conditionBlock,
           status,
           error,
           executedAt,

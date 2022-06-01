@@ -125,6 +125,7 @@ export interface IScheduledForUser {
 
 export interface IExecuteStatus {
   status: Status;
+  broadcasted?: boolean;
   conditionMet?: boolean;
   transactionHash?: string;
   error?: string;
@@ -134,6 +135,7 @@ export interface IExecuteStatus {
   assetValue?: number;
   executionAttempts?: number;
   lastExecutionAttempt?: string;
+  conditionBlock?: number;
 }
 
 export interface IScheduleRequest {
