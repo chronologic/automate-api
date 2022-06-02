@@ -57,8 +57,16 @@ function createMessenger(chatId: string): ITelegramMessenger {
 }
 
 function sendMessage(chatId: string, msg: string): void {
-  logger.debug(`Sending msg "${msg}" to ${chatId}...`);
-  chatId && telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+  try {
+    if (chatId) {
+      logger.debug(`Sending msg "${msg}" to ${chatId}...`);
+      telegramBot.sendMessage(chatId, msg, { parse_mode: 'HTML', disable_web_page_preview: true });
+    } else {
+      logger.debug(`Not tg chat id to send message to`);
+    }
+  } catch (e) {
+    logger.error(e);
+  }
 }
 
 function formatCurrency(value: number): string {
