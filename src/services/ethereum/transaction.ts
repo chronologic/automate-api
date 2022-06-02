@@ -88,8 +88,6 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     const isGasPriceConditionMet = await this.isGasPriceConditionMet(scheduled);
-
-    console.log(isGasPriceConditionMet);
     if (isGasPriceConditionMet.res) {
       // gas price condition met
     } else {
