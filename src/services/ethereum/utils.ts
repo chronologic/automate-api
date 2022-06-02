@@ -28,8 +28,6 @@ interface ITokenMetadata {
   assetName: string;
 }
 
-let coinGeckoCoins: ICoinGeckoCoin[] = [];
-
 const PROVIDER: {
   [key in ChainId]?: ethers.providers.BaseProvider;
 } = {
