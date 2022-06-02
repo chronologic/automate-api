@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { groupBy, merge } from 'lodash';
+import { groupBy, mergeWith } from 'lodash';
 
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
@@ -9,7 +9,6 @@ import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
 import tgBot from '../telegram';
 import webhookService from '../webhook';
-import Scheduled from '../../models/ScheduledSchema';
 
 export class Processor {
   private scheduleService: IScheduleService;
@@ -190,7 +189,7 @@ export class Processor {
       const gasSaved = scheduled.gasSaved > priceStats.gasSaved ? scheduled.gasSaved : priceStats.gasSaved;
 
       const merged: IScheduled = {
-        ...merge(
+        ...mergeWith(
           scheduled.toObject(),
           // tslint:disable-next-line: no-object-literal-type-assertion
           {
@@ -206,6 +205,9 @@ export class Processor {
             conditionBlock,
             gasPrice: priceStats.txGasPrice,
           } as IScheduled,
+          (scheduledValue, resValue) => {
+            return resValue || scheduledValue;
+          },
         ),
         gasPaid,
         gasSaved,
