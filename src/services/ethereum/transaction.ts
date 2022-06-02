@@ -88,6 +88,8 @@ export class TransactionExecutor implements ITransactionExecutor {
     }
 
     const isGasPriceConditionMet = await this.isGasPriceConditionMet(scheduled);
+
+    console.log(isGasPriceConditionMet);
     if (isGasPriceConditionMet.res) {
       // gas price condition met
     } else {
@@ -330,6 +332,7 @@ export class TransactionExecutor implements ITransactionExecutor {
           );
         }
       } else {
+        isGasPriceConditionMet = true;
         logger.debug(`${scheduled._id} ✅ TxGasPrice=${txGasPrice.toString()} Current=${networkGasPrice.toString()}`);
       }
     } else {
