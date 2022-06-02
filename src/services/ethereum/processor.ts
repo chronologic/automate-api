@@ -191,6 +191,7 @@ export class Processor {
 
       const merged: IScheduled = {
         ...merge(
+          scheduled.toObject(),
           // tslint:disable-next-line: no-object-literal-type-assertion
           {
             transactionHash,
@@ -205,7 +206,6 @@ export class Processor {
             conditionBlock,
             gasPrice: priceStats.txGasPrice,
           } as IScheduled,
-          scheduled.toObject(),
         ),
         gasPaid,
         gasSaved,
