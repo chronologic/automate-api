@@ -60,6 +60,10 @@ export class Routes {
       .post(authMiddleware, this.transactionController.edit.bind(this.transactionController))
       .delete(authMiddleware, this.transactionController.cancel.bind(this.transactionController));
 
+    app
+      .route('/transactions/batchUpdateNotes')
+      .post(authMiddleware, this.transactionController.batchUpdateNotes.bind(this.transactionController));
+
     ///////// payments
 
     app.route('/payments/address').get(paymentController.getPaymentAddress);

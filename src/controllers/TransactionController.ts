@@ -35,4 +35,9 @@ export class TransactionController {
     await transactionService.cancel(id);
     res.json({ status: Status.Cancelled });
   }
+
+  public async batchUpdateNotes(req: RequestWithAuth, res: Response) {
+    await transactionService.batchUpdateNotes(req.user.apiKey, req.body);
+    res.json({ status: 'ok' });
+  }
 }
