@@ -5,7 +5,7 @@ import Scheduled from '../../models/ScheduledSchema';
 import { SKIP_TX_BROADCAST } from '../../env';
 import sendMail from '../mail';
 import logger from './logger';
-import { getSenderNextNonce, getProvider, retryRpcCallOnIntermittentError } from './utils';
+import { getSenderNextNonce, getProvider, retryRpcCallOnIntermittentError, decodeTxGasParams } from './utils';
 import { gasService } from './gas';
 
 const abi = ['function balanceOf(address) view returns (uint256)'];
@@ -307,7 +307,7 @@ export class TransactionExecutor implements ITransactionExecutor {
 
     if (scheduled.gasPriceAware) {
       const networkGasPrice = await gasService.getCurrentSafeLowGasPrice(scheduled.chainId);
-      const txGasPrice = transaction.gasPrice;
+      const { combinedGasPrice: txGasPrice } = decodeTxGasParams(transaction);
 
       if (networkGasPrice.gt(txGasPrice)) {
         isGasPriceConditionMet = false;

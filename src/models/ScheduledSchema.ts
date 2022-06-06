@@ -2,6 +2,7 @@ import { BigNumber, ethers } from 'ethers';
 import { model, Schema } from 'mongoose';
 
 import { createLogger } from '../logger';
+import { decodeTxGasParams } from '../services/ethereum/utils';
 import getApi from '../services/polkadot/api';
 import { AssetType, IScheduled, Status } from './Models';
 
@@ -259,8 +260,8 @@ async function preSave(next: () => {}) {
       this.nonce = parsed.nonce;
       this.chainId = parsed.chainId;
       this.transactionHash = parsed.hash;
-      // TODO: handle this better
-      this.gasPrice = parsed.gasPrice || parsed.maxFeePerGas.add(parsed.maxPriorityFeePerGas);
+      const { combinedGasPrice } = decodeTxGasParams(parsed);
+      this.gasPrice = combinedGasPrice;
 
       if (this.conditionAsset && this.conditionAsset !== 'eth') {
         try {

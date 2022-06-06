@@ -124,6 +124,35 @@ function isTokenTx(txData: string): boolean {
   }
 }
 
+export function decodeTxGasParamsFromSignedTx(
+  signedTx: string,
+): {
+  combinedGasPrice: ethers.BigNumber;
+  gasPrice: ethers.BigNumber;
+  gasLimit: ethers.BigNumber;
+  maxFeePerGas: ethers.BigNumber;
+  maxPriorityFeePerGas: ethers.BigNumber;
+} {
+  const tx = ethers.utils.parseTransaction(signedTx);
+
+  return decodeTxGasParams(tx);
+}
+
+export function decodeTxGasParams(
+  tx: ethers.Transaction,
+): {
+  combinedGasPrice: ethers.BigNumber;
+  gasPrice: ethers.BigNumber;
+  gasLimit: ethers.BigNumber;
+  maxFeePerGas: ethers.BigNumber;
+  maxPriorityFeePerGas: ethers.BigNumber;
+} {
+  const { gasPrice, gasLimit, maxFeePerGas, maxPriorityFeePerGas } = tx;
+  const combinedGasPrice = gasPrice || maxFeePerGas.add(maxPriorityFeePerGas);
+
+  return { combinedGasPrice, gasPrice, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
+}
+
 export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats> {
   let ethPrice = 0;
   let gasPaid = 0;
@@ -132,8 +161,10 @@ export async function fetchPriceStats(tx: ethers.Transaction): Promise<IGasStats
   let networkGasPrice = 0;
 
   try {
-    const { gasPrice: _gasPriceWei, gasLimit, chainId, maxFeePerGas, maxPriorityFeePerGas } = tx;
-    txGasPrice = (_gasPriceWei || maxFeePerGas.add(maxPriorityFeePerGas)).toString();
+    const { combinedGasPrice, gasLimit } = decodeTxGasParams(tx);
+    txGasPrice = combinedGasPrice.toString();
+
+    const { chainId } = tx;
 
     const provider = getProvider(chainId);
 
