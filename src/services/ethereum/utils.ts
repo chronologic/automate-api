@@ -148,7 +148,7 @@ export function decodeTxGasParams(
   maxPriorityFeePerGas: ethers.BigNumber;
 } {
   const { gasPrice, gasLimit, maxFeePerGas, maxPriorityFeePerGas } = tx;
-  const combinedGasPrice = gasPrice || maxFeePerGas.add(maxPriorityFeePerGas);
+  const combinedGasPrice = gasPrice || maxFeePerGas;
 
   return { combinedGasPrice, gasPrice, gasLimit, maxFeePerGas, maxPriorityFeePerGas };
 }
