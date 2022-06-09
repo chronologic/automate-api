@@ -104,10 +104,7 @@ export class ScheduleService implements IScheduleService {
 
     if (transaction.status !== prevStatus && transaction.status === Status.Pending) {
       sendEmail(scheduled);
-      tgBot.scheduled({
-        value: transaction.assetValue,
-        savings: transaction.gasSaved,
-      });
+      tgBot.scheduled({ value: transaction.assetValue, savings: transaction.gasSaved });
       webhookService.notify(scheduled);
     }
 
