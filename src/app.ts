@@ -5,7 +5,6 @@ import expressWinston from 'express-winston';
 import mongoose from 'mongoose';
 import winston from 'winston';
 import 'express-async-errors';
-import { rateLimit } from 'express-rate-limit';
 
 import { LOG_LEVEL } from './env';
 import { ApplicationError } from './errors';
@@ -21,11 +20,6 @@ const corsOptions = {
     }
   },
 };
-
-const pwRequestLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 3,
-});
 
 class App {
   public app: express.Application;
@@ -52,7 +46,6 @@ class App {
   }
 
   private config(): void {
-    this.app.use('/auth/requestResetPassword', pwRequestLimiter);
     this.app.use(cors(corsOptions));
     this.app.options('*', cors(corsOptions));
     this.app.use(bodyParser.json());
