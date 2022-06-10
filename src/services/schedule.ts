@@ -300,7 +300,9 @@ function calculateNewStatusForDirectRequest({
   if (currentStatus === Status.Draft) {
     return isFreeTx ? Status.Pending : Status.PendingPayment;
   }
-
+  if (currentStatus === Status.Error) {
+    return Status.Pending;
+  }
   return currentStatus;
 }
 
