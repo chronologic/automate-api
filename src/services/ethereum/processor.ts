@@ -4,11 +4,11 @@ import { groupBy, mergeWith } from 'lodash';
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
 import sendMail from '../mail';
+import tgBot from '../telegram';
+import webhookService from '../webhook';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
-import tgBot from '../telegram';
-import webhookService from '../webhook';
 
 export class Processor {
   private scheduleService: IScheduleService;
@@ -238,6 +238,10 @@ export class Processor {
       scheduled.update({ conditionBlock: blockNum }).exec();
     } else if (lastExecutionAttempt) {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
+    }
+
+    if (status === Status.StaleNonce) {
+      await shiftTimeConditionForStrategy();
     }
 
     return { executed, conditionMet };

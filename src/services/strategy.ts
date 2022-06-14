@@ -9,6 +9,7 @@ import {
   IStrategyPrepTx,
   IStrategyPrepTxWithConditions,
 } from '../models/Models';
+import Scheduled from '../models/ScheduledSchema';
 import StrategyPrep from '../models/StrategyPrepSchema';
 
 const logger = createLogger('strategy');
@@ -23,6 +24,7 @@ export const strategyService = {
   deletePrepInstance,
   hasAnyPrep,
   matchFirstPrep,
+  shiftTimeCondition,
 };
 
 async function prep(userId: string, txs: IStrategyPrepTxWithConditions[]): Promise<IStrategyPrepResponse> {
@@ -108,4 +110,35 @@ function isSimilar(source: { [key: string]: any }, target: { [key: string]: any 
 
 function makeNotExpiredCondition(): any {
   return { expiresAt: { $gte: new Date().toISOString() } };
+}
+
+async function shiftTimeCondition(scheduled: IScheduled) {
+  if (!scheduled.strategyInstanceId) {
+    logger.debug(`tx ${scheduled._id} is not part of a strategy`);
+    return;
+  }
+
+  const futureNonceTxs = await Scheduled.find({
+    userId: scheduled.userId,
+    strategyInstanceId: scheduled.strategyInstanceId,
+    nonce: { $gt: scheduled.nonce },
+    from: scheduled.from,
+    to: scheduled.to,
+    // data: scheduled.data, // TODO fill tx data
+  }).sort({ nonce: 'ASC' });
+
+  let newTimeCondition = scheduled.timeCondition;
+  let newTimeConditionTZ = scheduled.timeConditionTZ;
+  for (const tx of futureNonceTxs) {
+    logger.debug(
+      `updaing ${scheduled._id} time condition from ${tx.timeCondition} (${tx.timeConditionTZ}) to ${newTimeCondition} (${newTimeConditionTZ})`,
+    );
+    await Scheduled.updateOne(
+      { _id: tx._id },
+      { timeCondition: newTimeCondition, timeConditionTZ: newTimeConditionTZ },
+    );
+
+    newTimeCondition = tx.timeCondition;
+    newTimeConditionTZ = tx.timeConditionTZ;
+  }
 }
