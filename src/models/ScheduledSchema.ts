@@ -153,9 +153,6 @@ const ScheduledSchema = new Schema({
   method: {
     type: String,
   },
-  callData: {
-    type: String,
-  },
   nonce: {
     type: Number,
   },
@@ -225,6 +222,12 @@ const ScheduledSchema = new Schema({
   },
   strategyPrepId: {
     type: String,
+  },
+  strategyPrepIteration: {
+    type: Number,
+  },
+  strategyPrepPosition: {
+    type: Number,
   },
   notes: {
     type: String,

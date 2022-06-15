@@ -118,29 +118,32 @@ async function shiftTimeCondition(scheduled: IScheduled) {
     return;
   }
 
-  const futureNonceTxs = await Scheduled.find({
+  const nextIteration = scheduled.strategyPrepIteration + 1;
+  const nextIterationTx = await Scheduled.findOne({
     userId: scheduled.userId,
     strategyInstanceId: scheduled.strategyInstanceId,
+    strategyPrepIteration: nextIteration,
+    strategyPrepPosition: scheduled.strategyPrepPosition,
     nonce: { $gt: scheduled.nonce },
     priority: scheduled.priority,
     from: scheduled.from,
-    callData: scheduled.callData,
-  }).sort({ nonce: 'ASC' });
+  });
 
-  let newTimeCondition = scheduled.timeCondition;
-  let newTimeConditionTZ = scheduled.timeConditionTZ;
-  for (const tx of futureNonceTxs) {
-    logger.debug(
-      `updating ${scheduled._id} (nonce ${tx.nonce}, priority ${tx.priority}) time condition from ${new Date(
-        tx.timeCondition,
-      ).toISOString()} (${tx.timeConditionTZ}) to ${new Date(newTimeCondition).toISOString()} (${newTimeConditionTZ})`,
-    );
-    await Scheduled.updateOne(
-      { _id: tx._id },
-      { timeCondition: newTimeCondition, timeConditionTZ: newTimeConditionTZ },
-    );
-
-    newTimeCondition = tx.timeCondition;
-    newTimeConditionTZ = tx.timeConditionTZ;
+  if (!nextIterationTx) {
+    logger.debug(`tx ${scheduled._id} has no counterpart in iteration ${nextIteration}`);
+    return;
   }
+
+  logger.debug(
+    `updating ${scheduled._id} (nonce ${nextIterationTx.nonce}, priority ${
+      nextIterationTx.priority
+    }) time condition from ${new Date(nextIterationTx.timeCondition).toISOString()} (${
+      nextIterationTx.timeConditionTZ
+    }) to ${new Date(scheduled.timeCondition).toISOString()} (${scheduled.timeConditionTZ})`,
+  );
+  await Scheduled.updateOne(
+    { _id: nextIterationTx._id },
+    { timeCondition: scheduled.timeCondition, timeConditionTZ: scheduled.timeConditionTZ },
+  );
+  await shiftTimeCondition(nextIterationTx);
 }

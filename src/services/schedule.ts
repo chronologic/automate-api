@@ -236,7 +236,6 @@ async function findOrCreateTransaction(
   transaction.to = transaction.to || decoded.to;
   transaction.nonce = decoded.nonce;
   transaction.method = decodeMethod(transaction.assetType, transaction.signedTransaction);
-  transaction.callData = decoded.data;
 
   return {
     transaction,
@@ -411,6 +410,8 @@ async function matchStrategyPrep(
   transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
   transaction.strategyInstanceId = strategyPrep.instanceId;
   transaction.strategyPrepId = strategyPrep.id;
+  transaction.strategyPrepIteration = strategyPrep.iteration;
+  transaction.strategyPrepPosition = strategyPrep.position;
   transaction.gasPriceAware = true; // ensure no 'gas price too low' error
 
   return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };

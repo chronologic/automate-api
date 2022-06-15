@@ -118,11 +118,13 @@ export class Processor {
     for (const transaction of sortedByPriority) {
       let executed = false;
       let conditionMet = false;
+      let staleNonce = false;
       logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
       try {
         const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
         executed = res.executed;
         conditionMet = res.conditionMet;
+        staleNonce = res.staleNonce;
       } catch (e) {
         logger.error(`${transaction._id} processing failed with ${e}`);
       }
@@ -134,9 +136,10 @@ export class Processor {
           conditionMet,
         })}`,
       );
-      if (conditionMet) {
+
+      if (conditionMet || staleNonce) {
         logger.debug(
-          `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
+          `${transaction._id} priority: ${transaction.priority} conditionMet: ${conditionMet}, staleNonce: ${staleNonce}; marking other priority txs as stale`,
         );
         await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
         break;
@@ -166,8 +169,9 @@ export class Processor {
     scheduled: IScheduled,
     transactionList: IScheduled[],
     blockNum: number,
-  ): Promise<{ executed: boolean; conditionMet: boolean }> {
+  ): Promise<{ executed: boolean; conditionMet: boolean; staleNonce: boolean }> {
     let executed = false;
+    let staleNonce = false;
     const {
       transactionHash,
       conditionMet,
@@ -184,6 +188,7 @@ export class Processor {
 
     const isStrategyTx = !!scheduled.strategyInstanceId;
     if (isStrategyTx && status === Status.StaleNonce) {
+      staleNonce = true;
       await strategyService.shiftTimeCondition(scheduled);
     }
 
@@ -238,7 +243,7 @@ export class Processor {
         webhookService.notify(merged);
       }
 
-      return { executed, conditionMet };
+      return { executed, conditionMet, staleNonce };
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -246,7 +251,7 @@ export class Processor {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
     }
 
-    return { executed, conditionMet };
+    return { executed, conditionMet, staleNonce };
   }
 
   private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
