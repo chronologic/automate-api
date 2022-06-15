@@ -122,16 +122,18 @@ async function shiftTimeCondition(scheduled: IScheduled) {
     userId: scheduled.userId,
     strategyInstanceId: scheduled.strategyInstanceId,
     nonce: { $gt: scheduled.nonce },
+    priority: scheduled.priority,
     from: scheduled.from,
-    to: scheduled.to,
-    // data: scheduled.data, // TODO fill tx data
+    callData: scheduled.callData,
   }).sort({ nonce: 'ASC' });
 
   let newTimeCondition = scheduled.timeCondition;
   let newTimeConditionTZ = scheduled.timeConditionTZ;
   for (const tx of futureNonceTxs) {
     logger.debug(
-      `updaing ${scheduled._id} time condition from ${tx.timeCondition} (${tx.timeConditionTZ}) to ${newTimeCondition} (${newTimeConditionTZ})`,
+      `updating ${scheduled._id} (nonce ${tx.nonce}, priority ${tx.priority}) time condition from ${new Date(
+        tx.timeCondition,
+      ).toISOString()} (${tx.timeConditionTZ}) to ${new Date(newTimeCondition).toISOString()} (${newTimeConditionTZ})`,
     );
     await Scheduled.updateOne(
       { _id: tx._id },

@@ -233,9 +233,10 @@ async function findOrCreateTransaction(
   const decoded = ethers.utils.parseTransaction(transaction.signedTransaction);
   transaction.chainId = decoded.chainId;
   transaction.from = decoded.from;
-  transaction.to = decoded.to;
+  transaction.to = transaction.to || decoded.to;
   transaction.nonce = decoded.nonce;
   transaction.method = decodeMethod(transaction.assetType, transaction.signedTransaction);
+  transaction.callData = decoded.data;
 
   return {
     transaction,

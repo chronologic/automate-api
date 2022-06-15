@@ -6,6 +6,7 @@ import { IScheduleService } from '../schedule';
 import sendMail from '../mail';
 import tgBot from '../telegram';
 import webhookService from '../webhook';
+import { strategyService } from '../strategy';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
@@ -181,6 +182,11 @@ export class Processor {
       conditionBlock,
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
 
+    const isStrategyTx = !!scheduled.strategyInstanceId;
+    if (isStrategyTx && status === Status.StaleNonce) {
+      await strategyService.shiftTimeCondition(scheduled);
+    }
+
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} processed with status ${Status[status]}`);
 
@@ -238,10 +244,6 @@ export class Processor {
       scheduled.update({ conditionBlock: blockNum }).exec();
     } else if (lastExecutionAttempt) {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
-    }
-
-    if (status === Status.StaleNonce) {
-      await shiftTimeConditionForStrategy();
     }
 
     return { executed, conditionMet };

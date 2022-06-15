@@ -50,6 +50,7 @@ export interface IScheduled extends Document {
   from: string;
   to: string;
   method: string;
+  callData: string;
   nonce: number;
   chainId: number;
   conditionBlock: number;

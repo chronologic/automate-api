@@ -153,6 +153,9 @@ const ScheduledSchema = new Schema({
   method: {
     type: String,
   },
+  callData: {
+    type: String,
+  },
   nonce: {
     type: Number,
   },
