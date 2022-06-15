@@ -254,23 +254,12 @@ export class Processor {
     return { executed, conditionMet, staleNonce };
   }
 
-  private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
-    logger.debug(`Marking lower priority txs for ${executed._id} as stale`);
-    for (const transaction of transactionList) {
-      const isLowerPriority: boolean = transaction.priority > executed.priority;
-      if (transaction._id !== executed._id && transaction.nonce === executed.nonce && isLowerPriority) {
-        logger.debug(`Marking tx ${transaction._id} as stale`);
-        transaction.update({ status: Status.StaleNonce }).exec();
-      }
-    }
-  }
-
   private async markOtherPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
     logger.debug(`Marking lower priority txs for ${executed._id} as stale`);
     for (const transaction of transactionList) {
       if (transaction._id !== executed._id && transaction.nonce === executed.nonce) {
         logger.debug(`Marking tx ${transaction._id} as stale`);
-        transaction.update({ status: Status.StaleNonce }).exec();
+        await transaction.update({ status: Status.StaleNonce }).exec();
       }
     }
   }

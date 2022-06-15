@@ -118,32 +118,50 @@ async function shiftTimeCondition(scheduled: IScheduled) {
     return;
   }
 
-  const nextIteration = scheduled.strategyPrepIteration + 1;
-  const nextIterationTx = await Scheduled.findOne({
+  const nextTxsInIterationCount = await Scheduled.count({
     userId: scheduled.userId,
     strategyInstanceId: scheduled.strategyInstanceId,
-    strategyPrepIteration: nextIteration,
-    strategyPrepPosition: scheduled.strategyPrepPosition,
+    strategyPrepIteration: scheduled.strategyPrepIteration,
+    strategyPrepPosition: { $gt: scheduled.strategyPrepPosition },
     nonce: { $gt: scheduled.nonce },
-    priority: scheduled.priority,
-    from: scheduled.from,
   });
 
-  if (!nextIterationTx) {
-    logger.debug(`tx ${scheduled._id} has no counterpart in iteration ${nextIteration}`);
+  const hasNextTxsInIteration = nextTxsInIterationCount > 0;
+
+  if (hasNextTxsInIteration) {
+    logger.debug(`tx ${scheduled._id} is not last in iteration`);
     return;
   }
 
-  logger.debug(
-    `updating ${scheduled._id} (nonce ${nextIterationTx.nonce}, priority ${
-      nextIterationTx.priority
-    }) time condition from ${new Date(nextIterationTx.timeCondition).toISOString()} (${
-      nextIterationTx.timeConditionTZ
-    }) to ${new Date(scheduled.timeCondition).toISOString()} (${scheduled.timeConditionTZ})`,
-  );
-  await Scheduled.updateOne(
-    { _id: nextIterationTx._id },
-    { timeCondition: scheduled.timeCondition, timeConditionTZ: scheduled.timeConditionTZ },
-  );
-  await shiftTimeCondition(nextIterationTx);
+  const nextIteration = scheduled.strategyPrepIteration + 1;
+  const nextIterationTxs = await Scheduled.find({
+    userId: scheduled.userId,
+    strategyInstanceId: scheduled.strategyInstanceId,
+    strategyPrepIteration: nextIteration,
+    nonce: { $gt: scheduled.nonce },
+  }).sort({ strategyPrepPosition: 'asc' });
+
+  const hasNextIterationTxs = nextIterationTxs.length > 0;
+  if (!hasNextIterationTxs) {
+    logger.debug(`tx ${scheduled._id} has no txs in next iteration (${nextIteration})`);
+    return;
+  }
+
+  const lastTxInNextIteration = nextIterationTxs[nextIterationTxs.length - 1];
+
+  for (const tx of nextIterationTxs) {
+    logger.debug(
+      `updating ${tx._id} (nonce ${tx.nonce}, priority ${tx.priority}) time condition from ${new Date(
+        tx.timeCondition,
+      ).toISOString()} (${tx.timeConditionTZ}) to ${new Date(scheduled.timeCondition).toISOString()} (${
+        scheduled.timeConditionTZ
+      })`,
+    );
+    await Scheduled.updateOne(
+      { _id: tx._id },
+      { timeCondition: scheduled.timeCondition, timeConditionTZ: scheduled.timeConditionTZ },
+    );
+  }
+
+  await shiftTimeCondition(lastTxInNextIteration);
 }
