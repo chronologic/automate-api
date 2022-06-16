@@ -209,6 +209,12 @@ const ScheduledSchema = new Schema({
   strategyPrepId: {
     type: String,
   },
+  strategyPrepIteration: {
+    type: Number,
+  },
+  strategyPrepPosition: {
+    type: Number,
+  },
   notes: {
     type: String,
   },

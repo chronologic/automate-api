@@ -27,6 +27,14 @@ const StrategyPrepSchema = new Schema({
     type: Number,
     required: true,
   },
+  iteration: {
+    type: Number,
+    required: true,
+  },
+  position: {
+    type: Number,
+    required: true,
+  },
   isLastForNonce: {
     type: Boolean,
   },

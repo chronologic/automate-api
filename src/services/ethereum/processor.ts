@@ -4,11 +4,12 @@ import { groupBy, mergeWith } from 'lodash';
 import { AssetType, IScheduled, Status } from '../../models/Models';
 import { IScheduleService } from '../schedule';
 import sendMail from '../mail';
+import tgBot from '../telegram';
+import webhookService from '../webhook';
+import { strategyService } from '../strategy';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
-import tgBot from '../telegram';
-import webhookService from '../webhook';
 
 export class Processor {
   private scheduleService: IScheduleService;
@@ -117,11 +118,13 @@ export class Processor {
     for (const transaction of sortedByPriority) {
       let executed = false;
       let conditionMet = false;
+      let staleNonce = false;
       logger.debug(`${transaction._id} nonce: ${transaction.nonce} priority: ${transaction.priority} processing...`);
       try {
         const res = await this.processTransaction(transaction, sortedByPriority, blockNum);
         executed = res.executed;
         conditionMet = res.conditionMet;
+        staleNonce = res.staleNonce;
       } catch (e) {
         logger.error(`${transaction._id} processing failed with ${e}`);
       }
@@ -133,9 +136,10 @@ export class Processor {
           conditionMet,
         })}`,
       );
-      if (conditionMet) {
+
+      if (conditionMet || staleNonce) {
         logger.debug(
-          `${transaction._id} priority: ${transaction.priority} condition met; marking other priority txs as stale`,
+          `${transaction._id} priority: ${transaction.priority} conditionMet: ${conditionMet}, staleNonce: ${staleNonce}; marking other priority txs as stale`,
         );
         await this.markOtherPriorityTransactionsStale(transaction, sortedByPriority);
         break;
@@ -165,8 +169,9 @@ export class Processor {
     scheduled: IScheduled,
     transactionList: IScheduled[],
     blockNum: number,
-  ): Promise<{ executed: boolean; conditionMet: boolean }> {
+  ): Promise<{ executed: boolean; conditionMet: boolean; staleNonce: boolean }> {
     let executed = false;
+    let staleNonce = false;
     const {
       transactionHash,
       conditionMet,
@@ -180,6 +185,12 @@ export class Processor {
       lastExecutionAttempt,
       conditionBlock,
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
+
+    const isStrategyTx = !!scheduled.strategyInstanceId;
+    if (isStrategyTx && status === Status.StaleNonce) {
+      staleNonce = true;
+      await strategyService.shiftTimeCondition(scheduled);
+    }
 
     if (status !== Status.Pending) {
       logger.info(`${scheduled._id} processed with status ${Status[status]}`);
@@ -232,7 +243,7 @@ export class Processor {
         webhookService.notify(merged);
       }
 
-      return { executed, conditionMet };
+      return { executed, conditionMet, staleNonce };
     } else if (scheduled.conditionBlock === 0) {
       logger.info(`${scheduled._id} Starting confirmation tracker`);
       scheduled.update({ conditionBlock: blockNum }).exec();
@@ -240,18 +251,7 @@ export class Processor {
       scheduled.update({ lastExecutionAttempt, executionAttempts }).exec();
     }
 
-    return { executed, conditionMet };
-  }
-
-  private async markLowerPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
-    logger.debug(`Marking lower priority txs for ${executed._id} as stale`);
-    for (const transaction of transactionList) {
-      const isLowerPriority: boolean = transaction.priority > executed.priority;
-      if (transaction._id !== executed._id && transaction.nonce === executed.nonce && isLowerPriority) {
-        logger.debug(`Marking tx ${transaction._id} as stale`);
-        transaction.update({ status: Status.StaleNonce }).exec();
-      }
-    }
+    return { executed, conditionMet, staleNonce };
   }
 
   private async markOtherPriorityTransactionsStale(executed: IScheduled, transactionList: IScheduled[]) {
@@ -259,7 +259,7 @@ export class Processor {
     for (const transaction of transactionList) {
       if (transaction._id !== executed._id && transaction.nonce === executed.nonce) {
         logger.debug(`Marking tx ${transaction._id} as stale`);
-        transaction.update({ status: Status.StaleNonce }).exec();
+        await transaction.update({ status: Status.StaleNonce }).exec();
       }
     }
   }

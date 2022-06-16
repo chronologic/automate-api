@@ -76,6 +76,8 @@ export interface IScheduled extends Document {
   userId?: string;
   strategyInstanceId?: string;
   strategyPrepId?: string;
+  strategyPrepIteration?: number;
+  strategyPrepPosition?: number;
   notes?: string;
   scheduledEthPrice?: number;
   scheduledGasPrice?: number;
@@ -243,6 +245,8 @@ export interface IStrategyPrepTx {
 
 export interface IStrategyPrepTxWithConditions extends IStrategyPrepTx {
   order: number;
+  iteration: number;
+  position: number;
   isLastForNonce?: boolean;
   priority: number;
   conditionAsset?: string;

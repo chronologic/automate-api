@@ -9,6 +9,7 @@ import {
   IStrategyPrepTx,
   IStrategyPrepTxWithConditions,
 } from '../models/Models';
+import Scheduled from '../models/ScheduledSchema';
 import StrategyPrep from '../models/StrategyPrepSchema';
 
 const logger = createLogger('strategy');
@@ -23,6 +24,7 @@ export const strategyService = {
   deletePrepInstance,
   hasAnyPrep,
   matchFirstPrep,
+  shiftTimeCondition,
 };
 
 async function prep(userId: string, txs: IStrategyPrepTxWithConditions[]): Promise<IStrategyPrepResponse> {
@@ -108,4 +110,58 @@ function isSimilar(source: { [key: string]: any }, target: { [key: string]: any 
 
 function makeNotExpiredCondition(): any {
   return { expiresAt: { $gte: new Date().toISOString() } };
+}
+
+async function shiftTimeCondition(scheduled: IScheduled) {
+  if (!scheduled.strategyInstanceId) {
+    logger.debug(`tx ${scheduled._id} is not part of a strategy`);
+    return;
+  }
+
+  const nextTxsInIterationCount = await Scheduled.count({
+    userId: scheduled.userId,
+    strategyInstanceId: scheduled.strategyInstanceId,
+    strategyPrepIteration: scheduled.strategyPrepIteration,
+    strategyPrepPosition: { $gt: scheduled.strategyPrepPosition },
+    nonce: { $gt: scheduled.nonce },
+  });
+
+  const hasNextTxsInIteration = nextTxsInIterationCount > 0;
+
+  if (hasNextTxsInIteration) {
+    logger.debug(`tx ${scheduled._id} is not last in iteration`);
+    return;
+  }
+
+  const nextIteration = scheduled.strategyPrepIteration + 1;
+  const nextIterationTxs = await Scheduled.find({
+    userId: scheduled.userId,
+    strategyInstanceId: scheduled.strategyInstanceId,
+    strategyPrepIteration: nextIteration,
+    nonce: { $gt: scheduled.nonce },
+  }).sort({ strategyPrepPosition: 'asc' });
+
+  const hasNextIterationTxs = nextIterationTxs.length > 0;
+  if (!hasNextIterationTxs) {
+    logger.debug(`tx ${scheduled._id} has no txs in next iteration (${nextIteration})`);
+    return;
+  }
+
+  const lastTxInNextIteration = nextIterationTxs[nextIterationTxs.length - 1];
+
+  for (const tx of nextIterationTxs) {
+    logger.debug(
+      `updating ${tx._id} (nonce ${tx.nonce}, priority ${tx.priority}) time condition from ${new Date(
+        tx.timeCondition,
+      ).toISOString()} (${tx.timeConditionTZ}) to ${new Date(scheduled.timeCondition).toISOString()} (${
+        scheduled.timeConditionTZ
+      })`,
+    );
+    await Scheduled.updateOne(
+      { _id: tx._id },
+      { timeCondition: scheduled.timeCondition, timeConditionTZ: scheduled.timeConditionTZ },
+    );
+  }
+
+  await shiftTimeCondition(lastTxInNextIteration);
 }

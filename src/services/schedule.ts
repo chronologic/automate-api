@@ -233,7 +233,7 @@ async function findOrCreateTransaction(
   const decoded = ethers.utils.parseTransaction(transaction.signedTransaction);
   transaction.chainId = decoded.chainId;
   transaction.from = decoded.from;
-  transaction.to = decoded.to;
+  transaction.to = transaction.to || decoded.to;
   transaction.nonce = decoded.nonce;
   transaction.method = decodeMethod(transaction.assetType, transaction.signedTransaction);
 
@@ -412,6 +412,8 @@ async function matchStrategyPrep(
   transaction.timeConditionTZ = strategyPrep.timeConditionTZ;
   transaction.strategyInstanceId = strategyPrep.instanceId;
   transaction.strategyPrepId = strategyPrep.id;
+  transaction.strategyPrepIteration = strategyPrep.iteration;
+  transaction.strategyPrepPosition = strategyPrep.position;
   transaction.gasPriceAware = true; // ensure no 'gas price too low' error
 
   return { transaction, isStrategyTx, isLastPrepForNonce: strategyPrep.isLastForNonce };
