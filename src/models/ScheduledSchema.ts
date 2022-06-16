@@ -103,21 +103,7 @@ const ScheduledSchema = new Schema({
     },
   },
   conditionAmount: {
-    required: [true, 'Condition amount is required'],
     type: String,
-    validate: {
-      msg: 'Invalid amount',
-      validator: (conditionAmount: string) => {
-        try {
-          // tslint:disable-next-line:no-unused-expression
-          BigNumber.from(conditionAmount);
-        } catch (e) {
-          return false;
-        }
-
-        return true;
-      },
-    },
   },
   conditionAssetName: {
     type: String,

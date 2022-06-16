@@ -1,7 +1,7 @@
 // tslint:disable-next-line:no-implicit-dependencies
 import { IRouter } from 'express-serve-static-core';
 
-import { authMiddleware } from '../middleware';
+import { authMiddleware, pwRequestLimiter } from '../middleware';
 import { ScheduleService } from '../services/schedule';
 import { StatsService } from '../services/stats';
 import { UserService } from '../services/user';
@@ -49,7 +49,10 @@ export class Routes {
     app.route('/auth').post(this.userController.loginOrSignup.bind(this.userController));
     app.route('/auth/login').post(this.userController.login.bind(this.userController));
     app.route('/auth/signup').post(this.userController.signup.bind(this.userController));
-    app.route('/auth/requestResetPassword').post(this.userController.requestResetPassword.bind(this.userController));
+    app
+      .route('/auth/requestResetPassword')
+      .post(pwRequestLimiter, this.userController.requestResetPassword.bind(this.userController));
+
     app.route('/auth/resetPassword').post(this.userController.resetPassword.bind(this.userController));
 
     app.route('/user/credits').get(authMiddleware, this.userController.credits.bind(this.userController));
