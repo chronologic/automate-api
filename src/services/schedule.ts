@@ -272,7 +272,7 @@ export function calculateNewStatus({
       });
 }
 
-export function calculateNewStatusForProxyRequest({
+function calculateNewStatusForProxyRequest({
   currentStatus,
   isDraft,
   isStrategyTx,
@@ -288,7 +288,7 @@ export function calculateNewStatusForProxyRequest({
   return currentStatus || Status.Pending;
 }
 
-export function calculateNewStatusForDirectRequest({
+function calculateNewStatusForDirectRequest({
   currentStatus,
   isFreeTx,
 }: {

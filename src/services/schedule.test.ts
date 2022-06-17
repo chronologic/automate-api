@@ -1,15 +1,25 @@
 import { Status } from '../models/Models';
-import { calculateNewStatusForDirectRequest } from './schedule';
+import { calculateNewStatus } from './schedule';
 
-describe('calculateNewStatusForDirectRequest', () => {
-  test('changes Error status back to Pending', () => {
-    // given
-    const status = Status.Error;
+describe('calculateNewStatus', () => {
+  describe('direct request', () => {
+    const isProxyRequest = false;
 
-    // when
-    const newStatus = calculateNewStatusForDirectRequest({ currentStatus: status, isFreeTx: false });
+    test('changes Error status back to Pending', () => {
+      // given
+      const status = Status.Error;
 
-    // then
-    expect(newStatus).toBe(Status.Pending);
+      // when
+      const newStatus = calculateNewStatus({
+        currentStatus: status,
+        isFreeTx: false,
+        isDraft: false,
+        isStrategyTx: false,
+        isProxyRequest,
+      });
+
+      // then
+      expect(newStatus).toBe(Status.Pending);
+    });
   });
 });
