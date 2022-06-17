@@ -6,10 +6,10 @@ describe('calculateNewStatus', () => {
     const isProxyRequest = false;
 
     test('changes Error status back to Pending', () => {
-      // given
+      // given / arrange
       const status = Status.Error;
 
-      // when
+      // when / act
       const newStatus = calculateNewStatus({
         currentStatus: status,
         isFreeTx: false,
@@ -18,7 +18,7 @@ describe('calculateNewStatus', () => {
         isProxyRequest,
       });
 
-      // then
+      // then / assert
       expect(newStatus).toBe(Status.Pending);
     });
   });
