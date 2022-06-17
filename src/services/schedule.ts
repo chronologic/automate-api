@@ -247,7 +247,7 @@ async function findBySignedTransaction(signedTransaction: string) {
   return Scheduled.findOne({ signedTransaction }).exec();
 }
 
-function calculateNewStatus({
+export function calculateNewStatus({
   currentStatus,
   isFreeTx,
   isDraft,
@@ -272,7 +272,7 @@ function calculateNewStatus({
       });
 }
 
-function calculateNewStatusForProxyRequest({
+export function calculateNewStatusForProxyRequest({
   currentStatus,
   isDraft,
   isStrategyTx,
@@ -288,7 +288,7 @@ function calculateNewStatusForProxyRequest({
   return currentStatus || Status.Pending;
 }
 
-function calculateNewStatusForDirectRequest({
+export function calculateNewStatusForDirectRequest({
   currentStatus,
   isFreeTx,
 }: {
