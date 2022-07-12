@@ -160,7 +160,7 @@ export class ScheduleService implements IScheduleService {
   }
 
   public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {
-    return transactionService.list(apiKey);
+    return transactionService.list[0](apiKey);
   }
 
   public async getByHash(apiKey: string, hash: string): Promise<IScheduledForUser> {

@@ -21,7 +21,7 @@ export class TransactionController {
   }
 
   public async list(req: RequestWithAuth, res: Response) {
-    const items = await transactionService.list(req.user.apiKey);
+    const items = await transactionService.list(req.user.apiKey, req.query);
 
     res.json({
       items,

@@ -5,7 +5,7 @@ import send from './mail';
 import { mapToScheduledForUser } from './txLabel';
 
 export interface ITransactionService {
-  list(apiKey: string): Promise<IScheduledForUser[]>;
+  list(apiKey: string, opts?: any): Promise<[IScheduledForUser[], number]>;
   cancel(id: string);
   batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void>;
 }
@@ -23,13 +23,21 @@ async function cancel(id: string) {
 
   return res;
 }
-
-async function list(apiKey: string): Promise<IScheduledForUser[]> {
+// Promise<IScheduledForUser[]>
+async function list(apiKey: string, opts: any): Promise<[IScheduledForUser[], number]> {
   const user = await UserService.validateApiKey(apiKey);
   const scheduleds = await Scheduled.find({ userId: user.id }).exec();
   const mappedScheduleds = await Promise.all(scheduleds.map(mapToScheduledForUser));
-
-  return mappedScheduleds.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).reverse();
+  const result = mappedScheduleds.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).reverse();
+  const len = result.length;
+  // TODO-search&filter txs
+  if (opts.query) {
+    const q = new RegExp(opts.query, 'i');
+    return [result.filter((row) => row.id.match(q) || String(row.status).match(q) || row.from.match(q)), len];
+  }
+  const pageIndex = opts.index || 0;
+  const pageSize = opts.size;
+  return [result.slice((pageIndex - 1) * pageSize, pageIndex * pageSize), len];
 }
 
 async function batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void> {
