@@ -6,7 +6,6 @@ import { mapToScheduledForUser } from './txLabel';
 
 export interface ITransactionService {
   list(apiKey: string, opts?: IOpts): Promise<ITxList>;
-  count(apiKey: string): Promise<number>;
   cancel(id: string);
   batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void>;
 }
@@ -30,12 +29,6 @@ async function cancel(id: string) {
 
   return res;
 }
-async function count(apiKey: string): Promise<number> {
-  const user = await UserService.validateApiKey(apiKey);
-
-  const totalTxs = await Scheduled.countDocuments({ userId: user.id }).exec();
-  return totalTxs;
-}
 async function list(apiKey: string, opts: IOpts): Promise<ITxList> {
   const user = await UserService.validateApiKey(apiKey);
 
@@ -46,10 +39,15 @@ async function list(apiKey: string, opts: IOpts): Promise<ITxList> {
   const currentPage = Number(opts.index) || 0;
   const txPerPage = Number(opts.size);
 
+  let sort: { sort?: string; sortDir?: number; createdAt?: number } = { createdAt: -1 };
+  if (opts.sort) {
+    sort = { sort: opts.sort, sortDir: -1 };
+  }
+
   const scheduleds = await Scheduled.find({
     userId: user.id,
   })
-    .sort({ createdAt: -1 })
+    .sort({ to: -1 })
     .limit(txPerPage)
     .skip((currentPage - 1) * txPerPage)
     .exec();
@@ -68,7 +66,6 @@ async function batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): P
 
 export const transactionService: ITransactionService = {
   list,
-  count,
   cancel,
   batchUpdateNotes,
 };
