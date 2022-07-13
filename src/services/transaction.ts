@@ -1,11 +1,12 @@
-import { IScheduledForUser, Status } from '../models/Models';
+import { IScheduledForUser, Status, ITxList } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
 import { UserService } from './user';
 import send from './mail';
 import { mapToScheduledForUser } from './txLabel';
 
 export interface ITransactionService {
-  list(apiKey: string, opts?: any): Promise<[IScheduledForUser[], number]>;
+  list(apiKey: string, opts?: IOpts): Promise<ITxList>;
+  count(apiKey: string): Promise<number>;
   cancel(id: string);
   batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void>;
 }
@@ -13,6 +14,12 @@ export interface ITransactionService {
 interface IBatchUpdateNotes {
   transactionHash: string;
   notes: string;
+}
+
+interface IOpts {
+  index: number;
+  size: number;
+  sort?: string;
 }
 
 async function cancel(id: string) {
@@ -23,21 +30,32 @@ async function cancel(id: string) {
 
   return res;
 }
-// Promise<IScheduledForUser[]>
-async function list(apiKey: string, opts: any): Promise<[IScheduledForUser[], number]> {
+async function count(apiKey: string): Promise<number> {
   const user = await UserService.validateApiKey(apiKey);
-  const scheduleds = await Scheduled.find({ userId: user.id }).exec();
-  const mappedScheduleds = await Promise.all(scheduleds.map(mapToScheduledForUser));
-  const result = mappedScheduleds.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).reverse();
-  const len = result.length;
-  // TODO-search&filter txs
-  if (opts.query) {
-    const q = new RegExp(opts.query, 'i');
-    return [result.filter((row) => row.id.match(q) || String(row.status).match(q) || row.from.match(q)), len];
-  }
-  const pageIndex = opts.index || 0;
-  const pageSize = opts.size;
-  return [result.slice((pageIndex - 1) * pageSize, pageIndex * pageSize), len];
+
+  const totalTxs = await Scheduled.countDocuments({ userId: user.id }).exec();
+  return totalTxs;
+}
+async function list(apiKey: string, opts: IOpts): Promise<ITxList> {
+  const user = await UserService.validateApiKey(apiKey);
+
+  const totalTxs = await Scheduled.countDocuments({
+    userId: user.id,
+  }).exec();
+
+  const currentPage = Number(opts.index) || 0;
+  const txPerPage = Number(opts.size);
+
+  const scheduleds = await Scheduled.find({
+    userId: user.id,
+  })
+    .sort({ createdAt: -1 })
+    .limit(txPerPage)
+    .skip((currentPage - 1) * txPerPage)
+    .exec();
+
+  const result = await Promise.all(scheduleds.map(mapToScheduledForUser));
+  return { items: result, total: totalTxs };
 }
 
 async function batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void> {
@@ -50,6 +68,7 @@ async function batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): P
 
 export const transactionService: ITransactionService = {
   list,
+  count,
   cancel,
   batchUpdateNotes,
 };

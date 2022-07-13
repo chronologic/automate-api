@@ -62,6 +62,9 @@ export class Routes {
       .get(authMiddleware, this.transactionController.list.bind(this.transactionController))
       .post(authMiddleware, this.transactionController.edit.bind(this.transactionController))
       .delete(authMiddleware, this.transactionController.cancel.bind(this.transactionController));
+    app
+      .route('/transactions/count')
+      .get(authMiddleware, this.transactionController.count.bind(this.transactionController));
 
     app
       .route('/transactions/batchUpdateNotes')

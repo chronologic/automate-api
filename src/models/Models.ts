@@ -298,3 +298,8 @@ export interface IGasPrice extends Document {
   price: number;
   createdAt?: string;
 }
+
+export interface ITxList {
+  items: IScheduledForUser[];
+  total: number;
+}

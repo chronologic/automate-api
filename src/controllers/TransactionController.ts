@@ -20,8 +20,14 @@ export class TransactionController {
     res.json(stored);
   }
 
+  public async count(req: RequestWithAuth, res: Response) {
+    const totalTxs = await transactionService.count(req.user.apiKey);
+
+    res.json(totalTxs);
+  }
+
   public async list(req: RequestWithAuth, res: Response) {
-    const items = await transactionService.list(req.user.apiKey, req.query);
+    const items = await transactionService.list(req.user.apiKey, req.query as any);
 
     res.json({
       items,
