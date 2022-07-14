@@ -19,6 +19,7 @@ interface IOpts {
   index: number;
   size: number;
   sort?: string;
+  ascend?: boolean;
 }
 
 async function cancel(id: string) {
@@ -39,15 +40,10 @@ async function list(apiKey: string, opts: IOpts): Promise<ITxList> {
   const currentPage = Number(opts.index) || 0;
   const txPerPage = Number(opts.size);
 
-  let sort: { sort?: string; sortDir?: number; createdAt?: number } = { createdAt: -1 };
-  if (opts.sort) {
-    sort = { sort: opts.sort, sortDir: -1 };
-  }
-
   const scheduleds = await Scheduled.find({
     userId: user.id,
   })
-    .sort({ to: -1 })
+    .sort({ [opts?.sort || 'createdAt']: opts?.ascend || -1 })
     .limit(txPerPage)
     .skip((currentPage - 1) * txPerPage)
     .exec();
