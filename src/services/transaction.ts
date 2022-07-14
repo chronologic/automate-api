@@ -18,8 +18,8 @@ interface IBatchUpdateNotes {
 interface IOpts {
   index: number;
   size: number;
-  sort?: string;
-  ascend?: boolean;
+  sortCol: string;
+  sortDir: string;
 }
 
 async function cancel(id: string) {
@@ -40,10 +40,15 @@ async function list(apiKey: string, opts: IOpts): Promise<ITxList> {
   const currentPage = Number(opts.index) || 0;
   const txPerPage = Number(opts.size);
 
+  const sortObject = {};
+  const stype = opts.sortCol || 'createdAt';
+  const sdir = opts.sortDir || -1;
+  sortObject[stype] = sdir;
+
   const scheduleds = await Scheduled.find({
     userId: user.id,
   })
-    .sort({ [opts?.sort || 'createdAt']: opts?.ascend || -1 })
+    .sort(sortObject)
     .limit(txPerPage)
     .skip((currentPage - 1) * txPerPage)
     .exec();
