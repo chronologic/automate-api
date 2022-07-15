@@ -1,11 +1,11 @@
-import { IScheduledForUser, Status } from '../models/Models';
+import { IScheduledForUser, Status, ITxList } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
 import { UserService } from './user';
 import send from './mail';
 import { mapToScheduledForUser } from './txLabel';
 
 export interface ITransactionService {
-  list(apiKey: string): Promise<IScheduledForUser[]>;
+  list(apiKey: string, opts?: IOpts): Promise<ITxList>;
   cancel(id: string);
   batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void>;
 }
@@ -13,6 +13,13 @@ export interface ITransactionService {
 interface IBatchUpdateNotes {
   transactionHash: string;
   notes: string;
+}
+
+interface IOpts {
+  index: number;
+  size: number;
+  sortCol: string;
+  sortDir: string;
 }
 
 async function cancel(id: string) {
@@ -23,13 +30,31 @@ async function cancel(id: string) {
 
   return res;
 }
-
-async function list(apiKey: string): Promise<IScheduledForUser[]> {
+async function list(apiKey: string, opts: IOpts): Promise<ITxList> {
   const user = await UserService.validateApiKey(apiKey);
-  const scheduleds = await Scheduled.find({ userId: user.id }).exec();
-  const mappedScheduleds = await Promise.all(scheduleds.map(mapToScheduledForUser));
 
-  return mappedScheduleds.sort((a, b) => a.createdAt.localeCompare(b.createdAt)).reverse();
+  const totalTxs = await Scheduled.countDocuments({
+    userId: user.id,
+  }).exec();
+
+  const currentPage = Number(opts.index) || 0;
+  const txPerPage = Number(opts.size);
+
+  const sortObject = {};
+  const stype = opts.sortCol || 'createdAt';
+  const sdir = opts.sortDir || -1;
+  sortObject[stype] = sdir;
+
+  const scheduleds = await Scheduled.find({
+    userId: user.id,
+  })
+    .sort(sortObject)
+    .limit(txPerPage)
+    .skip((currentPage - 1) * txPerPage)
+    .exec();
+
+  const result = await Promise.all(scheduleds.map(mapToScheduledForUser));
+  return { items: result, total: totalTxs };
 }
 
 async function batchUpdateNotes(apiKey: string, updates: IBatchUpdateNotes[]): Promise<void> {
