@@ -282,7 +282,7 @@ function calculateNewStatusForProxyRequest({
   isStrategyTx: boolean;
 }): Status {
   if (isDraft && !isStrategyTx) {
-    return currentStatus || Status.Draft;
+    return currentStatus != null ? currentStatus : Status.Draft;
   }
 
   return currentStatus || Status.Pending;
