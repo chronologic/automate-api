@@ -336,9 +336,10 @@ async function populateTransactionMetadata({
     txMeta.conditionAsset = metadata.assetContract;
     txMeta.conditionAmount = metadata.assetAmountWei;
     txMeta.conditionAssetDecimals = metadata.assetDecimals;
+    txMeta.conditionAssetName = metadata.assetName;
   }
 
-  const conditionAssetMetadata = await getConditionAssetMetadata(transaction);
+  const conditionAssetMetadata = await getConditionAssetMetadata({ ...transaction, ...txMeta } as any);
   txMeta.conditionAssetName = conditionAssetMetadata.name;
   txMeta.conditionAssetDecimals = conditionAssetMetadata.decimals;
 
