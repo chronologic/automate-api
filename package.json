@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/server.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --detectOpenHandles",
     "build": "tsc",
     "postinstall": "npm run build",
     "predev": "npm run buildHerokuDeployYml",

@@ -9,6 +9,7 @@ import {
   IScheduleRequest,
   IStrategyPrepTx,
   ITransactionMetadata,
+  ITxList,
   Status,
 } from '../models/Models';
 import Scheduled from '../models/ScheduledSchema';
@@ -38,7 +39,7 @@ export interface IScheduleService {
   cancel(id: string);
   getPending(assetType: AssetType): Promise<IScheduled[]>;
   getByIds(assetType: AssetType, ids: string[]): Promise<IScheduled[]>;
-  listForApiKey(apiKey: string): Promise<IScheduledForUser[]>;
+  listForApiKey(apiKey: string): Promise<ITxList>;
   getByHash(apiKey: string, hash: string): Promise<IScheduledForUser>;
   getMaxNonce(apiKey: string, address: string, chainId: number): Promise<number>;
 }
@@ -159,7 +160,7 @@ export class ScheduleService implements IScheduleService {
     return rows;
   }
 
-  public async listForApiKey(apiKey: string): Promise<IScheduledForUser[]> {
+  public async listForApiKey(apiKey: string): Promise<ITxList> {
     return transactionService.list(apiKey);
   }
 
@@ -282,7 +283,7 @@ function calculateNewStatusForProxyRequest({
   isStrategyTx: boolean;
 }): Status {
   if (isDraft && !isStrategyTx) {
-    return currentStatus || Status.Draft;
+    return currentStatus != null ? currentStatus : Status.Draft;
   }
 
   return currentStatus || Status.Pending;
