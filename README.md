@@ -4,7 +4,7 @@
 
 ⏱️ This repositery contains API source code for [Automate](https://blog.chronologic.network/automate/home).
 
-UI source code can be found [here](https://github.com/chronologic/automate-ui)
+⌚️ UI source code can be found [here](https://github.com/chronologic/automate-ui)
 
 📌 **LIVE version is available here** [https://automate.chronologic.network/](https://automate.chronologic.network/)
 
