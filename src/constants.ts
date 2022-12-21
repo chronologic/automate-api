@@ -9,7 +9,7 @@ export enum ChainId {
   Arbitrum = 42161,
   Ethereum = 1,
   Ropsten = 3,
-  Arbitrum_Rinkeby = 421611,
+  // Arbitrum_Rinkeby = 421611,
 }
 export enum BlockExplorerUrl {
   None = '',

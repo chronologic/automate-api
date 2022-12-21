@@ -10,6 +10,7 @@ import { strategyService } from '../strategy';
 import logger from './logger';
 import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
+import { ChainId } from '../../constants';
 
 export class Processor {
   private scheduleService: IScheduleService;
@@ -54,7 +55,10 @@ export class Processor {
 
   private async processTransactions(scheduleds: IScheduled[]): Promise<void> {
     const groupedByChain = this.groupByChain(scheduleds);
-    const chainIds = Object.keys(groupedByChain).map(Number);
+    const chainIds = Object.keys(groupedByChain)
+      .map(Number)
+      // exclude non supported chains
+      .filter((id) => !!ChainId[id]);
 
     logger.debug(`Processing ${scheduleds.length} transactions for ${chainIds.length} chains: ${chainIds.join(', ')}`);
 

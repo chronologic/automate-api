@@ -1,19 +1,20 @@
 import { ethers } from 'ethers';
 
 import ERC20 from '../abi/erc20';
-import { HOUR_MILLIS, MINUTE_MILLIS } from '../constants';
-import { ETHERUM_URI, PAYMENT_ADDRESS } from '../env';
+import { ChainId, HOUR_MILLIS, MINUTE_MILLIS } from '../constants';
+import { PAYMENT_ADDRESS } from '../env';
 import { IPayment, IUser } from '../models/Models';
 import Payment from '../models/PaymentSchema';
 import User from '../models/UserSchema';
 import { sleep } from '../utils';
+import { getProvider } from './ethereum/utils';
 import { createLogger } from './logger';
 
 const DAY_ADDRESS = '0xe814aee960a85208c3db542c53e7d4a6c8d5f60f';
 const CONFIRMATIONS = 2;
 
 const logger = createLogger('payment');
-const provider = new ethers.providers.JsonRpcProvider(ETHERUM_URI);
+const provider = getProvider(ChainId.Ethereum);
 const dayContract = new ethers.Contract(DAY_ADDRESS, ERC20, provider);
 
 const SYNC_MIN_BLOCK = 14855555;

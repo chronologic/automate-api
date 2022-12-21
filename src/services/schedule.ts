@@ -27,7 +27,7 @@ import { transactionService } from './transaction';
 import { mapToScheduledForUser } from './txLabel';
 import logger from './logger';
 
-const DEV_PAYMENT_EMAILS = process.env.DEV_PAYMENT_EMAILS.split(';').map((str) => str.toLowerCase());
+const DEV_PAYMENT_EMAILS = (process.env.DEV_PAYMENT_EMAILS || '').split(';').map((str) => str.toLowerCase());
 const PAYMENTS_ENABLED = process.env.PAYMENT === 'true';
 const COUPON_CODES = process.env.COUPON_CODES.split(';').map((str) => str.toLowerCase());
 

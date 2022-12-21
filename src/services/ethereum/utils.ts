@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 import LRU from 'lru-cache';
 
 import { IAssetMetadata, IGasStats, IScheduled, ITransactionMetadata, Status } from '../../models/Models';
-import { ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHERUM_URI, ROPSTEN_URI } from '../../env';
+import { ARBITRUM_URI, ARBITRUM_RINKEBY_URI, ETHEREUM_URI, ROPSTEN_URI } from '../../env';
 import { ChainId, SECOND_MILLIS } from '../../constants';
 import ERC20 from '../../abi/erc20';
 import { convertWeiToUsd, fetchEthPrice } from '../priceFeed';
@@ -31,14 +31,15 @@ interface ITokenMetadata {
 const PROVIDER: {
   [key in ChainId]?: ethers.providers.BaseProvider;
 } = {
-  [ChainId.Arbitrum]: new ethers.providers.JsonRpcProvider(ARBITRUM_URI),
-  [ChainId.Arbitrum_Rinkeby]: new ethers.providers.JsonRpcProvider(ARBITRUM_RINKEBY_URI),
-  [ChainId.Ropsten]: new ethers.providers.JsonRpcProvider(ROPSTEN_URI),
-  [ChainId.Ethereum]: new ethers.providers.JsonRpcProvider(ETHERUM_URI),
+  [ChainId.Arbitrum]: new ethers.providers.StaticJsonRpcProvider(ARBITRUM_URI),
+  // [ChainId.Arbitrum_Rinkeby]: new ethers.providers.StaticJsonRpcProvider(ARBITRUM_RINKEBY_URI),
+  [ChainId.Ropsten]: new ethers.providers.StaticJsonRpcProvider(ROPSTEN_URI),
+  [ChainId.Ethereum]: new ethers.providers.StaticJsonRpcProvider(ETHEREUM_URI),
 };
 
 export function getProvider(chainId: number): ethers.providers.BaseProvider {
-  return PROVIDER[chainId] || PROVIDER[ChainId.Ethereum];
+  // return PROVIDER[chainId] || PROVIDER[ChainId.Ethereum];
+  return PROVIDER[chainId];
 }
 
 export async function getSenderNextNonce({ chainId, from }): Promise<number> {
@@ -286,7 +287,7 @@ async function scrapeTokenMetadata(txHash: string, chainId: ChainId): Promise<IT
     [key in ChainId]?: string;
   } = {
     [ChainId.Arbitrum]: 'arbiscan',
-    [ChainId.Arbitrum_Rinkeby]: 'testnet.arbiscan',
+    // [ChainId.Arbitrum_Rinkeby]: 'testnet.arbiscan',
     [ChainId.Ethereum]: 'etherscan',
     [ChainId.Ropsten]: 'ropsten.etherscan',
   };

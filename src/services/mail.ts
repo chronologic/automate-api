@@ -12,7 +12,7 @@ const FAILURE_EMAILS = process.env.FAILURE_EMAILS === 'true';
 const DELAYED_EMAILS = process.env.DELAYED_EMAILS === 'true';
 const EXTERNAL_RECIPIENTS = process.env.EXTERNAL_RECIPIENTS === 'true';
 
-const RECIPIENTS = process.env.EMAIL_RECIPIENTS.split(';');
+const RECIPIENTS = (process.env.EMAIL_RECIPIENTS || '').split(';');
 
 const scheduledTemplateId = 'd-31682cf5bd904f7ca0ed0fdfe4405451';
 const cancelledTemplateId = 'd-2297e2d4f3de48e487c885601642603e';

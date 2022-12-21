@@ -13,7 +13,7 @@ export const DB_URI = process.env.DB_URI as string;
 
 export const ARBITRUM_URI = process.env.ARBITRUM_URI;
 export const ARBITRUM_RINKEBY_URI = process.env.ARBITRUM_RINKEBY_URI;
-export const ETHERUM_URI = process.env.ETHEREUM_URI;
+export const ETHEREUM_URI = process.env.ETHEREUM_URI;
 export const ROPSTEN_URI = process.env.ROPSTEN_URI;
 
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string;
