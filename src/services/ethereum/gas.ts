@@ -170,18 +170,19 @@ async function fetchCurrentSafeLowGasPrice(chainId: number): Promise<BigNumber> 
   const provider = getProvider(chainId);
 
   if (chainId === ChainId.Ethereum) {
-    try {
-      const res = await fetch(CURRENT_GAS_PRICE_FEED_URL);
-      const json = await res.json();
+    // our gas price provider is broken (CURRENT_GAS_PRICE_FEED_URL)
+    // try {
+    //   const res = await fetch(CURRENT_GAS_PRICE_FEED_URL);
+    //   const json = await res.json();
 
-      return ethers.utils.parseUnits(json.SafeGasPrice, 'gwei');
-    } catch (e) {
-      logger.error(e);
-      // fallback - 85% of network price
-      const gasPrice = await provider.getGasPrice();
+    //   return ethers.utils.parseUnits(json.SafeGasPrice, 'gwei');
+    // } catch (e) {
+    //   logger.error(e);
+    // fallback - 85% of network price
+    const gasPrice = await provider.getGasPrice();
 
-      return gasPrice.mul(BigNumber.from('85')).div(BigNumber.from('100'));
-    }
+    return gasPrice.mul(BigNumber.from('85')).div(BigNumber.from('100'));
+    // }
   }
 
   return await provider.getGasPrice();
