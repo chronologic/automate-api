@@ -86,6 +86,9 @@ const ScheduledSchema = new Schema({
         if (!conditionAsset) {
           return true;
         }
+        if (conditionAsset === 'eth') {
+          return true;
+        }
         try {
           switch (this.assetType) {
             case AssetType.Ethereum:
