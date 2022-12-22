@@ -235,6 +235,9 @@ export class TransactionExecutor implements ITransactionExecutor {
       let networkAmount;
 
       try {
+        if (scheduled.conditionAsset === 'eth') {
+          throw new Error('Skip token check');
+        }
         const token = new ethers.Contract(transaction.to, abi, provider);
         networkAmount = await retryRpcCallOnIntermittentError(() => token.balanceOf(transaction.from));
       } catch (e) {

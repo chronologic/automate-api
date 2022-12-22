@@ -577,12 +577,12 @@ export async function fetchConditionAssetMetadata(transaction: IScheduled): Prom
       };
     }
 
-    const isEth = transaction.conditionAsset === '';
+    const isEth = transaction.conditionAsset === '' || transaction.conditionAsset === 'eth';
 
     if (isEth) {
       return {
         decimals: 18,
-        name: 'eth',
+        name: 'ETH',
       };
     }
 

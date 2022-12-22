@@ -10,3 +10,7 @@ export async function connect() {
     useUnifiedTopology: true,
   });
 }
+
+export async function disconnect() {
+  await mongoose.disconnect();
+}

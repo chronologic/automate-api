@@ -375,6 +375,10 @@ async function getScheduledMetadata({
     txMeta.conditionAssetName = metadata.assetName;
   }
 
+  if (txMeta.conditionAmount && txMeta.conditionAmount != '0' && !txMeta.conditionAsset) {
+    txMeta.conditionAsset = 'eth';
+  }
+
   const conditionAssetMetadata = await getConditionAssetMetadata({ ...transaction.toObject(), ...txMeta } as any);
   txMeta.conditionAssetName = txMeta.conditionAssetName || conditionAssetMetadata.name;
   txMeta.conditionAssetDecimals = txMeta.conditionAssetDecimals || conditionAssetMetadata.decimals;
