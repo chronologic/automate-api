@@ -10,10 +10,11 @@ import { LOG_LEVEL } from './env';
 import { ApplicationError } from './errors';
 import { Routes } from './routes/routes';
 import { Manager } from './services/manager';
+import { connect } from './db';
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || process.env.UI_URL.match(origin) || /https?:\/\/localhost/i.test(origin)) {
+    if (!origin || !process.env.UI_URL || process.env.UI_URL.match(origin) || /https?:\/\/localhost/i.test(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -24,7 +25,6 @@ const corsOptions = {
 class App {
   public app: express.Application;
   public routes: Routes = new Routes();
-  public mongoUrl: string = process.env.DB_URI || 'mongodb://root:example@localhost:27017';
 
   constructor() {
     this.app = express();
@@ -60,11 +60,7 @@ class App {
   }
 
   private mongoSetup(): void {
-    // mongoose.Promise = global.Promise;
-    mongoose.connect(this.mongoUrl, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    connect();
   }
 }
 

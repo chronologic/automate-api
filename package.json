@@ -12,6 +12,7 @@
     "start": "nodemon ./dist/server.js",
     "lint": "tslint --project .",
     "ngrok": "npx ngrok http 3001",
+    "script": "ts-node",
     "buildHerokuDeployYml": "node ./buildHerokuDeployYml.js"
   },
   "repository": {

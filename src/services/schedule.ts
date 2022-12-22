@@ -97,6 +97,12 @@ export class ScheduleService implements IScheduleService {
       await checkForDuplicateTx(request.signedTransaction);
     }
 
+    transaction = await getAndMergeScheduledMetadata({
+      transaction,
+      isProxyRequest,
+      transactionExists,
+    });
+
     const scheduled = await transaction.save();
 
     if (isStrategyTx) {
@@ -110,11 +116,6 @@ export class ScheduleService implements IScheduleService {
     }
 
     // do not wait for this - let it run in the background
-    populateTransactionMetadata({
-      transaction: scheduled,
-      isProxyRequest,
-      transactionExists,
-    });
 
     if (isStrategyTx && !isLastPrepForNonce) {
       throw new Error(
@@ -307,6 +308,26 @@ function calculateNewStatusForDirectRequest({
   return currentStatus;
 }
 
+async function getAndMergeScheduledMetadata({
+  transaction,
+  transactionExists,
+  isProxyRequest,
+}: {
+  transaction: IScheduled;
+  transactionExists: boolean;
+  isProxyRequest: boolean;
+}): Promise<IScheduled> {
+  const txMeta = await getScheduledMetadata({ transaction, transactionExists, isProxyRequest });
+  let mergedTx = transaction;
+
+  // cannot Object.assign or ...spread because transaction is a complex class instance, not a simple object and that would mess it up
+  Object.keys(txMeta).forEach((key) => {
+    mergedTx[key] = txMeta[key];
+  });
+
+  return mergedTx;
+}
+
 async function populateTransactionMetadata({
   transaction,
   transactionExists,
@@ -316,6 +337,20 @@ async function populateTransactionMetadata({
   transactionExists: boolean;
   isProxyRequest: boolean;
 }): Promise<void> {
+  const txMeta = await getScheduledMetadata({ transaction, transactionExists, isProxyRequest });
+
+  await Scheduled.updateOne({ _id: transaction._id }, txMeta);
+}
+
+async function getScheduledMetadata({
+  transaction,
+  transactionExists,
+  isProxyRequest,
+}: {
+  transaction: IScheduled;
+  transactionExists: boolean;
+  isProxyRequest: boolean;
+}): Promise<Partial<IScheduled>> {
   const startTime = Date.now();
   const metadata = await getTransactionMetadata(transaction);
   const txMeta: Partial<IScheduled> = {
@@ -340,14 +375,14 @@ async function populateTransactionMetadata({
     txMeta.conditionAssetName = metadata.assetName;
   }
 
-  const conditionAssetMetadata = await getConditionAssetMetadata({ ...transaction, ...txMeta } as any);
-  txMeta.conditionAssetName = conditionAssetMetadata.name;
-  txMeta.conditionAssetDecimals = conditionAssetMetadata.decimals;
-
-  await Scheduled.updateOne({ _id: transaction._id }, txMeta);
+  const conditionAssetMetadata = await getConditionAssetMetadata({ ...transaction.toObject(), ...txMeta } as any);
+  txMeta.conditionAssetName = txMeta.conditionAssetName || conditionAssetMetadata.name;
+  txMeta.conditionAssetDecimals = txMeta.conditionAssetDecimals || conditionAssetMetadata.decimals;
 
   const executionTimeSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
   logger.debug(`${transaction._id} Populated tx metadata in ${executionTimeSeconds}s`);
+
+  return txMeta;
 }
 
 async function getConditionAssetMetadata(transaction: IScheduled): Promise<IAssetMetadata> {
