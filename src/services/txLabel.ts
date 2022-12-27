@@ -1,5 +1,5 @@
 import { MINUTE_MILLIS } from '../constants';
-import { IScheduled, IScheduledForUser, ITxLabel } from '../models/Models';
+import { IScheduled, IScheduledForUser, ITxLabel, ITxLabelParams } from '../models/Models';
 import TxLabel from '../models/TxLabelSchema';
 import { createTimedCache, decodeMethod } from '../utils';
 import { Key } from './key';
@@ -74,4 +74,8 @@ async function getTxLabelsCached(): Promise<ITxLabel[]> {
 
 async function getTxLabels(): Promise<ITxLabel[]> {
   return TxLabel.find();
+}
+
+export async function addTxLabel(label: ITxLabelParams) {
+  return await TxLabel.insertMany([label]);
 }

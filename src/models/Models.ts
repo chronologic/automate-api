@@ -270,12 +270,15 @@ export interface IStrategyPrepResponse {
 
 export type TxLabelType = 'address' | 'method';
 
-export interface ITxLabel extends Document {
+export interface ITxLabelParams {
   assetType: AssetType;
   chainId: ChainId;
   type: TxLabelType;
   hash: string;
   label: string;
+}
+
+export interface ITxLabel extends ITxLabelParams, Document {
   createdAt: string;
   executedAt: string;
 }
