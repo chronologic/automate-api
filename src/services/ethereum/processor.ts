@@ -12,6 +12,8 @@ import { ITransactionExecutor } from './transaction';
 import { fetchPriceStats, getBlockNumber } from './utils';
 import { ChainId } from '../../constants';
 
+// processes txs in the following groups:
+// chain -> sender -> nonce
 export class Processor {
   private scheduleService: IScheduleService;
   private transactionExecutor: ITransactionExecutor;
@@ -191,8 +193,8 @@ export class Processor {
     } = await this.transactionExecutor.execute(scheduled, blockNum, transactionList);
 
     const isStrategyTx = !!scheduled.strategyInstanceId;
-    if (isStrategyTx && status === Status.StaleNonce) {
-      staleNonce = true;
+    staleNonce = status === Status.StaleNonce;
+    if (isStrategyTx && staleNonce) {
       await strategyService.shiftTimeCondition(scheduled);
     }
 
