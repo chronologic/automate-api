@@ -66,18 +66,18 @@ export class TransactionExecutor implements ITransactionExecutor {
       return await this.confirmTransaction(scheduled);
     }
 
-    const isTimeConditionMet = await this.isTimeConditionMet(scheduled);
-    if (isTimeConditionMet.res) {
-      // time condition met
-    } else {
-      return isTimeConditionMet.executeStatus!;
-    }
-
     const hasCorrectNonce = await this.hasCorrectNonce(scheduled);
     if (hasCorrectNonce.res) {
       // nonce is correct
     } else {
       return hasCorrectNonce.executeStatus!;
+    }
+
+    const isTimeConditionMet = await this.isTimeConditionMet(scheduled);
+    if (isTimeConditionMet.res) {
+      // time condition met
+    } else {
+      return isTimeConditionMet.executeStatus!;
     }
 
     const isAmountConditionMet = await this.isAmountConditionMet(scheduled);
