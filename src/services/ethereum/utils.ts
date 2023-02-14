@@ -256,6 +256,7 @@ async function fetchTokenMetadata({
   if ((!transaction.assetName || !transaction.assetValue) && transaction.transactionHash) {
     logger.debug('fetchTokenMetadata scraping data as fallback...');
     const { assetName, assetAmount, assetValue } = await scrapeTokenMetadata(
+      parsedTx.from,
       transaction.transactionHash,
       transaction.chainId,
     );
@@ -274,7 +275,7 @@ async function fetchTokenMetadata({
   return transaction;
 }
 
-async function scrapeTokenMetadata(txHash: string, chainId: ChainId): Promise<ITokenMetadata> {
+async function scrapeTokenMetadata(from: string, txHash: string, chainId: ChainId): Promise<ITokenMetadata> {
   const cacheKey = `tokenMeta:${txHash}`;
 
   if (lru.has(cacheKey)) {
@@ -300,38 +301,17 @@ async function scrapeTokenMetadata(txHash: string, chainId: ChainId): Promise<IT
 
   const resPromise = (async () => {
     try {
-      const res = await fetch(`https://${explorerName}.io/tx/${txHash}`).then((response) => response.text());
+      const res = await fetch(`https://${explorerName}.io/tx/${txHash}`, {
+        headers: {
+          accept: 'text/html,application/xhtml+xml,application/xml',
+          'accept-language': 'en-US,en;q=0.9',
+          'user-agent':
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+        },
+      }).then((response) => response.text());
       const $ = cheerio.load(res);
-      const tokenDetails = $('.row .list-unstyled');
-      let assetAmount = 0;
-      let assetValue = 0;
-      tokenDetails.find('.media-body').each((_, mb) => {
-        assetAmount = Number($(mb).find('> span.mr-1').last().text().trim().replace(/,/g, '')) || 0;
-      });
 
-      const transferDetails = tokenDetails.find('.media-body').text();
-
-      try {
-        assetValue = Number(/\(\$[0-9,.]+\)/.exec(transferDetails)[0].replace(/[\(\)\$,]/g, ''));
-      } catch (e) {
-        logger.error(e);
-      }
-
-      const assetName = tokenDetails
-        .find('.media-body > a')
-        .first()
-        .text()
-        .trim()
-        .split(' ')
-        .reverse()[0]
-        .replace(/[\(\)]/g, '')
-        .toLowerCase();
-
-      const meta = {
-        assetAmount: assetAmount || 0,
-        assetValue: assetValue || 0,
-        assetName: assetName || '',
-      };
+      const meta = extractTokenMeta(from, $);
 
       lru.set(cacheKey, meta);
 
@@ -345,6 +325,142 @@ async function scrapeTokenMetadata(txHash: string, chainId: ChainId): Promise<IT
   lru.set(cacheKey, resPromise);
 
   return resPromise;
+}
+
+function extractTokenMeta(from: string, $: cheerio.Root): ITokenMetadata {
+  try {
+    const res = extractTokenMeta_newUI(from, $);
+    return res;
+  } catch (e) {
+    return extractTokenMeta_oldUI(from, $);
+  }
+}
+
+function extractTokenMeta_oldUI(from: string, $: cheerio.Root): ITokenMetadata {
+  const transferList = $('.row.mb-4 #wrapperContent');
+
+  const transfers = [];
+
+  transferList.find('li').each(function (i, elem) {
+    const transferFrom = extractAddressFromText(
+      $(this).find('.media-body > .hash-tag').first().find('a .hash-tag').attr('title'),
+    );
+    const transferTo = extractAddressFromText(
+      $(this).find('.media-body > .hash-tag').last().find('a .hash-tag').attr('title'),
+    );
+    const amountText = $(this).find('.media-body').children('span').last().text();
+    const [amount, value] = extractAmountAndValueFromText(amountText);
+    const assetName = extractTokenNameFromText($(this).find('.media-body > a').remove('span').text());
+    transfers.push({
+      from: transferFrom,
+      to: transferTo,
+      assetName,
+      assetAmount: amount,
+      assetValue: value,
+    });
+  });
+
+  const transferToSender = transfers.find((t) => t.to.toLowerCase() === from.toLowerCase());
+
+  if (transferToSender) {
+    return transferToSender;
+  }
+
+  const transferFromSender = transfers.find((t) => t.from.toLowerCase() === from.toLowerCase());
+
+  if (transferFromSender) {
+    return transferFromSender;
+  }
+
+  return {
+    assetAmount: 0,
+    assetValue: 0,
+    assetName: '',
+  };
+
+  function extractAddressFromText(text: string): string {
+    const regEx = /0x[0-9a-z]{40}/i;
+    return text.match(regEx)[0];
+  }
+
+  function extractTokenNameFromText(text: string): string {
+    const regEx = /\((.*)\)/;
+    return text.match(regEx)[1];
+  }
+
+  function extractAmountAndValueFromText(text: string): [number, number] {
+    try {
+      const [rawAmount, rawValue] = text.split('(');
+      const amount = Number(rawAmount.replace(/[$,)]/g, '').trim());
+      const value = Number(rawValue.replace(/[$,)]/g, '').trim());
+      return [amount, value];
+    } catch (e) {
+      return [0, 0];
+    }
+  }
+}
+
+function extractTokenMeta_newUI(from: string, $: cheerio.Root): ITokenMetadata {
+  const transfers = [];
+
+  $('.row.mb-5 > .col-md-9 .row-count').each(function (i, elem) {
+    let transferFrom = '';
+    let transferTo = '';
+    let assetName = '';
+
+    $(this)
+      .children('a')
+      .each(function (i) {
+        if (i === 0) {
+          transferFrom = extractAddressFromText($(this).attr('href'));
+        } else if (i === 1) {
+          transferTo = extractAddressFromText($(this).attr('href'));
+        } else if (i === 3) {
+          assetName = extractTokenNameFromText($(this).find('.text-muted > .text-truncate').text());
+        }
+      });
+
+    const assetValue = extractValueFromText($(this).find('a.badge').text());
+    const assetAmount = extractValueFromText($(this).children('span[data-bs-toggle=tooltip]').first().text());
+
+    transfers.push({
+      from: transferFrom,
+      to: transferTo,
+      assetName,
+      assetAmount,
+      assetValue,
+    });
+  });
+
+  const transferToSender = transfers.find((t) => t.to.toLowerCase() === from.toLowerCase());
+
+  if (transferToSender) {
+    return transferToSender;
+  }
+
+  const transferFromSender = transfers.find((t) => t.from.toLowerCase() === from.toLowerCase());
+
+  if (transferFromSender) {
+    return transferFromSender;
+  }
+
+  return {
+    assetAmount: 0,
+    assetValue: 0,
+    assetName: '',
+  };
+
+  function extractAddressFromText(text: string): string {
+    return '0x' + text.split('0x').reverse()[0];
+  }
+
+  function extractTokenNameFromText(text: string): string {
+    return text.replace(/\./g, '');
+  }
+
+  function extractValueFromText(text: string): number {
+    return Number(text.replace(/[$,)]/g, '').trim());
+  }
 }
 
 async function fetchEthMetadata({
